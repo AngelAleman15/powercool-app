@@ -18,18 +18,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PowerCool - Sistema de Gestión",
   description: "Sistema de gestión de equipos de aire acondicionado",
-  manifest: "/manifest.json",
-  themeColor: "#0a0a0a",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "PowerCool",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
   },
 };
 

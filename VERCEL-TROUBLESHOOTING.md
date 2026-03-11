@@ -1,25 +1,57 @@
 # 🔧 Troubleshooting Vercel Deploy
 
-## ❓ Deploy Fallido - Checklist
+## ⚠️ ANTES DE DEPLOY: Configura Variables de Entorno
 
-### 1️⃣ Verificar Variables de Entorno
-
-**¿Configuraste estas variables en Vercel?**
-
-Ve a tu proyecto en Vercel → **Settings** → **Environment Variables**
-
-Debe haber **2 variables**:
-
+**🚨 ERROR MÁS COMÚN:** 
 ```
-✅ NEXT_PUBLIC_SUPABASE_URL
-✅ NEXT_PUBLIC_SUPABASE_ANON_KEY
+Error: Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.
 ```
 
-**Si NO las configuraste:**
-1. Click en **"Add New"** en Environment Variables
-2. Agrega ambas variables (cópialas de tu `.env.local`)
-3. Click en **"Save"**
-4. Ve a **Deployments** → Click en los 3 puntos del último deploy → **"Redeploy"**
+**Causa:** Las variables de entorno NO están configuradas en Vercel.
+
+---
+
+### ✅ Pasos para Configurar Variables (OBLIGATORIO):
+
+  1. Ve a https://vercel.com → Tu Proyecto → **Settings** → **Environment Variables**
+  2. Click en **"Add New"**
+  3. Agrega la **primera variable**:
+    - **Name:** `NEXT_PUBLIC_SUPABASE_URL`
+    - **Value:** (copia de tu `.env.local`)
+    - **Environments:** Selecciona **"All Environments"** (Production, Preview, Development)
+    - Click **"Save"**
+
+  4. Agrega la **segunda variable**:
+    - **Name:** `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    - **Value:** (copia de tu `.env.local`)
+    - **Environments:** Selecciona **"All Environments"**
+    - Click **"Save"**
+
+  5. Verifica que ambas variables digan **"All Environments"** arriba
+  6. Ve a **Deployments** → Click en el último deploy → **3 puntos (...)** → **"Redeploy"**
+
+  ---
+
+  ## ❓ Deploy Fallido - Checklist
+
+  ### 1️⃣ Verificar Variables de Entorno
+
+  **¿Configuraste estas variables en Vercel?**
+
+  Ve a tu proyecto en Vercel → **Settings** → **Environment Variables**
+
+  Debe haber **2 variables** configuradas para **"All Environments"**:
+
+  ```
+  ✅ NEXT_PUBLIC_SUPABASE_URL → All Environments
+  ✅ NEXT_PUBLIC_SUPABASE_ANON_KEY → All Environments
+  ```
+
+  **Si solo configuraste Production:**
+  1. Click en **"Edit"** en cada variable
+  2. En **"Environments"** selecciona **"All Environments"**
+  3. Click en **"Save"**
+  4. Ve a **Deployments** → Click en los 3 puntos del último deploy → **"Redeploy"**
 
 ---
 
