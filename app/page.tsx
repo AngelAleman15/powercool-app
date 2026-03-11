@@ -14,10 +14,11 @@ type ActivityItem = {
 
 type UpcomingTramite = {
   id: number
-  descripcion: string
-  fecha_programada: string
-  equipos: { marca: string; modelo: string } | null
-  clientes: { nombre: string } | null
+  equipo: string
+  cliente: string
+  fecha: string
+  tipo: string
+  estado: string
 }
 
 export default function Home() {
