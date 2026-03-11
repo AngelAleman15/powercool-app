@@ -1,6 +1,6 @@
 # 🌡️ PowerCool - Sistema de Gestión de Aires Acondicionados
 
-Sistema completo de gestión y mantenimiento para PowerCool, empresa especializada en aires acondicionados.
+Sistema completo de gestión y mantenimiento para PowerCool - empresa especializada en aires acondicionados.
 
 ## ✨ Características
 
