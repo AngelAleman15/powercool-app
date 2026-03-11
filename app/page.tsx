@@ -268,13 +268,13 @@ export default function Home() {
             <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-5 border border-white/10">
               <h2 className="text-lg font-bold text-white mb-4">Acciones Rápidas</h2>
               <div className="space-y-3">
-                <a href="/equipos/nuevo" className="flex items-center gap-3 p-3 rounded-lg bg-white text-black hover:bg-gray-200 transition-all group">
-                  <div className="p-2 bg-black rounded-lg group-hover:scale-110 transition-transform">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="/equipos/nuevo" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+                  <div className="p-2 bg-white rounded-lg group-hover:scale-110 transition-transform">
+                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </div>
-                  <span className="font-semibold text-sm">Nuevo Equipo</span>
+                  <span className="font-semibold text-white text-sm">Nuevo Equipo</span>
                 </a>
 
                 <a href="/tramites" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
