@@ -4,10 +4,26 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import NotificationSettings from "@/components/NotificationSettings"
 
+type ActivityItem = {
+  id: number
+  type: string
+  description: string
+  date: string
+  status: string
+}
+
+type UpcomingTramite = {
+  id: number
+  descripcion: string
+  fecha_programada: string
+  equipos: { marca: string; modelo: string } | null
+  clientes: { nombre: string } | null
+}
+
 export default function Home() {
   const [stats, setStats] = useState({ equipos: 0, mantenimientos: 0, clientes: 0, pendientes: 0 })
-  const [recentActivity, setRecentActivity] = useState([])
-  const [upcomingTramites, setUpcomingTramites] = useState([])
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
+  const [upcomingTramites, setUpcomingTramites] = useState<UpcomingTramite[]>([])
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
 
