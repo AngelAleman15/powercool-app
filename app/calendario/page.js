@@ -162,13 +162,13 @@ export default function CalendarioPage() {
         </div>
 
         {/* Calendario */}
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 sm:p-4 md:p-6 border border-white/10 overflow-hidden">
+        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 sm:p-6 border border-white/10 overflow-hidden">
           {loading ? (
             <div className="text-center py-12">
               <p className="text-gray-400">Cargando calendario...</p>
             </div>
           ) : (
-            <div className="calendar-shell h-[300px] sm:h-[400px] md:h-[560px] lg:h-[640px] w-full">
+            <div className="calendar-shell h-[360px] sm:h-[560px] lg:h-[640px]">
               <Calendar
                 localizer={localizer}
                 events={events}
@@ -176,8 +176,7 @@ export default function CalendarioPage() {
                 endAccessor="end"
                 popup
                 views={["month", "week", "day", "agenda"]}
-                defaultView="month"
-                style={{ height: '100%', width: '100%' }}
+                style={{ height: '100%' }}
                 eventPropGetter={eventStyleGetter}
                 onSelectEvent={handleSelectEvent}
                 messages={{
