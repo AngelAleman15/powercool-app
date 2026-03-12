@@ -46,9 +46,9 @@ export default function Home() {
       // Stats
       const totalEquipos = equiposRes.count || 0
       const totalClientes = clientesRes.count || 0
-      const allTramites = tramitesRes.data || []
-      const mantenimientos = allTramites.filter(t => t.tipo === "mantenimiento").length
-      const pendientes = allTramites.filter(t => t.estado === "pendiente").length
+      const tramitesData = tramitesRes.data || []
+      const mantenimientos = tramitesData.filter(t => t.tipo === "mantenimiento").length
+      const pendientes = tramitesData.filter(t => t.estado === "pendiente").length
 
       setStats({
         equipos: totalEquipos,
@@ -58,10 +58,10 @@ export default function Home() {
       })
 
       // Guardar todos los trámites para gráficos
-      setAllTramites(allTramites)
+      setAllTramites(tramitesData)
 
       // Recent Activity (últimos 5 items)
-      const activity = allTramites.slice(0, 5).map(t => ({
+      const activity = tramitesData.slice(0, 5).map(t => ({
         id: t.id,
         type: t.tipo,
         description: `${t.tipo === "mantenimiento" ? "🔧" : "💰"} ${t.equipos?.marca || ""} ${t.equipos?.modelo || ""} - ${t.clientes?.nombre || "Sin cliente"}`,
@@ -74,7 +74,7 @@ export default function Home() {
       const today = new Date()
       const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
       
-      const upcoming = allTramites
+      const upcoming = tramitesData
         .filter(t => {
           if (!t.fecha_programada) return false
           const fechaTramite = new Date(t.fecha_programada)
