@@ -168,7 +168,7 @@ export default function CalendarioPage() {
               <p className="text-gray-400">Cargando calendario...</p>
             </div>
           ) : (
-            <div className="calendar-shell" style={{ height: '700px' }}>
+            <div className="calendar-shell h-[360px] sm:h-[560px] lg:h-[640px]">
               <Calendar
                 localizer={localizer}
                 events={events}
@@ -233,7 +233,7 @@ export default function CalendarioPage() {
             onClick={() => setShowMobileStats(!showMobileStats)}
             className="w-full px-4 py-3 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] text-left flex items-center justify-between"
           >
-            <span className="text-sm font-semibold text-white">Estadísticas del Calendario</span>
+            <span className="text-sm font-semibold text-white">Menú de estadísticas</span>
             <span className="text-xs text-gray-400">{showMobileStats ? 'Ocultar' : 'Ver'}</span>
           </button>
 

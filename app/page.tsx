@@ -38,6 +38,7 @@ export default function Home() {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [upcomingTramites, setUpcomingTramites] = useState<UpcomingTramite[]>([])
   const [allTramites, setAllTramites] = useState<Tramite[]>([])
+  const [showMobileAnalytics, setShowMobileAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
 
@@ -130,8 +131,44 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Menú de analíticas en móvil */}
+        <div className="md:hidden mb-6">
+          <button
+            onClick={() => setShowMobileAnalytics(!showMobileAnalytics)}
+            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] text-left flex items-center justify-between"
+          >
+            <span className="text-sm font-semibold text-white">Menú de estadísticas y gráficas</span>
+            <span className="text-xs text-gray-400">{showMobileAnalytics ? "Ocultar" : "Ver"}</span>
+          </button>
+
+          {showMobileAnalytics && (
+            <div className="mt-3 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-blue-500/20">
+                  <p className="text-xs text-blue-300/80">Equipos</p>
+                  <p className="text-2xl font-bold text-white">{loading ? "..." : stats.equipos}</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-purple-500/20">
+                  <p className="text-xs text-purple-300/80">Clientes</p>
+                  <p className="text-2xl font-bold text-white">{loading ? "..." : stats.clientes}</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-green-500/20">
+                  <p className="text-xs text-green-300/80">Mantenimientos</p>
+                  <p className="text-2xl font-bold text-white">{loading ? "..." : stats.mantenimientos}</p>
+                </div>
+                <div className="bg-gradient-to-br from-amber-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-amber-500/30">
+                  <p className="text-xs text-amber-300/80">Pendientes</p>
+                  <p className="text-2xl font-bold text-amber-400">{loading ? "..." : stats.pendientes}</p>
+                </div>
+              </div>
+
+              <DashboardCharts tramites={allTramites} />
+            </div>
+          )}
+        </div>
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Equipos Card */}
           <div className="relative bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-blue-500/20 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group cursor-pointer overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -198,7 +235,7 @@ export default function Home() {
         </div>
 
         {/* Dashboard Charts */}
-        <div className="mb-8">
+        <div className="hidden md:block mb-8">
           <DashboardCharts tramites={allTramites} />
         </div>
 

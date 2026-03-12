@@ -63,6 +63,23 @@ body {
 .rbc-calendar {
   color: white;
   font-family: inherit;
+  background: #0f1115;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view,
+.rbc-time-header,
+.rbc-time-content,
+.rbc-time-gutter,
+.rbc-timeslot-group,
+.rbc-day-slot,
+.rbc-day-bg,
+.rbc-row-bg,
+.rbc-row-content,
+.rbc-time-header-content,
+.rbc-time-header-gutter {
+  background: #0f1115;
 }
 
 .rbc-header {
@@ -93,6 +110,16 @@ body {
 
 .rbc-off-range-bg {
   background: rgba(255, 255, 255, 0.02);
+}
+
+.rbc-off-range {
+  color: #6b7280;
+}
+
+.rbc-date-cell,
+.rbc-label,
+.rbc-current-time-indicator {
+  color: #d1d5db;
 }
 
 .rbc-event {
