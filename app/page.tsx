@@ -115,68 +115,105 @@ export default function Home() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Equipos Card */}
-          <div className="relative bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-blue-500/20 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group cursor-pointer overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="relative group cursor-pointer">
+            {/* Decorative background shape */}
+            <div className="absolute -inset-1 bg-gradient-to-br from-blue-500/30 via-blue-600/20 to-transparent rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+            
+            <div className="relative bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#1a1a1a] rounded-3xl p-6 border border-white/5 hover:border-blue-500/30 transition-all duration-300 overflow-hidden h-full">
+              {/* Animated corner accent */}
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-transparent rounded-bl-[60px] opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* Icon circle */}
+              <div className="relative mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/40 group-hover:shadow-blue-500/60 group-hover:scale-110 transition-all duration-300 rotate-3 group-hover:rotate-6">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-4xl font-bold text-white mb-1 group-hover:scale-105 transition-transform duration-300">{loading ? "..." : stats.equipos}</p>
-              <p className="text-sm text-blue-300/80 font-medium">Total Equipos</p>
+
+              {/* Content */}
+              <div className="relative">
+                <p className="text-5xl font-bold text-white mb-2 tracking-tight group-hover:text-blue-100 transition-colors duration-300">{loading ? "..." : stats.equipos}</p>
+                <p className="text-sm text-gray-400 font-medium tracking-wide uppercase">Total Equipos</p>
+              </div>
+
+              {/* Bottom accent line */}
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
             </div>
           </div>
 
           {/* Clientes Card */}
-          <div className="relative bg-gradient-to-br from-purple-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-purple-500/20 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 group cursor-pointer overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg shadow-purple-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="relative group cursor-pointer">
+            <div className="absolute -inset-1 bg-gradient-to-br from-purple-500/30 via-purple-600/20 to-transparent rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+            
+            <div className="relative bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#1a1a1a] rounded-3xl p-6 border border-white/5 hover:border-purple-500/30 transition-all duration-300 overflow-hidden h-full">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-[60px] opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <div className="relative mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/40 group-hover:shadow-purple-500/60 group-hover:scale-110 transition-all duration-300 rotate-3 group-hover:rotate-6">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-4xl font-bold text-white mb-1 group-hover:scale-105 transition-transform duration-300">{loading ? "..." : stats.clientes}</p>
-              <p className="text-sm text-purple-300/80 font-medium">Clientes Activos</p>
+
+              <div className="relative">
+                <p className="text-5xl font-bold text-white mb-2 tracking-tight group-hover:text-purple-100 transition-colors duration-300">{loading ? "..." : stats.clientes}</p>
+                <p className="text-sm text-gray-400 font-medium tracking-wide uppercase">Clientes Activos</p>
+              </div>
+
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500/0 via-purple-500/50 to-purple-500/0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
             </div>
           </div>
 
           {/* Mantenimientos Card */}
-          <div className="relative bg-gradient-to-br from-green-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-green-500/20 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/10 transition-all duration-300 group cursor-pointer overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg shadow-green-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="relative group cursor-pointer">
+            <div className="absolute -inset-1 bg-gradient-to-br from-green-500/30 via-green-600/20 to-transparent rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+            
+            <div className="relative bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#1a1a1a] rounded-3xl p-6 border border-white/5 hover:border-green-500/30 transition-all duration-300 overflow-hidden h-full">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-500/20 to-transparent rounded-bl-[60px] opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <div className="relative mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/40 group-hover:shadow-green-500/60 group-hover:scale-110 transition-all duration-300 rotate-3 group-hover:rotate-6">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-4xl font-bold text-white mb-1 group-hover:scale-105 transition-transform duration-300">{loading ? "..." : stats.mantenimientos}</p>
-              <p className="text-sm text-green-300/80 font-medium">Mantenimientos</p>
+
+              <div className="relative">
+                <p className="text-5xl font-bold text-white mb-2 tracking-tight group-hover:text-green-100 transition-colors duration-300">{loading ? "..." : stats.mantenimientos}</p>
+                <p className="text-sm text-gray-400 font-medium tracking-wide uppercase">Mantenimientos</p>
+              </div>
+
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/0 via-green-500/50 to-green-500/0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
             </div>
           </div>
 
           {/* Pendientes Card */}
-          <div className="relative bg-gradient-to-br from-amber-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-amber-500/30 hover:border-amber-500/60 hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-300 group cursor-pointer overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg shadow-amber-500/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="relative group cursor-pointer">
+            <div className="absolute -inset-1 bg-gradient-to-br from-amber-500/30 via-amber-600/20 to-transparent rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+            
+            <div className="relative bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#1a1a1a] rounded-3xl p-6 border border-white/5 hover:border-amber-500/30 transition-all duration-300 overflow-hidden h-full">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-500/20 to-transparent rounded-bl-[60px] opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <div className="relative mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/40 group-hover:shadow-amber-500/60 group-hover:scale-110 transition-all duration-300 rotate-3 group-hover:rotate-6">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-4xl font-bold text-amber-400 mb-1 group-hover:scale-105 transition-transform duration-300">{loading ? "..." : stats.pendientes}</p>
-              <p className="text-sm text-amber-300/80 font-medium">Trámites Pendientes</p>
+
+              <div className="relative">
+                <p className="text-5xl font-bold text-amber-400 mb-2 tracking-tight group-hover:text-amber-300 transition-colors duration-300">{loading ? "..." : stats.pendientes}</p>
+                <p className="text-sm text-gray-400 font-medium tracking-wide uppercase">Trámites Pendientes</p>
+              </div>
+
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500/0 via-amber-500/50 to-amber-500/0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
             </div>
           </div>
         </div>
