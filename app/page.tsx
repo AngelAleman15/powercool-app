@@ -22,11 +22,22 @@ type UpcomingTramite = {
   estado: string
 }
 
+type Tramite = {
+  id: number
+  tipo: string
+  estado: string
+  created_at: string
+  fecha_programada?: string
+  equipos?: { marca?: string; modelo?: string }
+  clientes?: { nombre?: string }
+  [key: string]: any
+}
+
 export default function Home() {
   const [stats, setStats] = useState({ equipos: 0, mantenimientos: 0, clientes: 0, pendientes: 0 })
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [upcomingTramites, setUpcomingTramites] = useState<UpcomingTramite[]>([])
-  const [allTramites, setAllTramites] = useState<any[]>([])
+  const [allTramites, setAllTramites] = useState<Tramite[]>([])
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
 

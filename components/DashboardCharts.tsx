@@ -2,7 +2,22 @@
 
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
-export default function DashboardCharts({ tramites = [] }) {
+type Tramite = {
+  id: number
+  tipo: string
+  estado: string
+  created_at: string
+  fecha_programada?: string
+  equipos?: { marca?: string; modelo?: string }
+  clientes?: { nombre?: string }
+  [key: string]: any
+}
+
+type DashboardChartsProps = {
+  tramites: Tramite[]
+}
+
+export default function DashboardCharts({ tramites = [] }: DashboardChartsProps) {
   // Datos para gráfico de trámites por mes (últimos 6 meses)
   const getTramitesPorMes = () => {
     const meses = []
@@ -136,7 +151,7 @@ export default function DashboardCharts({ tramites = [] }) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
