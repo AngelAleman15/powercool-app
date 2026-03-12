@@ -25,7 +25,15 @@ export default function CalendarioPage() {
   const [events, setEvents] = useState([])
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('month')
+  const [showMobileStats, setShowMobileStats] = useState(false)
+
+  const parseLocalDate = (dateValue) => {
+    if (!dateValue) return null
+    const dateStr = String(dateValue).slice(0, 10)
+    const [year, month, day] = dateStr.split('-').map(Number)
+    if (!year || !month || !day) return null
+    return new Date(year, month - 1, day, 12, 0, 0, 0)
+  }
 
   useEffect(() => {
     cargarTramites()
@@ -44,15 +52,25 @@ export default function CalendarioPage() {
       // Convertir trámites a eventos del calendario
       const eventos = data
         .filter(t => t.fecha_programada && t.estado !== 'cancelado')
-        .map(t => ({
-          id: t.id,
-          title: `${t.tipo === 'mantenimiento' ? '🔧' : '💰'} ${t.equipos?.marca || ''} ${t.equipos?.modelo || ''} - ${t.clientes?.nombre || 'Sin cliente'}`,
-          start: new Date(t.fecha_programada),
-          end: new Date(t.fecha_programada),
-          resource: t,
-          estado: t.estado,
-          tipo: t.tipo
-        }))
+        .map(t => {
+          const startDate = parseLocalDate(t.fecha_programada)
+          if (!startDate) return null
+
+          const endDate = new Date(startDate)
+          endDate.setDate(endDate.getDate() + 1)
+
+          return {
+            id: t.id,
+            title: `${t.tipo === 'mantenimiento' ? '🔧' : '💰'} ${t.equipos?.marca || ''} ${t.equipos?.modelo || ''} - ${t.clientes?.nombre || 'Sin cliente'}`,
+            start: startDate,
+            end: endDate,
+            allDay: true,
+            resource: t,
+            estado: t.estado,
+            tipo: t.tipo
+          }
+        })
+        .filter(Boolean)
       
       setEvents(eventos)
     }
@@ -98,8 +116,8 @@ export default function CalendarioPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-white rounded-xl">
-              <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-3 bg-sky-500/20 border border-sky-500/30 rounded-xl">
+              <svg className="w-8 h-8 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
@@ -111,7 +129,7 @@ export default function CalendarioPage() {
           
           <Link
             href="/tramites"
-            className="px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+            className="px-4 py-2 bg-sky-500 text-black rounded-lg text-sm font-semibold hover:bg-sky-400 transition-all"
           >
             + Nuevo Trámite
           </Link>
@@ -144,18 +162,20 @@ export default function CalendarioPage() {
         </div>
 
         {/* Calendario */}
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-6 border border-white/10">
+        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 sm:p-6 border border-white/10 overflow-hidden">
           {loading ? (
             <div className="text-center py-12">
               <p className="text-gray-400">Cargando calendario...</p>
             </div>
           ) : (
-            <div style={{ height: '700px' }}>
+            <div className="calendar-shell" style={{ height: '700px' }}>
               <Calendar
                 localizer={localizer}
                 events={events}
                 startAccessor="start"
                 endAccessor="end"
+                popup
+                views={["month", "week", "day", "agenda"]}
                 style={{ height: '100%' }}
                 eventPropGetter={eventStyleGetter}
                 onSelectEvent={handleSelectEvent}
@@ -180,7 +200,7 @@ export default function CalendarioPage() {
         </div>
 
         {/* Stats Rápidas */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10">
             <p className="text-gray-400 text-xs mb-1">Total Programados</p>
             <p className="text-2xl font-bold text-white">{events.length}</p>
@@ -205,6 +225,45 @@ export default function CalendarioPage() {
               }).length}
             </p>
           </div>
+        </div>
+
+        {/* Stats en apartado móvil */}
+        <div className="md:hidden mt-6">
+          <button
+            onClick={() => setShowMobileStats(!showMobileStats)}
+            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] text-left flex items-center justify-between"
+          >
+            <span className="text-sm font-semibold text-white">Estadísticas del Calendario</span>
+            <span className="text-xs text-gray-400">{showMobileStats ? 'Ocultar' : 'Ver'}</span>
+          </button>
+
+          {showMobileStats && (
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-white/10">
+                <p className="text-gray-400 text-xs mb-1">Total</p>
+                <p className="text-xl font-bold text-white">{events.length}</p>
+              </div>
+              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-amber-500/30">
+                <p className="text-gray-400 text-xs mb-1">Pendientes</p>
+                <p className="text-xl font-bold text-amber-400">{events.filter(e => e.estado === 'pendiente').length}</p>
+              </div>
+              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-blue-500/30">
+                <p className="text-gray-400 text-xs mb-1">En Proceso</p>
+                <p className="text-xl font-bold text-blue-400">{events.filter(e => e.estado === 'en_proceso').length}</p>
+              </div>
+              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-green-500/30">
+                <p className="text-gray-400 text-xs mb-1">Completados Mes</p>
+                <p className="text-xl font-bold text-green-400">{tramites.filter(t => {
+                  const fecha = parseLocalDate(t.fecha_programada || t.created_at)
+                  const ahora = new Date()
+                  if (!fecha) return false
+                  return fecha.getMonth() === ahora.getMonth() &&
+                    fecha.getFullYear() === ahora.getFullYear() &&
+                    t.estado === 'completado'
+                }).length}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Modal de Evento Seleccionado */}
@@ -235,12 +294,12 @@ export default function CalendarioPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Fecha</p>
-                  <p className="text-white">{new Date(selectedEvent.fecha_programada).toLocaleDateString('es-UY', { 
+                  <p className="text-white">{parseLocalDate(selectedEvent.fecha_programada)?.toLocaleDateString('es-UY', {
                     weekday: 'long', 
                     year: 'numeric', 
                     month: 'long', 
                     day: 'numeric' 
-                  })}</p>
+                  }) || 'Sin fecha'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Estado</p>

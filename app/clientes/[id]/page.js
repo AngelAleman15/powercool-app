@@ -8,10 +8,13 @@ import Link from "next/link"
 export default function ClienteDetalle() {
   const params = useParams()
   const router = useRouter()
+  const clienteId = Array.isArray(params.id) ? params.id[0] : params.id
   const [cliente, setCliente] = useState(null)
   const [equipos, setEquipos] = useState([])
   const [tramitesPendientes, setTramitesPendientes] = useState([])
   const [tramitesHistorial, setTramitesHistorial] = useState([])
+  const [seccionActiva, setSeccionActiva] = useState("equipos")
+  const [searchPerfil, setSearchPerfil] = useState("")
   const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
   const [formData, setFormData] = useState({
@@ -48,10 +51,10 @@ export default function ClienteDetalle() {
   })
 
   useEffect(() => {
-    if (params.id) {
+    if (clienteId) {
       cargarDatos()
     }
-  }, [params.id])
+  }, [clienteId])
 
   async function cargarDatos() {
     setLoading(true)
@@ -60,7 +63,7 @@ export default function ClienteDetalle() {
       const { data: clienteData } = await supabase
         .from("clientes")
         .select("*")
-        .eq("id", params.id)
+        .eq("id", clienteId)
         .single()
 
       if (!clienteData) {
@@ -81,7 +84,7 @@ export default function ClienteDetalle() {
       const { data: equiposData } = await supabase
         .from("equipos")
         .select("*")
-        .eq("cliente_id", params.id)
+        .eq("cliente_id", clienteId)
         .order("created_at", { ascending: false })
 
       setEquipos(equiposData || [])
@@ -90,7 +93,7 @@ export default function ClienteDetalle() {
       const { data: tramitesData } = await supabase
         .from("tramites")
         .select("*, equipos(marca, modelo)")
-        .eq("cliente_id", params.id)
+        .eq("cliente_id", clienteId)
         .order("created_at", { ascending: false })
 
       // Separar pendientes y completados
@@ -117,7 +120,7 @@ export default function ClienteDetalle() {
     const { error } = await supabase
       .from("clientes")
       .update(formData)
-      .eq("id", params.id)
+      .eq("id", clienteId)
 
     if (!error) {
       setShowEditModal(false)
@@ -173,7 +176,7 @@ export default function ClienteDetalle() {
     } else {
       const result = await supabase
         .from("equipos")
-        .insert([{ ...equipoFormData, cliente_id: params.id }])
+        .insert([{ ...equipoFormData, cliente_id: clienteId }])
       error = result.error
     }
 
@@ -232,7 +235,7 @@ export default function ClienteDetalle() {
     } else {
       const result = await supabase
         .from("tramites")
-        .insert([{ ...tramiteFormData, cliente_id: params.id }])
+        .insert([{ ...tramiteFormData, cliente_id: clienteId }])
       error = result.error
     }
 
@@ -270,6 +273,24 @@ export default function ClienteDetalle() {
       label: "Cancelado"
     }
   }
+
+  const matchSearch = (text) =>
+    String(text || "").toLowerCase().includes(searchPerfil.trim().toLowerCase())
+
+  const equiposFiltrados = equipos.filter(equipo => {
+    if (!searchPerfil.trim()) return true
+    return matchSearch(`${equipo.marca} ${equipo.modelo} ${equipo.tipo} ${equipo.capacidad} ${equipo.ubicacion}`)
+  })
+
+  const tramitesPendientesFiltrados = tramitesPendientes.filter(tramite => {
+    if (!searchPerfil.trim()) return true
+    return matchSearch(`${tramite.descripcion} ${tramite.tipo} ${tramite.estado} ${tramite.equipos?.marca || ""} ${tramite.equipos?.modelo || ""}`)
+  })
+
+  const tramitesHistorialFiltrados = tramitesHistorial.filter(tramite => {
+    if (!searchPerfil.trim()) return true
+    return matchSearch(`${tramite.descripcion} ${tramite.tipo} ${tramite.estado} ${tramite.equipos?.marca || ""} ${tramite.equipos?.modelo || ""}`)
+  })
 
   if (loading) {
     return (
@@ -373,8 +394,46 @@ export default function ClienteDetalle() {
         </div>
       </div>
 
+      {/* Navegación y búsqueda del perfil */}
+      <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-white/10 mb-6">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
+          <button
+            onClick={() => setSeccionActiva("equipos")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              seccionActiva === "equipos" ? "bg-sky-500 text-black" : "bg-white/5 text-gray-300"
+            }`}
+          >
+            Equipos
+          </button>
+          <button
+            onClick={() => setSeccionActiva("activos")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              seccionActiva === "activos" ? "bg-sky-500 text-black" : "bg-white/5 text-gray-300"
+            }`}
+          >
+            Trámites Activos
+          </button>
+          <button
+            onClick={() => setSeccionActiva("historial")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              seccionActiva === "historial" ? "bg-sky-500 text-black" : "bg-white/5 text-gray-300"
+            }`}
+          >
+            Historial
+          </button>
+        </div>
+
+        <input
+          type="text"
+          value={searchPerfil}
+          onChange={(e) => setSearchPerfil(e.target.value)}
+          placeholder="Buscar equipos o trámites de este cliente..."
+          className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+        />
+      </div>
+
       {/* Equipos Section */}
-      <div className="mb-6">
+      <div className={`mb-6 ${seccionActiva !== "equipos" ? "hidden" : ""}`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">Equipos Asignados</h2>
           <button
@@ -388,13 +447,13 @@ export default function ClienteDetalle() {
           </button>
         </div>
 
-        {equipos.length === 0 ? (
+        {equiposFiltrados.length === 0 ? (
           <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-8 border border-white/10 text-center">
-            <p className="text-sm text-gray-400">No hay equipos asignados a este cliente</p>
+            <p className="text-sm text-gray-400">No hay equipos que coincidan con la búsqueda</p>
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {equipos.map(equipo => (
+            {equiposFiltrados.map(equipo => (
               <div
                 key={equipo.id}
                 className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10 hover:border-white/30 transition-all"
@@ -432,7 +491,7 @@ export default function ClienteDetalle() {
       </div>
 
       {/* Trámites Pendientes */}
-      <div className="mb-6">
+      <div className={`mb-6 ${seccionActiva !== "activos" ? "hidden" : ""}`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">Trámites Activos</h2>
           <button
@@ -445,13 +504,13 @@ export default function ClienteDetalle() {
             Nuevo trámite
           </button>
         </div>
-        {tramitesPendientes.length === 0 ? (
+        {tramitesPendientesFiltrados.length === 0 ? (
           <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-8 border border-white/10 text-center">
-            <p className="text-sm text-gray-400">No hay trámites pendientes</p>
+            <p className="text-sm text-gray-400">No hay trámites activos que coincidan</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {tramitesPendientes.map(tramite => {
+            {tramitesPendientesFiltrados.map(tramite => {
               const config = estadoConfig[tramite.estado]
               return (
                 <div
@@ -508,15 +567,15 @@ export default function ClienteDetalle() {
       </div>
 
       {/* Historial */}
-      <div>
+      <div className={seccionActiva !== "historial" ? "hidden" : ""}>
         <h2 className="text-xl font-bold text-white mb-4">Historial</h2>
-        {tramitesHistorial.length === 0 ? (
+        {tramitesHistorialFiltrados.length === 0 ? (
           <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-8 border border-white/10 text-center">
-            <p className="text-sm text-gray-400">Sin historial de trámites</p>
+            <p className="text-sm text-gray-400">Sin historial que coincida con la búsqueda</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {tramitesHistorial.map(tramite => {
+            {tramitesHistorialFiltrados.map(tramite => {
               const config = estadoConfig[tramite.estado]
               return (
                 <div

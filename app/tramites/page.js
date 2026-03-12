@@ -62,12 +62,11 @@ export default function Tramites() {
     }
   }
 
-  const handleEquipoChange = (e) => {
-    setNuevoEquipo({ ...nuevoEquipo, [e.target.name]: e.target.value })
+  const handleEquipoChange = (name, value) => {
+    setNuevoEquipo(prev => ({ ...prev, [name]: value }))
   }
 
-  const crearEquipoRapido = async (e) => {
-    e.preventDefault()
+  const crearEquipoRapido = async () => {
     
     const { data, error } = await supabase
       .from("equipos")

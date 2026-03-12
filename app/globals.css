@@ -117,8 +117,8 @@ body {
 
 .rbc-toolbar button {
   color: white;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(14, 116, 144, 0.22);
+  border: 1px solid rgba(56, 189, 248, 0.3);
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -126,12 +126,12 @@ body {
 }
 
 .rbc-toolbar button:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(14, 116, 144, 0.34);
 }
 
 .rbc-toolbar button.rbc-active {
-  background: white;
-  color: black;
+  background: #38bdf8;
+  color: #001018;
 }
 
 .rbc-toolbar-label {
@@ -161,4 +161,63 @@ body {
 
 .rbc-agenda-event-cell {
   width: 100%;
+}
+
+.rbc-row-content {
+  z-index: 3;
+}
+
+.rbc-show-more {
+  color: #38bdf8;
+}
+
+@media (max-width: 767px) {
+  .calendar-shell {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .rbc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .rbc-toolbar-label {
+    text-align: center;
+    font-size: 16px;
+  }
+
+  .rbc-btn-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .rbc-toolbar button {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  .rbc-header {
+    font-size: 11px;
+    padding: 6px 2px;
+  }
+
+  .rbc-date-cell {
+    font-size: 11px;
+    padding-right: 2px;
+  }
+
+  .rbc-month-row {
+    min-height: 62px;
+  }
+
+  .rbc-event {
+    font-size: 10px;
+    line-height: 1.1;
+    padding: 1px 3px;
+  }
 }

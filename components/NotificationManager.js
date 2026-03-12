@@ -6,6 +6,30 @@ import { supabase } from '@/lib/supabase'
 
 export default function NotificationManager() {
   const { permission, requestPermission, registerServiceWorker, scheduleNotification } = useNotifications()
+  const NOTIFICATION_COOLDOWN_MS = 12 * 60 * 60 * 1000
+
+  const canNotifyNow = (key) => {
+    try {
+      const raw = localStorage.getItem('powercool_notification_history')
+      const history = raw ? JSON.parse(raw) : {}
+      const lastShown = history[key]
+      if (!lastShown) return true
+      return Date.now() - lastShown >= NOTIFICATION_COOLDOWN_MS
+    } catch {
+      return true
+    }
+  }
+
+  const markNotified = (key) => {
+    try {
+      const raw = localStorage.getItem('powercool_notification_history')
+      const history = raw ? JSON.parse(raw) : {}
+      history[key] = Date.now()
+      localStorage.setItem('powercool_notification_history', JSON.stringify(history))
+    } catch {
+      // Sin acción: si falla localStorage, no bloqueamos el flujo
+    }
+  }
 
   useEffect(() => {
     // Registrar service worker al cargar
@@ -48,6 +72,9 @@ export default function NotificationManager() {
         if (fechaProgramada <= twoDaysFromNow && fechaProgramada > now) {
           const diasRestantes = Math.ceil((fechaProgramada - now) / (1000 * 60 * 60 * 24))
           const equipo = tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : 'Equipo'
+          const notifyKey = `${tramite.id}-${tramite.fecha_programada}-${tramite.estado}`
+
+          if (!canNotifyNow(notifyKey)) return
           
           scheduleNotification(
             '⚠️ Mantenimiento Próximo',
@@ -55,6 +82,8 @@ export default function NotificationManager() {
             0,
             '/tramites'
           )
+
+          markNotified(notifyKey)
         }
       })
     }

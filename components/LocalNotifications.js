@@ -42,7 +42,7 @@ export default function LocalNotifications() {
           pending.forEach(r => {
             new Notification('PowerCool - Recordatorio', {
               body: r.message,
-              icon: '/icon-192.png',
+              icon: '/icon-512.png',
               badge: '/icon-192.png',
               tag: r.id
             })
