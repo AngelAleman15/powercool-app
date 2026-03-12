@@ -61,9 +61,9 @@ body {
 
 /* React Big Calendar Styles - Dark Theme */
 .rbc-calendar {
-  color: white !important;
-  font-family: inherit !important;
-  background: #0f1115 !important;
+  color: white;
+  font-family: inherit;
+  background: #0f1115;
 }
 
 .rbc-month-view,
@@ -79,52 +79,47 @@ body {
 .rbc-row-content,
 .rbc-time-header-content,
 .rbc-time-header-gutter {
-  background: #0f1115 !important;
-  color: white !important;
+  background: #0f1115;
 }
 
 .rbc-header {
   padding: 12px 6px;
   font-weight: 500;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03) !important;
-  color: white !important;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .rbc-month-view {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   overflow: hidden;
-  background: #0f1115 !important;
 }
 
 .rbc-month-row {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   min-height: 80px;
-  background: #0f1115 !important;
 }
 
 .rbc-day-bg {
   border-left: 1px solid rgba(255, 255, 255, 0.1);
-  background: #0f1115 !important;
 }
 
 .rbc-day-bg.rbc-today {
-  background-color: rgba(99, 102, 241, 0.1) !important;
+  background-color: rgba(99, 102, 241, 0.1);
 }
 
 .rbc-off-range-bg {
-  background: rgba(255, 255, 255, 0.02) !important;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .rbc-off-range {
-  color: #6b7280 !important;
+  color: #6b7280;
 }
 
 .rbc-date-cell,
 .rbc-label,
 .rbc-current-time-indicator {
-  color: #d1d5db !important;
+  color: #d1d5db;
 }
 
 .rbc-event {
@@ -252,44 +247,4 @@ body {
     line-height: 1.1;
     padding: 1px 3px;
   }
-}
-
-/* Estilos de alta especificidad para asegurar que el calendario sea oscuro */
-body .rbc-calendar {
-  background-color: #0f1115 !important;
-}
-
-body .rbc-month-view,
-body .rbc-time-view,
-body .rbc-agenda-view {
-  background-color: #0f1115 !important;
-}
-
-body .rbc-time-slot,
-body .rbc-current-time-indicator {
-  background-color: #0f1115 !important;
-}
-
-body .rbc-time-content {
-  background-color: #0f1115 !important;
-}
-
-body .rbc-toolbarLabel {
-  color: white !important;
-}
-
-/* Fuerza los colores de texto */
-body .rbc-toolbar-label,
-body .rbc-toolbar-button,
-body .rbc-header {
-  color: white !important;
-}
-
-/* Enfuerza fondo oscuro en todos los elementos día/hora */
-body .rbc-day-slot .rbc-time-slot {
-  background: #0f1115 !important;
-}
-
-body .rbc-time-slot {
-  background: #0f1115 !important;
 }
