@@ -12,30 +12,9 @@ type ActivityItem = {
   status: string
 }
 
-type UpcomingTramite = {
-  id: number
-  equipo: string
-  cliente: string
-  fecha: string
-  tipo: string
-  estado: string
-}
-
-type Tramite = {
-  id: number
-  tipo: string
-  estado: string
-  created_at: string
-  fecha_programada?: string
-  equipos?: { marca?: string; modelo?: string }
-  clientes?: { nombre?: string }
-  [key: string]: any
-}
-
 export default function Home() {
   const [stats, setStats] = useState({ equipos: 0, mantenimientos: 0, clientes: 0, pendientes: 0 })
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
-  const [upcomingTramites, setUpcomingTramites] = useState<UpcomingTramite[]>([])
   const [showMobileAnalytics, setShowMobileAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
@@ -76,28 +55,6 @@ export default function Home() {
         status: t.estado
       }))
       setRecentActivity(activity)
-
-      // Upcoming Tramites (próximos 7 días)
-      const today = new Date()
-      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
-      
-      const upcoming = tramitesData
-        .filter(t => {
-          if (!t.fecha_programada) return false
-          const fechaTramite = new Date(t.fecha_programada)
-          return fechaTramite >= today && fechaTramite <= nextWeek && t.estado !== "completado" && t.estado !== "cancelado"
-        })
-        .slice(0, 4)
-        .map(t => ({
-          id: t.id,
-          equipo: `${t.equipos?.marca || ""} ${t.equipos?.modelo || ""}`,
-          cliente: t.clientes?.nombre || "Sin cliente",
-          fecha: new Date(t.fecha_programada).toLocaleDateString("es-UY"),
-          tipo: t.tipo,
-          estado: t.estado
-        }))
-
-      setUpcomingTramites(upcoming)
     } catch (error) {
       console.error("Error cargando dashboard:", error)
     } finally {
@@ -183,7 +140,7 @@ export default function Home() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
-          {/* Left Column - Activity + Upcoming */}
+          {/* Left Column - Activity */}
           <div className="lg:col-span-2 space-y-6">
             
             {/* Recent Activity */}
@@ -235,42 +192,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Upcoming Tramites */}
-            <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-5 border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Próximos 7 Días
-                </h2>
-              </div>
-              
-              {loading ? (
-                <div className="text-center py-8 text-gray-500">Cargando...</div>
-              ) : upcomingTramites.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="text-sm">No hay trámites programados</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingTramites.map((tramite) => (
-                    <div key={tramite.id} className="p-3 rounded-lg bg-white/5 border border-white/5 hover:border-white/20 transition-all">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-white">{tramite.equipo}</p>
-                          <p className="text-xs text-gray-400">{tramite.cliente}</p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-xs font-semibold text-white">{tramite.fecha}</p>
-                          <p className="text-xs text-gray-500">{tramite.tipo === "mantenimiento" ? "🔧 Mant." : "💰 Abono"}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Right Column - Quick Actions + Notifications */}
