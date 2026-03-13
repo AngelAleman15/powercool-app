@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 
@@ -14,6 +14,7 @@ export default function Tramites() {
   const [tipoTramite, setTipoTramite] = useState("mantenimiento")
   const [editingTramite, setEditingTramite] = useState(null)
   const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(null)
+  const closeEstadoMenuRef = useRef(null)
   
   const [formData, setFormData] = useState({
     tipo: "mantenimiento",
@@ -47,6 +48,14 @@ export default function Tramites() {
 
     document.addEventListener("pointerdown", cerrarMenuEstado)
     return () => document.removeEventListener("pointerdown", cerrarMenuEstado)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (closeEstadoMenuRef.current) {
+        clearTimeout(closeEstadoMenuRef.current)
+      }
+    }
   }, [])
 
   const cargarDatos = async () => {
@@ -176,7 +185,23 @@ export default function Tramites() {
     })
   }
 
-  const getEstadoBadge = (estado, tramiteId) => {
+  const openEstadoMenu = (tramiteId) => {
+    if (closeEstadoMenuRef.current) {
+      clearTimeout(closeEstadoMenuRef.current)
+    }
+    setEstadoMenuAbierto(tramiteId)
+  }
+
+  const scheduleCloseEstadoMenu = (tramiteId) => {
+    if (closeEstadoMenuRef.current) {
+      clearTimeout(closeEstadoMenuRef.current)
+    }
+    closeEstadoMenuRef.current = setTimeout(() => {
+      setEstadoMenuAbierto((prev) => (prev === tramiteId ? null : prev))
+    }, 160)
+  }
+
+  const getEstadoBadge = (estado, tramiteId, canChange = true) => {
     const estilos = {
       pendiente: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
       en_proceso: "bg-blue-500/20 text-blue-500 border-blue-500/30",
@@ -191,16 +216,27 @@ export default function Tramites() {
       cancelado: "Cancelado"
     }
     
+    if (!canChange) {
+      return (
+        <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]}`}>
+          {textos[estado]}
+        </span>
+      )
+    }
+
     return (
       <div
         className="relative estado-menu-wrapper"
-        onMouseEnter={() => setEstadoMenuAbierto(tramiteId)}
-        onMouseLeave={() => setEstadoMenuAbierto((prev) => (prev === tramiteId ? null : prev))}
+        onMouseEnter={() => openEstadoMenu(tramiteId)}
+        onMouseLeave={() => scheduleCloseEstadoMenu(tramiteId)}
       >
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation()
+            if (closeEstadoMenuRef.current) {
+              clearTimeout(closeEstadoMenuRef.current)
+            }
             setEstadoMenuAbierto((prev) => (prev === tramiteId ? null : tramiteId))
           }}
           className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]} hover:brightness-110 transition-all`}
@@ -210,7 +246,11 @@ export default function Tramites() {
         </button>
 
         {estadoMenuAbierto === tramiteId && (
-          <div className="absolute left-0 top-[calc(100%+6px)] z-30 min-w-[150px] rounded-lg border border-white/15 bg-[#0c0d10] p-1.5 shadow-xl">
+          <div
+            className="absolute left-0 top-full mt-1 z-30 min-w-[150px] rounded-lg border border-white/15 bg-[#0c0d10] p-1.5 shadow-xl"
+            onMouseEnter={() => openEstadoMenu(tramiteId)}
+            onMouseLeave={() => scheduleCloseEstadoMenu(tramiteId)}
+          >
             {Object.entries(textos).map(([estadoKey, estadoLabel]) => (
               <button
                 key={estadoKey}
@@ -326,7 +366,7 @@ export default function Tramites() {
                           <p className="text-sm font-semibold text-white truncate">
                             {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : "Equipo no especificado"}
                           </p>
-                          {getEstadoBadge(tramite.estado, tramite.id)}
+                          {getEstadoBadge(tramite.estado, tramite.id, false)}
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300 uppercase tracking-wide">
                             {tramite.tipo}
                           </span>
