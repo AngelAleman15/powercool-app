@@ -76,7 +76,6 @@ body {
 .rbc-day-slot,
 .rbc-day-bg,
 .rbc-row-bg,
-.rbc-row-content,
 .rbc-time-header-content,
 .rbc-time-header-gutter {
   background: #0f1115;
@@ -100,8 +99,16 @@ body {
   min-height: 80px;
 }
 
+.rbc-row-content {
+  background: transparent;
+}
+
 .rbc-day-bg {
   border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rbc-month-row .rbc-row-bg {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .rbc-day-bg.rbc-today {
