@@ -134,7 +134,6 @@ export default function CalendarioPage() {
         opacity: 0.9,
         color: 'white',
         border: '0px',
-        display: 'block',
         fontSize: '12px',
         padding: '2px 5px'
       }
