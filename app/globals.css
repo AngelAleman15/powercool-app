@@ -99,9 +99,25 @@ body {
 }
 
 .rbc-month-row + .rbc-month-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
 }
 
+@keyframes toolbar-blink-white {
+  0% {
+    background: rgba(14, 116, 144, 0.22);
+    color: white;
+  }
+  45% {
+    background: #ffffff;
+    color: #030712;
+    border-color: #ffffff;
+  }
+  100% {
+    background: rgba(14, 116, 144, 0.22);
+    color: white;
+    border-color: rgba(56, 189, 248, 0.3);
+  }
+}
 .rbc-row-content {
   background: transparent;
 }
@@ -112,6 +128,10 @@ body {
 
 .rbc-row-bg .rbc-day-bg:first-child {
   border-left: none;
+}
+
+.rbc-row-bg .rbc-day-bg:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .rbc-day-bg.rbc-today {
@@ -178,6 +198,10 @@ body {
 
 .rbc-toolbar button:active {
   transform: translateY(0);
+}
+
+.rbc-toolbar .rbc-btn-group:first-child button:active {
+  animation: toolbar-blink-white 260ms ease-out;
 }
 
 .rbc-toolbar button.rbc-active {
