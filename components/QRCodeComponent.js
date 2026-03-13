@@ -9,8 +9,10 @@ export default function QRCodeComponent({ id }) {
 
   useEffect(()=>{
 
+    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+
     QRCode.toDataURL(
-      `http://localhost:3000/equipos/${id}`,
+      `${origin}/equipos/${id}`,
       {
         width: 300,
         margin: 2,

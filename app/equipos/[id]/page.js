@@ -6,24 +6,47 @@ import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import QRCodeComponent from "@/components/QRCodeComponent"
 import Link from "next/link"
+import { useDemoMode } from "@/lib/useDemoMode"
+import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 
 export default function EquipoPage({ params }) {
 
   const [equipo, setEquipo] = useState(null)
+  const [historial, setHistorial] = useState([])
   const [loading, setLoading] = useState(true)
   const [showExportModal, setShowExportModal] = useState(false)
   const [incluirHistorial, setIncluirHistorial] = useState(true)
+  const { demoMode } = useDemoMode()
 
   const fichaRef = useRef()
   const historialRef = useRef()
 
   useEffect(() => {
     cargarEquipo()
-  }, [])
+  }, [demoMode])
 
   const cargarEquipo = async () => {
     setLoading(true)
     const { id } = await params
+
+    const isDemoId = String(id).startsWith("DEMO-EQ-")
+    if (demoMode || isDemoId) {
+      const demoEquipo = DEMO_EQUIPOS.find((e) => String(e.id) === String(id))
+      if (demoEquipo) {
+        const demoCliente = DEMO_CLIENTES.find((c) => c.id === demoEquipo.cliente_id)
+        const demoHistorial = DEMO_TRAMITES
+          .filter((t) => t.equipo_id === demoEquipo.id)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+        setEquipo({
+          ...demoEquipo,
+          clientes: demoCliente || null,
+        })
+        setHistorial(demoHistorial)
+        setLoading(false)
+        return
+      }
+    }
 
     const { data } = await supabase
       .from("equipos")
@@ -32,6 +55,19 @@ export default function EquipoPage({ params }) {
       .single()
 
     setEquipo(data)
+
+    if (data?.id) {
+      const { data: historialData } = await supabase
+        .from("tramites")
+        .select("id, tipo, estado, created_at, fecha_programada")
+        .eq("equipo_id", data.id)
+        .order("created_at", { ascending: false })
+
+      setHistorial(historialData || [])
+    } else {
+      setHistorial([])
+    }
+
     setLoading(false)
   }
 
@@ -219,7 +255,21 @@ export default function EquipoPage({ params }) {
                 </svg>
                 <h3 className="text-lg font-bold text-white">Historial de Mantenimiento</h3>
               </div>
-              <p className="text-sm text-gray-500">Esta funcionalidad estará disponible próximamente</p>
+              {historial.length === 0 ? (
+                <p className="text-sm text-gray-500">Sin historial registrado</p>
+              ) : (
+                <div className="space-y-2 mt-2">
+                  {historial.slice(0, 8).map((item) => (
+                    <div key={item.id} className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-white uppercase tracking-wide">{item.tipo}</p>
+                        <span className="text-[10px] text-gray-300">{new Date(item.created_at).toLocaleDateString("es-UY")}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">Estado: {String(item.estado).replace("_", " ")}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
