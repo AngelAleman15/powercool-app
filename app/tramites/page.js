@@ -13,6 +13,7 @@ export default function Tramites() {
   const [showEquipoModal, setShowEquipoModal] = useState(false)
   const [tipoTramite, setTipoTramite] = useState("mantenimiento")
   const [editingTramite, setEditingTramite] = useState(null)
+  const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(null)
   
   const [formData, setFormData] = useState({
     tipo: "mantenimiento",
@@ -35,6 +36,17 @@ export default function Tramites() {
 
   useEffect(() => {
     cargarDatos()
+  }, [])
+
+  useEffect(() => {
+    const cerrarMenuEstado = (event) => {
+      if (!event.target.closest(".estado-menu-wrapper")) {
+        setEstadoMenuAbierto(null)
+      }
+    }
+
+    document.addEventListener("pointerdown", cerrarMenuEstado)
+    return () => document.removeEventListener("pointerdown", cerrarMenuEstado)
   }, [])
 
   const cargarDatos = async () => {
@@ -91,17 +103,6 @@ export default function Tramites() {
     if (!error) {
       cargarDatos()
     }
-  }
-
-  const getNextEstado = (estadoActual) => {
-    const orden = ["pendiente", "en_proceso", "completado", "cancelado"]
-    const idx = orden.indexOf(estadoActual)
-    return orden[(idx + 1) % orden.length]
-  }
-
-  const cambiarEstadoDesdeBadge = (tramite) => {
-    const siguiente = getNextEstado(tramite.estado)
-    cambiarEstado(tramite.id, siguiente)
   }
 
   const equiposFiltrados = formData.cliente_id 
@@ -175,7 +176,7 @@ export default function Tramites() {
     })
   }
 
-  const getEstadoBadge = (estado, onClick) => {
+  const getEstadoBadge = (estado, tramiteId) => {
     const estilos = {
       pendiente: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
       en_proceso: "bg-blue-500/20 text-blue-500 border-blue-500/30",
@@ -191,14 +192,46 @@ export default function Tramites() {
     }
     
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]} hover:brightness-110 transition-all`}
-        title="Click para cambiar estado"
+      <div
+        className="relative estado-menu-wrapper"
+        onMouseEnter={() => setEstadoMenuAbierto(tramiteId)}
+        onMouseLeave={() => setEstadoMenuAbierto((prev) => (prev === tramiteId ? null : prev))}
       >
-        {textos[estado]}
-      </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setEstadoMenuAbierto((prev) => (prev === tramiteId ? null : tramiteId))
+          }}
+          className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]} hover:brightness-110 transition-all`}
+          title="Hover o toque para cambiar estado"
+        >
+          {textos[estado]}
+        </button>
+
+        {estadoMenuAbierto === tramiteId && (
+          <div className="absolute left-0 top-[calc(100%+6px)] z-30 min-w-[150px] rounded-lg border border-white/15 bg-[#0c0d10] p-1.5 shadow-xl">
+            {Object.entries(textos).map(([estadoKey, estadoLabel]) => (
+              <button
+                key={estadoKey}
+                type="button"
+                disabled={estadoKey === estado}
+                onClick={() => {
+                  cambiarEstado(tramiteId, estadoKey)
+                  setEstadoMenuAbierto(null)
+                }}
+                className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-all ${
+                  estadoKey === estado
+                    ? "bg-white/10 text-gray-500 cursor-default"
+                    : "text-white hover:bg-white/10"
+                }`}
+              >
+                {estadoLabel}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     )
   }
 
@@ -293,7 +326,7 @@ export default function Tramites() {
                           <p className="text-sm font-semibold text-white truncate">
                             {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : "Equipo no especificado"}
                           </p>
-                          {getEstadoBadge(tramite.estado, () => cambiarEstadoDesdeBadge(tramite))}
+                          {getEstadoBadge(tramite.estado, tramite.id)}
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300 uppercase tracking-wide">
                             {tramite.tipo}
                           </span>
@@ -349,7 +382,7 @@ export default function Tramites() {
                         <h3 className="text-base font-bold text-white">
                           {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : 'Equipo no especificado'}
                         </h3>
-                        {getEstadoBadge(tramite.estado, () => cambiarEstadoDesdeBadge(tramite))}
+                        {getEstadoBadge(tramite.estado, tramite.id)}
                       </div>
                       {tramite.clientes && (
                         <p className="text-xs text-gray-400 mb-2">
