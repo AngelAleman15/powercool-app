@@ -4,8 +4,7 @@ const urlsToCache = [
   '/',
   '/equipos',
   '/clientes',
-  '/tramites',
-  '/manifest.json'
+  '/tramites'
 ];
 
 // Instalación del Service Worker
@@ -33,9 +32,15 @@ self.addEventListener('activate', (event) => {
 
 // Estrategia de cache: Network First, fallback to Cache
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
+        if (!response || !response.ok) {
+          return response;
+        }
+
         // Clonar la respuesta
         const responseToCache = response.clone();
         caches.open(CACHE_NAME)

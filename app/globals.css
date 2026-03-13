@@ -95,12 +95,11 @@ body {
 }
 
 .rbc-month-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
   min-height: 80px;
 }
 
-.rbc-month-row:first-child {
-  border-top: none;
+.rbc-month-row + .rbc-month-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .rbc-row-content {
@@ -109,6 +108,10 @@ body {
 
 .rbc-row-bg .rbc-day-bg + .rbc-day-bg {
   border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rbc-row-bg .rbc-day-bg:first-child {
+  border-left: none;
 }
 
 .rbc-day-bg.rbc-today {
@@ -120,11 +123,11 @@ body {
 }
 
 .rbc-off-range {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .rbc-off-range .rbc-button-link {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .rbc-date-cell,
