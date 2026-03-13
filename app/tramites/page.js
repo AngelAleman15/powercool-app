@@ -366,7 +366,7 @@ export default function Tramites() {
                           <p className="text-sm font-semibold text-white truncate">
                             {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : "Equipo no especificado"}
                           </p>
-                          {getEstadoBadge(tramite.estado, tramite.id, false)}
+                          {getEstadoBadge(tramite.estado, tramite.id)}
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300 uppercase tracking-wide">
                             {tramite.tipo}
                           </span>
