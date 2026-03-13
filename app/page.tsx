@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import NotificationSettings from "@/components/NotificationSettings"
 import DashboardCharts from "@/components/DashboardCharts"
+import { useDemoMode } from "@/lib/useDemoMode"
+import { DEMO_ACTIVITY, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
 
 type ActivityItem = {
   id: number
@@ -21,36 +23,6 @@ type Tramite = {
   [key: string]: any
 }
 
-const DEMO_TRAMITES: Tramite[] = [
-  { id: 9001, tipo: "mantenimiento", estado: "completado", created_at: "2026-01-08T10:00:00.000Z" },
-  { id: 9002, tipo: "mantenimiento", estado: "pendiente", created_at: "2026-01-16T15:20:00.000Z" },
-  { id: 9003, tipo: "abono", estado: "completado", created_at: "2026-01-22T12:40:00.000Z" },
-  { id: 9004, tipo: "mantenimiento", estado: "en_proceso", created_at: "2026-02-03T09:10:00.000Z" },
-  { id: 9005, tipo: "abono", estado: "pendiente", created_at: "2026-02-10T18:05:00.000Z" },
-  { id: 9006, tipo: "mantenimiento", estado: "completado", created_at: "2026-02-19T14:30:00.000Z" },
-  { id: 9007, tipo: "abono", estado: "completado", created_at: "2026-02-26T11:00:00.000Z" },
-  { id: 9008, tipo: "mantenimiento", estado: "pendiente", created_at: "2026-03-02T16:10:00.000Z" },
-  { id: 9009, tipo: "abono", estado: "en_proceso", created_at: "2026-03-06T13:15:00.000Z" },
-  { id: 9010, tipo: "mantenimiento", estado: "pendiente", created_at: "2026-03-09T10:25:00.000Z" },
-  { id: 9011, tipo: "abono", estado: "cancelado", created_at: "2026-03-10T19:30:00.000Z" },
-  { id: 9012, tipo: "mantenimiento", estado: "completado", created_at: "2026-03-12T08:45:00.000Z" }
-]
-
-const DEMO_ACTIVITY: ActivityItem[] = [
-  { id: 9012, type: "mantenimiento", description: "🔧 Daikin Inverter 12000 - Hotel Central", date: "12/03/2026", status: "completado" },
-  { id: 9010, type: "mantenimiento", description: "🔧 Samsung Windfree - Clínica Norte", date: "09/03/2026", status: "pendiente" },
-  { id: 9009, type: "abono", description: "💰 Pago mensual - Residencial Atlántida", date: "06/03/2026", status: "en_proceso" },
-  { id: 9008, type: "mantenimiento", description: "🔧 Midea Xtreme Save - Oficina Delta", date: "02/03/2026", status: "pendiente" },
-  { id: 9007, type: "abono", description: "💰 Abono acordado - Edificio Arena", date: "26/02/2026", status: "completado" }
-]
-
-const DEMO_STATS = {
-  equipos: 32,
-  mantenimientos: 18,
-  clientes: 21,
-  pendientes: 6
-}
-
 export default function Home() {
   const [stats, setStats] = useState({ equipos: 0, mantenimientos: 0, clientes: 0, pendientes: 0 })
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
@@ -58,7 +30,7 @@ export default function Home() {
   const [showMobileAnalytics, setShowMobileAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
-  const [demoMode, setDemoMode] = useState(false)
+  const { demoMode, setDemoModePersistent } = useDemoMode()
 
   useEffect(() => {
     setMounted(true)
@@ -128,7 +100,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setDemoMode((prev) => !prev)}
+              onClick={() => setDemoModePersistent(!demoMode)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                 demoMode
                   ? "bg-green-500/20 text-green-300 border-green-500/40"

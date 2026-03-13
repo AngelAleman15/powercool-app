@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import { useDemoMode } from "@/lib/useDemoMode"
+import { DEMO_CLIENTES } from "@/lib/demoData"
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
@@ -18,8 +20,15 @@ export default function Clientes() {
   })
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const { demoMode } = useDemoMode()
 
   const cargarClientes = async () => {
+    if (demoMode) {
+      setClientes(DEMO_CLIENTES)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     const { data } = await supabase
       .from("clientes")
@@ -32,7 +41,7 @@ export default function Clientes() {
 
   useEffect(() => {
     cargarClientes()
-  }, [])
+  }, [demoMode])
 
   const filtrados = clientes.filter(c =>
     c.nombre?.toLowerCase().includes(search.toLowerCase()) ||
@@ -43,6 +52,12 @@ export default function Clientes() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (demoMode) {
+      setShowModal(false)
+      setEditingId(null)
+      return
+    }
+
     setSaving(true)
 
     let error
@@ -75,6 +90,7 @@ export default function Clientes() {
   }
 
   const handleEdit = (cliente) => {
+    if (demoMode) return
     setEditingId(cliente.id)
     setFormData({
       nombre: cliente.nombre || "",
@@ -103,10 +119,18 @@ export default function Clientes() {
           <p className="text-xs text-gray-400">
             Gestión de clientes
           </p>
+          {demoMode && (
+            <p className="mt-1 text-[11px] text-green-300">Modo Demo activo: datos de muestra</p>
+          )}
         </div>
         <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all w-full sm:w-auto justify-center"
+          onClick={() => !demoMode && setShowModal(true)}
+          disabled={demoMode}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full sm:w-auto justify-center ${
+            demoMode
+              ? "bg-white/10 text-gray-400 cursor-not-allowed"
+              : "bg-white text-black hover:bg-gray-200"
+          }`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -221,6 +245,7 @@ export default function Clientes() {
                     </Link>
                     <button
                       onClick={() => handleEdit(cliente)}
+                      disabled={demoMode}
                       className="px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs font-semibold hover:bg-white/10 transition-all"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

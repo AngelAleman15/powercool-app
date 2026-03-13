@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import { useDemoMode } from "@/lib/useDemoMode"
+import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 
 export default function Tramites() {
   const [tramites, setTramites] = useState([])
@@ -15,6 +17,7 @@ export default function Tramites() {
   const [editingTramite, setEditingTramite] = useState(null)
   const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(null)
   const closeEstadoMenuRef = useRef(null)
+  const { demoMode } = useDemoMode()
   
   const [formData, setFormData] = useState({
     tipo: "mantenimiento",
@@ -37,7 +40,7 @@ export default function Tramites() {
 
   useEffect(() => {
     cargarDatos()
-  }, [])
+  }, [demoMode])
 
   useEffect(() => {
     const cerrarMenuEstado = (event) => {
@@ -59,6 +62,14 @@ export default function Tramites() {
   }, [])
 
   const cargarDatos = async () => {
+    if (demoMode) {
+      setTramites(DEMO_TRAMITES)
+      setEquipos(DEMO_EQUIPOS.map((e) => ({ id: e.id, marca: e.marca, modelo: e.modelo, cliente_id: e.cliente_id })))
+      setClientes(DEMO_CLIENTES)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     
     const [{ data: tramitesData }, { data: equiposData }, { data: clientesData }] = await Promise.all([
@@ -88,6 +99,7 @@ export default function Tramites() {
   }
 
   const crearEquipoRapido = async () => {
+    if (demoMode) return
     
     const { data, error } = await supabase
       .from("equipos")
@@ -104,6 +116,11 @@ export default function Tramites() {
   }
 
   const cambiarEstado = async (tramiteId, nuevoEstado) => {
+    if (demoMode) {
+      setTramites((prev) => prev.map((t) => (t.id === tramiteId ? { ...t, estado: nuevoEstado } : t)))
+      return
+    }
+
     const { error } = await supabase
       .from("tramites")
       .update({ estado: nuevoEstado })
@@ -120,6 +137,12 @@ export default function Tramites() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (demoMode) {
+      setShowModal(false)
+      setEditingTramite(null)
+      return
+    }
     
     let error
     if (editingTramite) {
@@ -294,10 +317,18 @@ export default function Tramites() {
           <p className="text-xs text-gray-400">
             Gestión de mantenimientos y abonos
           </p>
+          {demoMode && (
+            <p className="mt-1 text-[11px] text-green-300">Modo Demo activo: datos de muestra</p>
+          )}
         </div>
         <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all w-full sm:w-auto justify-center"
+          onClick={() => !demoMode && setShowModal(true)}
+          disabled={demoMode}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full sm:w-auto justify-center ${
+            demoMode
+              ? "bg-white/10 text-gray-400 cursor-not-allowed"
+              : "bg-white text-black hover:bg-gray-200"
+          }`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

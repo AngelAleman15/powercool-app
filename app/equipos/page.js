@@ -3,14 +3,23 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import { useDemoMode } from "@/lib/useDemoMode"
+import { DEMO_EQUIPOS } from "@/lib/demoData"
 
 export default function Equipos() {
 
   const [equipos,setEquipos] = useState([])
   const [search,setSearch] = useState("")
   const [loading,setLoading] = useState(true)
+  const { demoMode } = useDemoMode()
 
   const cargarEquipos = async () => {
+    if (demoMode) {
+      setEquipos(DEMO_EQUIPOS)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     const { data } = await supabase
       .from("equipos")
@@ -22,7 +31,7 @@ export default function Equipos() {
 
   useEffect(()=>{
     cargarEquipos()
-  },[])
+  },[demoMode])
 
   const filtrados = equipos.filter(e =>
     e.modelo?.toLowerCase().includes(search.toLowerCase()) ||
@@ -44,16 +53,30 @@ export default function Equipos() {
           <p className="text-xs text-gray-400">
             Gestión y control de equipos de climatización
           </p>
+          {demoMode && (
+            <p className="mt-1 text-[11px] text-green-300">Modo Demo activo: datos de muestra</p>
+          )}
         </div>
-        <Link
-          href="/equipos/nuevo"
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all w-full sm:w-auto justify-center"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo Equipo
-        </Link>
+        {demoMode ? (
+          <button
+            type="button"
+            disabled
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 text-gray-400 rounded-lg text-sm font-semibold w-full sm:w-auto justify-center cursor-not-allowed"
+            title="Deshabilitado en modo demo"
+          >
+            Nuevo Equipo
+          </button>
+        ) : (
+          <Link
+            href="/equipos/nuevo"
+            className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all w-full sm:w-auto justify-center"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo Equipo
+          </Link>
+        )}
       </div>
 
       {/* Search Bar */}
