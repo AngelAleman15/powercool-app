@@ -93,6 +93,17 @@ export default function Tramites() {
     }
   }
 
+  const getNextEstado = (estadoActual) => {
+    const orden = ["pendiente", "en_proceso", "completado", "cancelado"]
+    const idx = orden.indexOf(estadoActual)
+    return orden[(idx + 1) % orden.length]
+  }
+
+  const cambiarEstadoDesdeBadge = (tramite) => {
+    const siguiente = getNextEstado(tramite.estado)
+    cambiarEstado(tramite.id, siguiente)
+  }
+
   const equiposFiltrados = formData.cliente_id 
     ? equipos.filter(e => e.cliente_id === formData.cliente_id)
     : []
@@ -164,7 +175,7 @@ export default function Tramites() {
     })
   }
 
-  const getEstadoBadge = (estado) => {
+  const getEstadoBadge = (estado, onClick) => {
     const estilos = {
       pendiente: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
       en_proceso: "bg-blue-500/20 text-blue-500 border-blue-500/30",
@@ -180,11 +191,24 @@ export default function Tramites() {
     }
     
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]} hover:brightness-110 transition-all`}
+        title="Click para cambiar estado"
+      >
         {textos[estado]}
-      </span>
+      </button>
     )
   }
+
+  const tramitesActivos = tramites.filter(
+    (t) => t.tipo === tipoTramite && t.estado !== "completado" && t.estado !== "cancelado"
+  )
+
+  const tramitesHistorial = tramites
+    .slice()
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
   return (
     <div className="px-4 sm:px-6 py-4 sm:py-6">
@@ -231,6 +255,16 @@ export default function Tramites() {
         >
           Abonos
         </button>
+        <button
+          onClick={() => setTipoTramite("historial")}
+          className={`px-4 py-2 text-sm font-medium transition-all ${
+            tipoTramite === "historial"
+              ? "text-white border-b-2 border-white"
+              : "text-gray-400 hover:text-white"
+          }`}
+        >
+          Historial
+        </button>
       </div>
 
       {/* Loading State */}
@@ -240,22 +274,71 @@ export default function Tramites() {
         </div>
       ) : (
         <>
-          {/* Tramites List */}
-          {tramites.filter(t => t.tipo === tipoTramite).length === 0 ? (
+          {/* Historial */}
+          {tipoTramite === "historial" ? (
+            tramitesHistorial.length === 0 ? (
+              <div className="text-center py-12 bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl border border-white/10">
+                <svg className="mx-auto h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 className="mt-2 text-xs font-medium text-white">No hay trámites en historial</h3>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl border border-white/10 p-3 sm:p-4 max-h-[68vh] overflow-y-auto no-scrollbar space-y-2">
+                {tramitesHistorial.map((tramite) => (
+                  <div key={tramite.id} className="rounded-lg border border-white/10 bg-black/20 p-2.5 sm:p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : "Equipo no especificado"}
+                          </p>
+                          {getEstadoBadge(tramite.estado, () => cambiarEstadoDesdeBadge(tramite))}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300 uppercase tracking-wide">
+                            {tramite.tipo}
+                          </span>
+                        </div>
+                        {tramite.clientes && <p className="text-xs text-gray-400">{tramite.clientes.nombre}</p>}
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          Creado: {new Date(tramite.created_at).toLocaleDateString("es-UY")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Link
+                          href={`/tramites/${tramite.id}`}
+                          className="px-2.5 py-1.5 rounded-md bg-white/10 text-white text-xs hover:bg-white/20 transition-all"
+                        >
+                          Ver
+                        </Link>
+                        <button
+                          onClick={() => handleEditTramite(tramite)}
+                          className="px-2.5 py-1.5 rounded-md bg-white text-black text-xs font-semibold hover:bg-gray-200 transition-all"
+                        >
+                          Editar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) :
+          /* Tramites Activos por categoria */
+          tramitesActivos.length === 0 ? (
             <div className="text-center py-12 bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl border border-white/10">
               <svg className="mx-auto h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <h3 className="mt-2 text-xs font-medium text-white">
-                No hay {tipoTramite === "mantenimiento" ? "mantenimientos" : "abonos"} registrados
+                No hay {tipoTramite === "mantenimiento" ? "mantenimientos" : "abonos"} activos
               </h3>
               <p className="mt-1 text-xs text-gray-500">
-                Crea uno nuevo para comenzar
+                Los completados y cancelados están en Historial
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {tramites.filter(t => t.tipo === tipoTramite).map(tramite => (
+              {tramitesActivos.map(tramite => (
                 <div
                   key={tramite.id}
                   className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-lg border border-white/10 p-4 hover:border-white/30 transition-all"
@@ -266,7 +349,7 @@ export default function Tramites() {
                         <h3 className="text-base font-bold text-white">
                           {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : 'Equipo no especificado'}
                         </h3>
-                        {getEstadoBadge(tramite.estado)}
+                        {getEstadoBadge(tramite.estado, () => cambiarEstadoDesdeBadge(tramite))}
                       </div>
                       {tramite.clientes && (
                         <p className="text-xs text-gray-400 mb-2">
@@ -297,9 +380,15 @@ export default function Tramites() {
                     </div>
                   </div>
                   
-                  {/* Selector de Estado */}
+                  {/* Acciones */}
                   <div className="border-t border-white/10 pt-3">
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/tramites/${tramite.id}`}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-semibold hover:bg-white/20 transition-all"
+                      >
+                        Ver detalle
+                      </Link>
                       <button
                         onClick={() => handleEditTramite(tramite)}
                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white text-black rounded-lg text-xs font-semibold hover:bg-gray-200 transition-all"
@@ -310,19 +399,6 @@ export default function Tramites() {
                         Editar
                       </button>
                     </div>
-                    <label className="block text-xs font-medium text-gray-400 mb-2">
-                      Cambiar estado:
-                    </label>
-                    <select
-                      value={tramite.estado}
-                      onChange={(e) => cambiarEstado(tramite.id, e.target.value)}
-                      className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="en_proceso">En Proceso</option>
-                      <option value="completado">Completado</option>
-                      <option value="cancelado">Cancelado</option>
-                    </select>
                   </div>
                 </div>
               ))}
