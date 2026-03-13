@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -26,14 +26,35 @@ export default function CalendarioPage() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showMobileStats, setShowMobileStats] = useState(false)
+  const [currentView, setCurrentView] = useState('month')
+  const [hoverMenu, setHoverMenu] = useState(null)
+  const calendarShellRef = useRef(null)
 
   const parseLocalDate = (dateValue) => {
     if (!dateValue) return null
     const dateStr = String(dateValue).slice(0, 10)
     const [year, month, day] = dateStr.split('-').map(Number)
     if (!year || !month || !day) return null
-    return new Date(year, month - 1, day, 12, 0, 0, 0)
+    return new Date(year, month - 1, day, 0, 0, 0, 0)
   }
+
+  const toDayKey = (date) => format(date, 'yyyy-MM-dd')
+
+  const hiddenEventsByDay = useMemo(() => {
+    const grouped = {}
+    events.forEach((event) => {
+      const dayKey = event.dayKey
+      if (!grouped[dayKey]) grouped[dayKey] = []
+      grouped[dayKey].push(event)
+    })
+
+    const hiddenMap = {}
+    Object.keys(grouped).forEach((dayKey) => {
+      hiddenMap[dayKey] = grouped[dayKey].slice(3)
+    })
+
+    return hiddenMap
+  }, [events])
 
   useEffect(() => {
     cargarTramites()
@@ -52,27 +73,40 @@ export default function CalendarioPage() {
       // Convertir trámites a eventos del calendario
       const eventos = data
         .filter(t => t.fecha_programada && t.estado !== 'cancelado')
-        .map(t => {
+        .map((t) => {
           const startDate = parseLocalDate(t.fecha_programada)
           if (!startDate) return null
 
           const endDate = new Date(startDate)
-          endDate.setDate(endDate.getDate() + 1)
+          endDate.setHours(23, 59, 59, 999)
 
           return {
             id: t.id,
             title: `${t.tipo === 'mantenimiento' ? '🔧' : '💰'} ${t.equipos?.marca || ''} ${t.equipos?.modelo || ''} - ${t.clientes?.nombre || 'Sin cliente'}`,
             start: startDate,
             end: endDate,
-            allDay: true,
+            allDay: false,
             resource: t,
             estado: t.estado,
-            tipo: t.tipo
+            tipo: t.tipo,
+            dayKey: toDayKey(startDate)
           }
         })
         .filter(Boolean)
+
+      const dailyOrderMap = {}
+      const eventosConOrden = eventos.map((event) => {
+        const dayKey = event.dayKey
+        const currentOrder = (dailyOrderMap[dayKey] || 0) + 1
+        dailyOrderMap[dayKey] = currentOrder
+
+        return {
+          ...event,
+          dayOrder: currentOrder
+        }
+      })
       
-      setEvents(eventos)
+      setEvents(eventosConOrden)
     }
     setLoading(false)
   }
@@ -94,6 +128,7 @@ export default function CalendarioPage() {
 
     return {
       style: {
+        display: currentView === 'month' && event.dayOrder > 3 ? 'none' : 'block',
         backgroundColor,
         borderRadius: '6px',
         opacity: 0.9,
@@ -104,6 +139,44 @@ export default function CalendarioPage() {
         padding: '2px 5px'
       }
     }
+  }
+
+  const handleDayHover = (event, dateValue) => {
+    if (currentView !== 'month' || !calendarShellRef.current) return
+
+    const dayKey = toDayKey(dateValue)
+    const hidden = hiddenEventsByDay[dayKey] || []
+    if (hidden.length === 0) {
+      setHoverMenu(null)
+      return
+    }
+
+    const cellRect = event.currentTarget.getBoundingClientRect()
+    const shellRect = calendarShellRef.current.getBoundingClientRect()
+
+    setHoverMenu({
+      dayKey,
+      hidden,
+      dateValue,
+      top: cellRect.top - shellRect.top + 6,
+      left: cellRect.left - shellRect.left + 6
+    })
+  }
+
+  const handleDayLeave = () => {
+    setHoverMenu(null)
+  }
+
+  const DateCellWrapper = ({ value, children }) => {
+    return (
+      <div
+        className="h-full w-full"
+        onMouseEnter={(event) => handleDayHover(event, value)}
+        onMouseLeave={handleDayLeave}
+      >
+        {children}
+      </div>
+    )
   }
 
   const handleSelectEvent = (event) => {
@@ -162,13 +235,13 @@ export default function CalendarioPage() {
         </div>
 
         {/* Calendario */}
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 sm:p-6 border border-white/10 overflow-hidden">
+        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 sm:p-6 border border-white/10 overflow-visible">
           {loading ? (
             <div className="text-center py-12">
               <p className="text-gray-400">Cargando calendario...</p>
             </div>
           ) : (
-            <div className="calendar-shell h-[360px] sm:h-[560px] lg:h-[640px]">
+            <div ref={calendarShellRef} className="calendar-shell relative h-[360px] sm:h-[560px] lg:h-[640px]">
               <Calendar
                 localizer={localizer}
                 events={events}
@@ -179,6 +252,10 @@ export default function CalendarioPage() {
                 style={{ height: '100%' }}
                 eventPropGetter={eventStyleGetter}
                 onSelectEvent={handleSelectEvent}
+                onView={setCurrentView}
+                components={{
+                  dateCellWrapper: DateCellWrapper
+                }}
                 messages={{
                   next: "Sig",
                   previous: "Ant",
@@ -195,6 +272,35 @@ export default function CalendarioPage() {
                 }}
                 culture="es"
               />
+
+              {hoverMenu && currentView === 'month' && (
+                <div
+                  className="calendar-hover-menu absolute z-40 w-72 max-w-[90vw] rounded-lg border border-white/15 bg-[#10131a] shadow-2xl p-3"
+                  style={{ top: hoverMenu.top, left: hoverMenu.left }}
+                  onMouseEnter={() => setHoverMenu(hoverMenu)}
+                  onMouseLeave={handleDayLeave}
+                >
+                  <p className="text-xs text-gray-300 mb-2 font-semibold">
+                    {hoverMenu.dateValue.toLocaleDateString('es-UY', {
+                      weekday: 'long',
+                      day: '2-digit',
+                      month: 'long'
+                    })}
+                  </p>
+
+                  <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar">
+                    {hoverMenu.hidden.map((event) => (
+                      <button
+                        key={`hover-${event.id}`}
+                        className="w-full text-left rounded-md border border-white/10 bg-white/5 px-2 py-1.5 hover:bg-white/10 transition-colors"
+                        onClick={() => setSelectedEvent(event.resource)}
+                      >
+                        <p className="text-[11px] text-gray-100 leading-tight">{event.title}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
