@@ -21,6 +21,36 @@ type Tramite = {
   [key: string]: any
 }
 
+const DEMO_TRAMITES: Tramite[] = [
+  { id: 9001, tipo: "mantenimiento", estado: "completado", created_at: "2026-01-08T10:00:00.000Z" },
+  { id: 9002, tipo: "mantenimiento", estado: "pendiente", created_at: "2026-01-16T15:20:00.000Z" },
+  { id: 9003, tipo: "abono", estado: "completado", created_at: "2026-01-22T12:40:00.000Z" },
+  { id: 9004, tipo: "mantenimiento", estado: "en_proceso", created_at: "2026-02-03T09:10:00.000Z" },
+  { id: 9005, tipo: "abono", estado: "pendiente", created_at: "2026-02-10T18:05:00.000Z" },
+  { id: 9006, tipo: "mantenimiento", estado: "completado", created_at: "2026-02-19T14:30:00.000Z" },
+  { id: 9007, tipo: "abono", estado: "completado", created_at: "2026-02-26T11:00:00.000Z" },
+  { id: 9008, tipo: "mantenimiento", estado: "pendiente", created_at: "2026-03-02T16:10:00.000Z" },
+  { id: 9009, tipo: "abono", estado: "en_proceso", created_at: "2026-03-06T13:15:00.000Z" },
+  { id: 9010, tipo: "mantenimiento", estado: "pendiente", created_at: "2026-03-09T10:25:00.000Z" },
+  { id: 9011, tipo: "abono", estado: "cancelado", created_at: "2026-03-10T19:30:00.000Z" },
+  { id: 9012, tipo: "mantenimiento", estado: "completado", created_at: "2026-03-12T08:45:00.000Z" }
+]
+
+const DEMO_ACTIVITY: ActivityItem[] = [
+  { id: 9012, type: "mantenimiento", description: "🔧 Daikin Inverter 12000 - Hotel Central", date: "12/03/2026", status: "completado" },
+  { id: 9010, type: "mantenimiento", description: "🔧 Samsung Windfree - Clínica Norte", date: "09/03/2026", status: "pendiente" },
+  { id: 9009, type: "abono", description: "💰 Pago mensual - Residencial Atlántida", date: "06/03/2026", status: "en_proceso" },
+  { id: 9008, type: "mantenimiento", description: "🔧 Midea Xtreme Save - Oficina Delta", date: "02/03/2026", status: "pendiente" },
+  { id: 9007, type: "abono", description: "💰 Abono acordado - Edificio Arena", date: "26/02/2026", status: "completado" }
+]
+
+const DEMO_STATS = {
+  equipos: 32,
+  mantenimientos: 18,
+  clientes: 21,
+  pendientes: 6
+}
+
 export default function Home() {
   const [stats, setStats] = useState({ equipos: 0, mantenimientos: 0, clientes: 0, pendientes: 0 })
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
@@ -28,6 +58,7 @@ export default function Home() {
   const [showMobileAnalytics, setShowMobileAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [demoMode, setDemoMode] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -73,6 +104,11 @@ export default function Home() {
       setLoading(false)
     }
   }
+
+  const visibleStats = demoMode ? DEMO_STATS : stats
+  const visibleActivity = demoMode ? DEMO_ACTIVITY : recentActivity
+  const visibleTramites = demoMode ? DEMO_TRAMITES : allTramites
+
   return (
     <div className="px-4 sm:px-6 py-6 sm:py-8">
       <div className="max-w-7xl mx-auto">
@@ -90,8 +126,20 @@ export default function Home() {
               <p className="text-sm text-gray-400">Resumen general del sistema</p>
             </div>
           </div>
-          <div className="text-sm text-gray-500">
-            {mounted ? new Date().toLocaleDateString("es-UY", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Cargando..."}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setDemoMode((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                demoMode
+                  ? "bg-green-500/20 text-green-300 border-green-500/40"
+                  : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"
+              }`}
+            >
+              {demoMode ? "Modo Demo ON" : "Activar Modo Demo"}
+            </button>
+            <div className="text-sm text-gray-500">
+              {mounted ? new Date().toLocaleDateString("es-UY", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Cargando..."}
+            </div>
           </div>
         </div>
 
@@ -110,22 +158,22 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-blue-500/20">
                   <p className="text-xs text-blue-300/80">Equipos</p>
-                  <p className="text-2xl font-bold text-white">{loading ? "..." : stats.equipos}</p>
+                  <p className="text-2xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.equipos}</p>
                 </div>
                 <div className="bg-gradient-to-br from-purple-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-purple-500/20">
                   <p className="text-xs text-purple-300/80">Clientes</p>
-                  <p className="text-2xl font-bold text-white">{loading ? "..." : stats.clientes}</p>
+                  <p className="text-2xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.clientes}</p>
                 </div>
                 <div className="bg-gradient-to-br from-green-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-green-500/20">
                   <p className="text-xs text-green-300/80">Mantenimientos</p>
-                  <p className="text-2xl font-bold text-white">{loading ? "..." : stats.mantenimientos}</p>
+                  <p className="text-2xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.mantenimientos}</p>
                 </div>
                 <div className="bg-gradient-to-br from-amber-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-amber-500/30">
                   <p className="text-xs text-amber-300/80">Pendientes</p>
-                  <p className="text-2xl font-bold text-amber-400">{loading ? "..." : stats.pendientes}</p>
+                  <p className="text-2xl font-bold text-amber-400">{loading && !demoMode ? "..." : visibleStats.pendientes}</p>
                 </div>
               </div>
-              <DashboardCharts tramites={allTramites} />
+              <DashboardCharts tramites={visibleTramites} />
             </div>
           )}
         </div>
@@ -134,24 +182,24 @@ export default function Home() {
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-blue-500/20">
             <p className="text-sm text-blue-300/80 font-medium mb-1">Total Equipos</p>
-            <p className="text-4xl font-bold text-white">{loading ? "..." : stats.equipos}</p>
+            <p className="text-4xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.equipos}</p>
           </div>
           <div className="bg-gradient-to-br from-purple-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-purple-500/20">
             <p className="text-sm text-purple-300/80 font-medium mb-1">Clientes Activos</p>
-            <p className="text-4xl font-bold text-white">{loading ? "..." : stats.clientes}</p>
+            <p className="text-4xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.clientes}</p>
           </div>
           <div className="bg-gradient-to-br from-green-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-green-500/20">
             <p className="text-sm text-green-300/80 font-medium mb-1">Mantenimientos</p>
-            <p className="text-4xl font-bold text-white">{loading ? "..." : stats.mantenimientos}</p>
+            <p className="text-4xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.mantenimientos}</p>
           </div>
           <div className="bg-gradient-to-br from-amber-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-amber-500/30">
             <p className="text-sm text-amber-300/80 font-medium mb-1">Trámites Pendientes</p>
-            <p className="text-4xl font-bold text-amber-400">{loading ? "..." : stats.pendientes}</p>
+            <p className="text-4xl font-bold text-amber-400">{loading && !demoMode ? "..." : visibleStats.pendientes}</p>
           </div>
         </div>
 
         <div className="hidden md:block mb-8">
-          <DashboardCharts tramites={allTramites} />
+          <DashboardCharts tramites={visibleTramites} />
         </div>
 
         {/* Main Content Grid */}
@@ -172,15 +220,15 @@ export default function Home() {
                 <a href="/tramites" className="text-xs text-gray-400 hover:text-white transition-colors">Ver todo →</a>
               </div>
               
-              {loading ? (
+              {loading && !demoMode ? (
                 <div className="text-center py-8 text-gray-500">Cargando...</div>
-              ) : recentActivity.length === 0 ? (
+              ) : visibleActivity.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">No hay actividad reciente</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentActivity.map((activity) => (
+                  {visibleActivity.map((activity) => (
                     <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                         activity.status === "completado" ? "bg-green-500" :
