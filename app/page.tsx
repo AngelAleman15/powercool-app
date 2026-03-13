@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import NotificationSettings from "@/components/NotificationSettings"
+import DashboardCharts from "@/components/DashboardCharts"
 
 type ActivityItem = {
   id: number
@@ -12,9 +13,18 @@ type ActivityItem = {
   status: string
 }
 
+type Tramite = {
+  id: number
+  tipo: string
+  estado: string
+  created_at: string
+  [key: string]: any
+}
+
 export default function Home() {
   const [stats, setStats] = useState({ equipos: 0, mantenimientos: 0, clientes: 0, pendientes: 0 })
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
+  const [allTramites, setAllTramites] = useState<Tramite[]>([])
   const [showMobileAnalytics, setShowMobileAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
@@ -45,6 +55,8 @@ export default function Home() {
         clientes: totalClientes,
         pendientes
       })
+
+      setAllTramites(tramitesData)
 
       // Recent Activity (últimos 5 items)
       const activity = tramitesData.slice(0, 5).map(t => ({
@@ -94,7 +106,7 @@ export default function Home() {
           </button>
 
           {showMobileAnalytics && (
-            <div className="mt-3">
+            <div className="mt-3 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-blue-500/20">
                   <p className="text-xs text-blue-300/80">Equipos</p>
@@ -113,6 +125,7 @@ export default function Home() {
                   <p className="text-2xl font-bold text-amber-400">{loading ? "..." : stats.pendientes}</p>
                 </div>
               </div>
+              <DashboardCharts tramites={allTramites} />
             </div>
           )}
         </div>
@@ -135,6 +148,10 @@ export default function Home() {
             <p className="text-sm text-amber-300/80 font-medium mb-1">Trámites Pendientes</p>
             <p className="text-4xl font-bold text-amber-400">{loading ? "..." : stats.pendientes}</p>
           </div>
+        </div>
+
+        <div className="hidden md:block mb-8">
+          <DashboardCharts tramites={allTramites} />
         </div>
 
         {/* Main Content Grid */}
