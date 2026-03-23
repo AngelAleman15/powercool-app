@@ -361,7 +361,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <section className="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
           <div className="xl:col-span-1 space-y-5">
             <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
               <div className="px-6 py-4 border-b border-[#dbe4f3]">
@@ -404,22 +404,22 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="xl:col-span-2 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="xl:col-span-2 self-start rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
             <div className="px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-2xl font-bold text-[#284a76]">Estado de Máquinas</h2>
+              <h2 className="text-xl font-bold text-[#284a76]">Estado de Máquinas</h2>
             </div>
-            <div className="p-5 space-y-5">
+            <div className="p-4 space-y-3.5">
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[#3a9c57] font-semibold">Operativas</span><span className="text-[#2b5e3a] font-bold text-4xl">{machineStatus.ok}</span></div>
-                <div className="h-7 rounded bg-[#d9f0de] overflow-hidden"><div className="h-full bg-[#4aaf61]" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#3a9c57] font-semibold">Operativas</span><span className="text-[#2b5e3a] font-bold text-3xl">{machineStatus.ok}</span></div>
+                <div className="h-5 rounded bg-[#d9f0de] overflow-hidden"><div className="h-full bg-[#4aaf61]" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[#cb8f21] font-semibold">Advertencia</span><span className="text-[#94671c] font-bold text-4xl">{machineStatus.warning}</span></div>
-                <div className="h-7 rounded bg-[#f9ecd1] overflow-hidden"><div className="h-full bg-[#e7a832]" style={{ width: `${percent(machineStatus.warning)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#cb8f21] font-semibold">Advertencia</span><span className="text-[#94671c] font-bold text-3xl">{machineStatus.warning}</span></div>
+                <div className="h-5 rounded bg-[#f9ecd1] overflow-hidden"><div className="h-full bg-[#e7a832]" style={{ width: `${percent(machineStatus.warning)}%` }} /></div>
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[#ca4545] font-semibold">Críticas</span><span className="text-[#9d3333] font-bold text-4xl">{machineStatus.critical}</span></div>
-                <div className="h-7 rounded bg-[#fadada] overflow-hidden"><div className="h-full bg-[#e24d4d]" style={{ width: `${percent(machineStatus.critical)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#ca4545] font-semibold">Críticas</span><span className="text-[#9d3333] font-bold text-3xl">{machineStatus.critical}</span></div>
+                <div className="h-5 rounded bg-[#fadada] overflow-hidden"><div className="h-full bg-[#e24d4d]" style={{ width: `${percent(machineStatus.critical)}%` }} /></div>
               </div>
             </div>
           </div>
