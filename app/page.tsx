@@ -57,7 +57,7 @@ export default function Home() {
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
-  const { demoMode, setDemoModePersistent } = useDemoMode()
+  const { demoMode } = useDemoMode()
 
   const getClienteNombre = (clientes: Tramite["clientes"]) => {
     if (!clientes) return "Cliente"
@@ -242,16 +242,6 @@ export default function Home() {
               <p className="text-2xl font-semibold text-[#5a7194] mt-1">Resumen General de Clientes y Equipos</p>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setDemoModePersistent(!demoMode)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
-                  demoMode
-                    ? "bg-[#4da869] text-white border-[#2d8f4b]"
-                    : "bg-[#edf4ff] text-[#255088] border-[#9db7de] hover:bg-[#e2edfd]"
-                }`}
-              >
-                {demoMode ? "Modo Demo ON" : "Activar Modo Demo"}
-              </button>
               <span className="text-xs sm:text-sm font-semibold text-[#5e7697]">
                 {mounted ? new Date().toLocaleDateString("es-UY", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Cargando..."}
               </span>
