@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 body {
   background: #e9eef5;
@@ -302,4 +303,18 @@ body {
     line-height: 1.1;
     padding: 1px 3px;
   }
+}
+
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-control-zoom a {
+  color: #244a78;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #f6f9ff;
+  color: #244a78;
 }
