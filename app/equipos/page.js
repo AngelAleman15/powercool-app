@@ -100,76 +100,79 @@ export default function Equipos() {
 
       {/* Summary Panels and Map */}
       <div className="px-4 sm:px-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          
-          {/* Ultimos Movimientos */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
-            <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-[11px] font-bold text-[#284a76]">Ultimos Movimientos de Inventario</h2>
-            </div>
-            <div className="space-y-0.5 px-3 py-2">
-              {DEMO_MOVIMIENTOS.map((mov) => (
-                <div key={mov.id} className="flex items-center gap-1.5 text-[9px]">
-                  <svg className={`w-2.5 h-2.5 shrink-0 ${mov.color === 'green' ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clipRule="evenodd" />
-                  </svg>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-[#1f6bc1] leading-tight">{mov.tipo}: {mov.cantidad} {mov.unidad}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+
+          <div className="space-y-3 lg:col-span-1">
+            {/* Ultimos Movimientos */}
+            <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
+              <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+                <h2 className="text-[11px] font-bold text-[#284a76]">Ultimos Movimientos de Inventario</h2>
+              </div>
+              <div className="space-y-0.5 px-3 py-2">
+                {DEMO_MOVIMIENTOS.map((mov) => (
+                  <div key={mov.id} className="flex items-center gap-1.5 text-[9px]">
+                    <svg className={`w-2.5 h-2.5 shrink-0 ${mov.color === 'green' ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clipRule="evenodd" />
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[#1f6bc1] leading-tight">{mov.tipo}: {mov.cantidad} {mov.unidad}</p>
+                    </div>
                   </div>
+                ))}
+              </div>
+              <div className="px-3 py-1 border-t border-[#dbe4f3] bg-[#f9fbff]">
+                <button className="text-[9px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-1.5 py-0.5 bg-white rounded border border-[#d1dcec]">
+                  Ver inventario
+                </button>
+              </div>
+            </div>
+
+            {/* Proximos Mantenimientos */}
+            <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
+              <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+                <h2 className="text-[11px] font-bold text-[#284a76]">Proximos Mantenimientos</h2>
+              </div>
+              <div className="space-y-0.5 px-3 py-2">
+                {DEMO_PROXIMOS.map((mant) => (
+                  <div key={mant.id} className="flex items-start gap-1 text-[9px]">
+                    <svg className="w-3 h-3 text-[#2459a8] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[#1f6bc1] leading-tight">{mant.servicio}</p>
+                      <p className="text-gray-500 text-[8px]">{mant.cliente}</p>
+                      <p className="text-[#2459a8] font-bold text-[8px]">{mant.fecha}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="px-3 py-1 border-t border-[#dbe4f3] bg-[#f9fbff]">
+                <button className="text-[9px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-1.5 py-0.5 bg-white rounded border border-[#d1dcec]">
+                  Cronograma
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Estado de Maquinas */}
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden lg:col-span-2 h-full">
+            <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-[11px] font-bold text-[#284a76]">Estado de Maquinas</h2>
+            </div>
+            <div className="space-y-2 px-3 py-3">
+              {DEMO_ESTADO_MAQUINAS.map((estado, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-[9px]">
+                  <span className="w-24 shrink-0 font-semibold text-[#284a76]">{estado.estado}</span>
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className={`h-full ${estado.color}`} style={{ width: `${Math.min(estado.cantidad / 100 * 100, 100)}%` }}></div>
+                  </div>
+                  <span className="text-[9px] font-bold text-[#1f6bc1] min-w-[24px] text-right">{estado.cantidad}</span>
                 </div>
               ))}
             </div>
             <div className="px-3 py-1 border-t border-[#dbe4f3] bg-[#f9fbff]">
               <button className="text-[9px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-1.5 py-0.5 bg-white rounded border border-[#d1dcec]">
-                Ver inventario
-              </button>
-            </div>
-          </div>
-
-          {/* Estado de Maquinas */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden h-fit">
-            <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-[11px] font-bold text-[#284a76]">Estado de Maquinas</h2>
-            </div>
-            <div className="space-y-1 px-3 py-2">
-              {DEMO_ESTADO_MAQUINAS.map((estado, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-[10px]">
-                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full ${estado.color}`} style={{ width: `${Math.min(estado.cantidad / 100 * 100, 100)}%` }}></div>
-                  </div>
-                  <span className="text-[9px] font-bold text-[#1f6bc1] min-w-[20px] text-right">{estado.cantidad}</span>
-                </div>
-              ))}
-            </div>
-            <div className="px-3 py-1.5 border-t border-[#dbe4f3] bg-[#f9fbff]">
-              <button className="text-[10px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-2 py-1 bg-white rounded border border-[#d1dcec]">
                 Detalle
-              </button>
-            </div>
-          </div>
-
-          {/* Proximos Mantenimientos */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden h-fit">
-            <div className="px-3 py-2 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-xs font-bold text-[#284a76]">Proximos Mantenimientos</h2>
-            </div>
-            <div className="space-y-1.5 p-3">
-              {DEMO_PROXIMOS.map((mant) => (
-                <div key={mant.id} className="flex items-start gap-1.5 text-[10px]">
-                  <svg className="w-3.5 h-3.5 text-[#2459a8] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-[#1f6bc1]">{mant.servicio}</p>
-                    <p className="text-gray-500 text-[9px]">{mant.cliente}</p>
-                    <p className="text-[#2459a8] font-bold text-[9px] mt-0.5">{mant.fecha}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="px-3 py-1.5 border-t border-[#dbe4f3] bg-[#f9fbff]">
-              <button className="text-[10px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-2 py-1 bg-white rounded border border-[#d1dcec]">
-                Cronograma
               </button>
             </div>
           </div>
@@ -179,9 +182,9 @@ export default function Equipos() {
         {/* Mapa */}
         <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
           <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-            <h2 className="text-sm font-bold text-[#284a76]">Mapa de Equipos</h2>
+            <h2 className="text-sm font-bold text-[#284a76]">Mapa de Clientes</h2>
           </div>
-          <div className="relative z-0 h-[340px] m-4 rounded-md overflow-hidden border border-[#e0e8f0]">
+          <div className="relative z-0 h-[460px] m-4 rounded-md overflow-hidden border border-[#e0e8f0]">
             <UruguayMap />
           </div>
         </div>
@@ -291,7 +294,7 @@ export default function Equipos() {
         </>
       )}
 
-      </div>
+  </div>
 
     </div>
 

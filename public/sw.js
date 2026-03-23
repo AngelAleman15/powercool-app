@@ -1,5 +1,5 @@
 // Service Worker para PowerCool PWA
-const CACHE_NAME = 'powercool-v1';
+const CACHE_NAME = 'powercool-v2';
 const urlsToCache = [
   '/',
   '/equipos',
@@ -13,6 +13,8 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
   );
+
+  self.skipWaiting();
 });
 
 // Activación del Service Worker
@@ -28,29 +30,53 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+
+  self.clients.claim();
 });
 
 // Estrategia de cache: Network First, fallback to Cache
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // No interceptar requests cross-origin (ej: Supabase) para evitar errores de red del SW
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (!response || !response.ok) {
-          return response;
+        if (!response) {
+          return Response.error();
         }
 
-        // Clonar la respuesta
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME)
-          .then((cache) => {
+        if (response.ok) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
+        }
+
         return response;
       })
-      .catch(() => {
-        return caches.match(event.request);
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // Fallback para navegación offline
+        if (event.request.mode === 'navigate') {
+          const home = await caches.match('/');
+          if (home) {
+            return home;
+          }
+        }
+
+        // Garantizar que siempre devolvemos un Response válido
+        return Response.error();
       })
   );
 });
