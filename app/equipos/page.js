@@ -100,76 +100,77 @@ export default function Equipos() {
 
       {/* Summary Panels and Map */}
       <div className="px-4 sm:px-6 mb-6">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           
-          {/* Últimos Movimientos */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-sm font-bold text-[#284a76]">Últimos Movimientos</h2>
+          {/* Ultimos Movimientos */}
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden h-fit">
+            <div className="px-3 py-2 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-xs font-bold text-[#284a76]">Ultimos Movimientos de Inventario</h2>
             </div>
-            <div className="space-y-2 p-3">
+            <div className="space-y-1.5 p-3">
               {DEMO_MOVIMIENTOS.map((mov) => (
-                <div key={mov.id} className="flex items-start gap-2 text-[11px]">
-                  <div className={`mt-0.5 h-1.5 w-1.5 rounded-full shrink-0 ${mov.color === 'green' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <div key={mov.id} className="flex items-center gap-2 text-[10px]">
+                  <svg className={`w-3 h-3 shrink-0 ${mov.color === 'green' ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clipRule="evenodd" />
+                  </svg>
                   <div className="min-w-0">
                     <p className="font-semibold text-[#1f6bc1]">{mov.tipo}: {mov.cantidad} {mov.unidad}</p>
-                    <p className="text-gray-500 text-[10px]">{mov.modelo}</p>
+                    <p className="text-gray-500 text-[9px]">{mov.modelo}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="px-4 py-2 border-t border-[#dbe4f3] bg-[#f9fbff]">
-              <button className="text-[11px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors">
-                Ver inventario →
+            <div className="px-3 py-1.5 border-t border-[#dbe4f3] bg-[#f9fbff]">
+              <button className="text-[10px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-2 py-1 bg-white rounded border border-[#d1dcec]">
+                Ver inventario
               </button>
             </div>
           </div>
 
-          {/* Estado de Máquinas */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-sm font-bold text-[#284a76]">Estado de Máquinas</h2>
+          {/* Estado de Maquinas */}
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden h-fit">
+            <div className="px-3 py-2 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-xs font-bold text-[#284a76]">Estado de Maquinas</h2>
             </div>
-            <div className="space-y-2.5 p-3">
+            <div className="space-y-2 p-3">
               {DEMO_ESTADO_MAQUINAS.map((estado, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-gray-600 min-w-[90px]">{estado.estado}</span>
+                <div key={idx} className="flex items-center gap-2 text-[10px]">
                   <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div className={`h-full ${estado.color}`} style={{ width: `${Math.min(estado.cantidad / 100 * 100, 100)}%` }}></div>
                   </div>
-                  <span className="text-[11px] font-bold text-[#1f6bc1]">{estado.cantidad}</span>
+                  <span className="text-[9px] font-bold text-[#1f6bc1] min-w-[20px] text-right">{estado.cantidad}</span>
                 </div>
               ))}
             </div>
-            <div className="px-4 py-2 border-t border-[#dbe4f3] bg-[#f9fbff]">
-              <button className="text-[11px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors">
-                Detalle →
+            <div className="px-3 py-1.5 border-t border-[#dbe4f3] bg-[#f9fbff]">
+              <button className="text-[10px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-2 py-1 bg-white rounded border border-[#d1dcec]">
+                Detalle
               </button>
             </div>
           </div>
 
-          {/* Próximos Mantenimientos */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-sm font-bold text-[#284a76]">Próximos Mantenimientos</h2>
+          {/* Proximos Mantenimientos */}
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden h-fit">
+            <div className="px-3 py-2 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-xs font-bold text-[#284a76]">Proximos Mantenimientos</h2>
             </div>
-            <div className="space-y-2 p-3">
+            <div className="space-y-1.5 p-3">
               {DEMO_PROXIMOS.map((mant) => (
-                <div key={mant.id} className="flex items-start gap-2 border-l-2 border-[#2459a8] pl-2 text-[11px]">
+                <div key={mant.id} className="flex items-start gap-1.5 text-[10px]">
                   <svg className="w-3.5 h-3.5 text-[#2459a8] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <div className="min-w-0">
                     <p className="font-semibold text-[#1f6bc1]">{mant.servicio}</p>
-                    <p className="text-gray-500 text-[10px]">{mant.cliente}</p>
-                    <p className="text-[#2459a8] font-bold text-[10px] mt-0.5">{mant.fecha}</p>
+                    <p className="text-gray-500 text-[9px]">{mant.cliente}</p>
+                    <p className="text-[#2459a8] font-bold text-[9px] mt-0.5">{mant.fecha}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="px-4 py-2 border-t border-[#dbe4f3] bg-[#f9fbff]">
-              <button className="text-[11px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors">
-                Cronograma →
+            <div className="px-3 py-1.5 border-t border-[#dbe4f3] bg-[#f9fbff]">
+              <button className="text-[10px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-2 py-1 bg-white rounded border border-[#d1dcec]">
+                Cronograma
               </button>
             </div>
           </div>
