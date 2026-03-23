@@ -5,6 +5,25 @@ import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_EQUIPOS } from "@/lib/demoData"
+import UruguayMap from "@/components/UruguayMap"
+
+const DEMO_MOVIMIENTOS = [
+  { id: 1, tipo: "Ingreso", cantidad: 10, unidad: "Unidades", modelo: "Sin: 3008TU", color: "green" },
+  { id: 2, tipo: "Salida", cantidad: 5, unidad: "Unidades", modelo: "Frio Techo", color: "red" },
+  { id: 3, tipo: "Ingreso", cantidad: 8, unidad: "Unidades", modelo: "Consola 2400BTU", color: "green" },
+]
+
+const DEMO_ESTADO_MAQUINAS = [
+  { estado: "Perfecto", cantidad: 95, color: "bg-green-500" },
+  { estado: "Mantenimiento", cantidad: 18, color: "bg-yellow-500" },
+  { estado: "Reparacion", cantidad: 5, color: "bg-red-500" },
+]
+
+const DEMO_PROXIMOS = [
+  { id: 1, servicio: "Mantenimiento", cliente: "Hotel Oasis", fecha: "25 Sep" },
+  { id: 2, servicio: "Revision", cliente: "Clinica Medica", fecha: "28 Sep" },
+  { id: 3, servicio: "Service", cliente: "Oficina TecoCorp", fecha: "30 Sep" },
+]
 
 export default function Equipos() {
 
@@ -42,10 +61,10 @@ export default function Equipos() {
 
   return (
 
-    <div className="px-4 sm:px-6 py-4 sm:py-6">
+    <div className="py-4 sm:py-6">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+      <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">
             Equipos
@@ -79,23 +98,115 @@ export default function Equipos() {
         )}
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-4">
-        <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-            <svg className="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+      {/* Summary Panels and Map */}
+      <div className="px-4 sm:px-6 mb-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mb-4">
+          
+          {/* Últimos Movimientos */}
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-sm font-bold text-[#284a76]">Últimos Movimientos</h2>
+            </div>
+            <div className="space-y-2 p-3">
+              {DEMO_MOVIMIENTOS.map((mov) => (
+                <div key={mov.id} className="flex items-start gap-2 text-[11px]">
+                  <div className={`mt-0.5 h-1.5 w-1.5 rounded-full shrink-0 ${mov.color === 'green' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#1f6bc1]">{mov.tipo}: {mov.cantidad} {mov.unidad}</p>
+                    <p className="text-gray-500 text-[10px]">{mov.modelo}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-2 border-t border-[#dbe4f3] bg-[#f9fbff]">
+              <button className="text-[11px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors">
+                Ver inventario →
+              </button>
+            </div>
           </div>
-          <input
-            type="text"
-            placeholder="Buscar por modelo, marca, ubicación o ID..."
-            value={search}
-            onChange={(e)=>setSearch(e.target.value)}
-            className="block w-full pl-8 pr-3 py-1.5 border border-white/10 rounded-lg bg-[#111] text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all"
-          />
+
+          {/* Estado de Máquinas */}
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-sm font-bold text-[#284a76]">Estado de Máquinas</h2>
+            </div>
+            <div className="space-y-2.5 p-3">
+              {DEMO_ESTADO_MAQUINAS.map((estado, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-gray-600 min-w-[90px]">{estado.estado}</span>
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className={`h-full ${estado.color}`} style={{ width: `${Math.min(estado.cantidad / 100 * 100, 100)}%` }}></div>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#1f6bc1]">{estado.cantidad}</span>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-2 border-t border-[#dbe4f3] bg-[#f9fbff]">
+              <button className="text-[11px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors">
+                Detalle →
+              </button>
+            </div>
+          </div>
+
+          {/* Próximos Mantenimientos */}
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-sm font-bold text-[#284a76]">Próximos Mantenimientos</h2>
+            </div>
+            <div className="space-y-2 p-3">
+              {DEMO_PROXIMOS.map((mant) => (
+                <div key={mant.id} className="flex items-start gap-2 border-l-2 border-[#2459a8] pl-2 text-[11px]">
+                  <svg className="w-3.5 h-3.5 text-[#2459a8] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#1f6bc1]">{mant.servicio}</p>
+                    <p className="text-gray-500 text-[10px]">{mant.cliente}</p>
+                    <p className="text-[#2459a8] font-bold text-[10px] mt-0.5">{mant.fecha}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-2 border-t border-[#dbe4f3] bg-[#f9fbff]">
+              <button className="text-[11px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors">
+                Cronograma →
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Mapa */}
+        <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+            <h2 className="text-sm font-bold text-[#284a76]">Mapa de Equipos</h2>
+          </div>
+          <div className="relative z-0 h-[340px] m-4 rounded-md overflow-hidden border border-[#e0e8f0]">
+            <UruguayMap />
+          </div>
         </div>
       </div>
+
+      {/* Search and Equipment Grid */}
+      <div className="px-4 sm:px-6">
+
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+              <svg className="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar por modelo, marca, ubicación o ID..."
+              value={search}
+              onChange={(e)=>setSearch(e.target.value)}
+              className="block w-full pl-8 pr-3 py-1.5 border border-white/10 rounded-lg bg-[#111] text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all"
+            />
+          </div>
+        </div>
 
       {/* Loading State */}
       {loading ? (
@@ -179,6 +290,8 @@ export default function Equipos() {
           )}
         </>
       )}
+
+      </div>
 
     </div>
 
