@@ -288,46 +288,46 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] text-white flex items-center justify-center text-sm">✚</div>
-              <div className="leading-tight">
-                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Mantenimientos Pendientes</p>
-                <p className="text-[32px] leading-none font-extrabold text-[#c03838] tracking-[-0.01em]">{loading ? "..." : visibleStats.mantenimientosPendientes} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Servicios Programados</span></p>
+              <div className="leading-tight min-w-0">
+                <p className="text-[13px] font-bold text-[#2b578d] leading-[1.05]">Mantenimientos Pendientes</p>
+                <p className="text-[30px] leading-none font-extrabold text-[#c03838] tracking-[-0.01em]">{loading ? "..." : visibleStats.mantenimientosPendientes} <span className="text-[10px] font-semibold text-[#6f86a8] ml-1">Servicios Programados</span></p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
           <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-2xl font-bold text-[#284a76]">Listado de Clientes</h2>
+            <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
+              <h2 className="text-base font-bold text-[#284a76]">Listado de Clientes</h2>
             </div>
-            <div className="px-6 pt-5">
+            <div className="px-4 pt-2.5">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar cliente..."
-                className="w-full px-3 py-2 rounded-md border border-[#cad8eb] bg-white text-sm text-[#304f76] placeholder:text-[#8fa4c0] focus:outline-none focus:ring-2 focus:ring-[#7fa4d6]"
+                className="w-full px-2.5 py-1.5 rounded-md border border-[#cad8eb] bg-white text-xs text-[#304f76] placeholder:text-[#8fa4c0] focus:outline-none focus:ring-2 focus:ring-[#7fa4d6]"
               />
             </div>
-            <div className="px-6 pb-5 pt-4 overflow-auto">
-              <table className="w-full text-sm">
+            <div className="px-4 pb-3 pt-2 overflow-auto">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="text-[#5f789b] border-y border-[#dbe4f3] bg-[#f1f6fd]">
-                    <th className="text-left py-2">Cliente</th>
-                    <th className="text-left py-2">Ubicación</th>
-                    <th className="text-left py-2">Equipos</th>
-                    <th className="text-left py-2">Estado</th>
+                    <th className="text-left py-1.5">Cliente</th>
+                    <th className="text-left py-1.5">Ubicación</th>
+                    <th className="text-left py-1.5">Equipos</th>
+                    <th className="text-left py-1.5">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredClients.slice(0, 6).map((row) => (
                     <tr key={row.id} className="border-b border-[#e6eef9]">
-                      <td className="py-2 text-[#24476f] font-semibold">{row.cliente}</td>
-                      <td className="py-2 text-[#5d7799]">{row.ubicacion}</td>
-                      <td className="py-2 text-[#2d8857] font-bold">{row.equipos} Activos</td>
-                      <td className="py-2">
-                        <span className={`text-xs px-2 py-1 rounded-md font-semibold ${row.estado === "activo" ? "bg-[#3ea54f] text-white" : "bg-[#f1a937] text-white"}`}>
+                      <td className="py-1.5 text-[#24476f] font-semibold">{row.cliente}</td>
+                      <td className="py-1.5 text-[#5d7799]">{row.ubicacion}</td>
+                      <td className="py-1.5 text-[#2d8857] font-bold">{row.equipos} Activos</td>
+                      <td className="py-1.5">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${row.estado === "activo" ? "bg-[#3ea54f] text-white" : "bg-[#f1a937] text-white"}`}>
                           {row.estado === "activo" ? "Activo" : "En Mantenimiento"}
                         </span>
                       </td>
@@ -338,8 +338,8 @@ export default function Home() {
               {filteredClients.length === 0 && (
                 <p className="text-center py-6 text-sm text-[#bcc8d7]">no se encuentra el cliente</p>
               )}
-              <div className="pt-3 text-center">
-                <Link href="/clientes" className="inline-flex items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
+              <div className="pt-2 text-center">
+                <Link href="/clientes" className="inline-flex items-center px-4 py-1 rounded-md bg-[#2a6dc1] text-white text-xs font-semibold hover:bg-[#245aa5]">
                   Ver Detalles
                 </Link>
               </div>
@@ -347,12 +347,12 @@ export default function Home() {
           </div>
 
           <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-2xl font-bold text-[#284a76]">Mapa de Equipos</h2>
+            <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
+              <h2 className="text-base font-bold text-[#284a76]">Mapa de Equipos</h2>
             </div>
-            <div className="relative z-0 h-[360px] m-5 rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
+            <div className="relative z-0 h-[190px] m-4 rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
               <UruguayMap />
-              <div className="absolute left-3 bottom-3 rounded bg-white/85 px-2 py-1 text-[11px] font-semibold text-[#54749a]">
+              <div className="absolute left-2 bottom-2 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-[#54749a]">
                 Mapa interactivo: arrastra y haz zoom
               </div>
             </div>
