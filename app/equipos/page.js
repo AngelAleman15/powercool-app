@@ -103,25 +103,24 @@ export default function Equipos() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           
           {/* Ultimos Movimientos */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden h-fit">
-            <div className="px-3 py-2 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-xs font-bold text-[#284a76]">Ultimos Movimientos de Inventario</h2>
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
+            <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-[11px] font-bold text-[#284a76]">Ultimos Movimientos de Inventario</h2>
             </div>
-            <div className="space-y-1.5 p-3">
+            <div className="space-y-0.5 px-3 py-2">
               {DEMO_MOVIMIENTOS.map((mov) => (
-                <div key={mov.id} className="flex items-center gap-2 text-[10px]">
-                  <svg className={`w-3 h-3 shrink-0 ${mov.color === 'green' ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                <div key={mov.id} className="flex items-center gap-1.5 text-[9px]">
+                  <svg className={`w-2.5 h-2.5 shrink-0 ${mov.color === 'green' ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clipRule="evenodd" />
                   </svg>
                   <div className="min-w-0">
-                    <p className="font-semibold text-[#1f6bc1]">{mov.tipo}: {mov.cantidad} {mov.unidad}</p>
-                    <p className="text-gray-500 text-[9px]">{mov.modelo}</p>
+                    <p className="font-semibold text-[#1f6bc1] leading-tight">{mov.tipo}: {mov.cantidad} {mov.unidad}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="px-3 py-1.5 border-t border-[#dbe4f3] bg-[#f9fbff]">
-              <button className="text-[10px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-2 py-1 bg-white rounded border border-[#d1dcec]">
+            <div className="px-3 py-1 border-t border-[#dbe4f3] bg-[#f9fbff]">
+              <button className="text-[9px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-1.5 py-0.5 bg-white rounded border border-[#d1dcec]">
                 Ver inventario
               </button>
             </div>
@@ -129,10 +128,10 @@ export default function Equipos() {
 
           {/* Estado de Maquinas */}
           <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden h-fit">
-            <div className="px-3 py-2 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-xs font-bold text-[#284a76]">Estado de Maquinas</h2>
+            <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
+              <h2 className="text-[11px] font-bold text-[#284a76]">Estado de Maquinas</h2>
             </div>
-            <div className="space-y-2 p-3">
+            <div className="space-y-1 px-3 py-2">
               {DEMO_ESTADO_MAQUINAS.map((estado, idx) => (
                 <div key={idx} className="flex items-center gap-2 text-[10px]">
                   <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
