@@ -228,9 +228,17 @@ export default function Home() {
 
   const totalMachine = Math.max(1, machineStatus.ok + machineStatus.warning + machineStatus.critical)
   const percent = (value: number) => Math.round((value / totalMachine) * 100)
+  const demoClientMapPoints = [
+    { id: "mvd-centro", label: "Hotel Oasis (Montevideo)", top: "56%", left: "61%", color: "bg-[#1e6bc1]" },
+    { id: "mvd-pocitos", label: "Clinica Medica (Pocitos)", top: "59%", left: "64%", color: "bg-[#1e6bc1]" },
+    { id: "canelones", label: "Oficinas TechCorp (Canelones)", top: "54%", left: "66%", color: "bg-[#3ea55e]" },
+    { id: "maldonado", label: "Supermercado Verde (Maldonado)", top: "66%", left: "75%", color: "bg-[#1e6bc1]" },
+    { id: "colonia", label: "Deposito Colonia", top: "57%", left: "45%", color: "bg-[#1e6bc1]" },
+    { id: "salto", label: "Cliente Norte (Salto)", top: "31%", left: "41%", color: "bg-[#1e6bc1]" },
+  ]
 
   return (
-    <div className="px-4 sm:px-6 py-6 sm:py-8 text-[#223f66]">
+    <div className="px-6 sm:px-10 lg:px-12 py-6 sm:py-8 text-[#223f66]">
       <div className="space-y-6">
         <section className="pb-3 border-b border-[#cad7e8]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -352,9 +360,21 @@ export default function Home() {
             <div className="relative h-[360px] m-5 rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
               <iframe
                 title="Mapa funcional de equipos"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=-10.8%2C35.5%2C4.8%2C44.2&layer=mapnik"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=-58.9%2C-35.4%2C-52.5%2C-30.3&layer=mapnik"
                 className="absolute inset-0 h-full w-full"
               />
+              {demoClientMapPoints.map((point) => (
+                <div
+                  key={point.id}
+                  className="absolute group"
+                  style={{ top: point.top, left: point.left, transform: "translate(-50%, -50%)" }}
+                >
+                  <span className={`block w-4 h-4 rounded-full ${point.color} border-2 border-white shadow-[0_3px_8px_rgba(16,77,145,.38)]`} />
+                  <span className="absolute left-1/2 -translate-x-1/2 -top-8 whitespace-nowrap rounded bg-[#244a78]/90 px-2 py-1 text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    {point.label}
+                  </span>
+                </div>
+              ))}
               <div className="absolute left-3 bottom-3 rounded bg-white/85 px-2 py-1 text-[11px] font-semibold text-[#54749a]">
                 Mapa interactivo: arrastra y haz zoom
               </div>
