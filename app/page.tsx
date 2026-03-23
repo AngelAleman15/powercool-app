@@ -257,40 +257,40 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
-            <div className="flex items-center gap-3">
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch">
+          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
+            <div className="flex items-center gap-3 w-full">
               <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#2459a8] text-white flex items-center justify-center font-bold text-xl">👥</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.clientesActivos}</p>
-                <p className="text-sm font-semibold text-[#335682]">Clientes Activos</p>
+                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Clientes Activos</p>
               </div>
             </div>
           </div>
-          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
-            <div className="flex items-center gap-3">
+          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
+            <div className="flex items-center gap-3 w-full">
               <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#3f79d6] text-white flex items-center justify-center font-bold text-xl">▤</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.maquinasInstaladas}</p>
-                <p className="text-sm font-semibold text-[#335682]">Máquinas Instaladas</p>
+                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Máquinas Instaladas</p>
               </div>
             </div>
           </div>
-          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
-            <div className="flex items-center gap-3">
+          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
+            <div className="flex items-center gap-3 w-full">
               <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#35a66b] text-white flex items-center justify-center font-bold text-xl">▣</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.unidadesStock}</p>
-                <p className="text-sm font-semibold text-[#335682]">Unidades en Stock</p>
+                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Unidades en Stock</p>
               </div>
             </div>
           </div>
-          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
-            <div className="flex items-center gap-3">
+          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
+            <div className="flex items-center gap-3 w-full">
               <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#e76868] text-white flex items-center justify-center font-bold text-xl">✚</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#c03838]">{loading ? "..." : visibleStats.mantenimientosPendientes}</p>
-                <p className="text-sm font-semibold text-[#335682]">Mantenimientos Pendientes</p>
+                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Mantenimientos Pendientes</p>
               </div>
             </div>
           </div>
