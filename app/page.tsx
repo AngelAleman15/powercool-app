@@ -257,40 +257,40 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch">
-          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
-            <div className="flex items-center gap-3 w-full">
-              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#2459a8] text-white flex items-center justify-center font-bold text-xl">👥</div>
-              <div>
-                <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.clientesActivos}</p>
-                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Clientes Activos</p>
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-stretch">
+          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
+            <div className="flex items-center gap-2.5 w-full">
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#2459a8] text-white flex items-center justify-center text-sm">👥</div>
+              <div className="leading-tight">
+                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Clientes Activos</p>
+                <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.clientesActivos} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Empresas Registradas</span></p>
               </div>
             </div>
           </div>
-          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
-            <div className="flex items-center gap-3 w-full">
-              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#3f79d6] text-white flex items-center justify-center font-bold text-xl">▤</div>
-              <div>
-                <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.maquinasInstaladas}</p>
-                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Máquinas Instaladas</p>
+          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
+            <div className="flex items-center gap-2.5 w-full">
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#3f79d6] text-white flex items-center justify-center text-sm">▤</div>
+              <div className="leading-tight">
+                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Máquinas Instaladas</p>
+                <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.maquinasInstaladas} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Equipos en Operación</span></p>
               </div>
             </div>
           </div>
-          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
-            <div className="flex items-center gap-3 w-full">
-              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#35a66b] text-white flex items-center justify-center font-bold text-xl">▣</div>
-              <div>
-                <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.unidadesStock}</p>
-                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Unidades en Stock</p>
+          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
+            <div className="flex items-center gap-2.5 w-full">
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#35a66b] text-white flex items-center justify-center text-sm">▣</div>
+              <div className="leading-tight">
+                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Unidades en Stock</p>
+                <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.unidadesStock} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">En Almacén</span></p>
               </div>
             </div>
           </div>
-          <div className="h-[106px] rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)] flex items-center">
-            <div className="flex items-center gap-3 w-full">
-              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#e76868] text-white flex items-center justify-center font-bold text-xl">✚</div>
-              <div>
-                <p className="text-[26px] leading-none font-bold text-[#c03838]">{loading ? "..." : visibleStats.mantenimientosPendientes}</p>
-                <p className="text-sm font-semibold text-[#335682] whitespace-nowrap">Mantenimientos Pendientes</p>
+          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
+            <div className="flex items-center gap-2.5 w-full">
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] text-white flex items-center justify-center text-sm">✚</div>
+              <div className="leading-tight">
+                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Mantenimientos Pendientes</p>
+                <p className="text-[32px] leading-none font-extrabold text-[#c03838] tracking-[-0.01em]">{loading ? "..." : visibleStats.mantenimientosPendientes} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Servicios Programados</span></p>
               </div>
             </div>
           </div>
