@@ -260,7 +260,7 @@ export default function Home() {
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-[#2459a8] text-white flex items-center justify-center font-bold text-xl">👥</div>
+              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#2459a8] text-white flex items-center justify-center font-bold text-xl">👥</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.clientesActivos}</p>
                 <p className="text-sm font-semibold text-[#335682]">Clientes Activos</p>
@@ -269,7 +269,7 @@ export default function Home() {
           </div>
           <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-[#3f79d6] text-white flex items-center justify-center font-bold text-xl">▤</div>
+              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#3f79d6] text-white flex items-center justify-center font-bold text-xl">▤</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.maquinasInstaladas}</p>
                 <p className="text-sm font-semibold text-[#335682]">Máquinas Instaladas</p>
@@ -278,7 +278,7 @@ export default function Home() {
           </div>
           <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-[#35a66b] text-white flex items-center justify-center font-bold text-xl">▣</div>
+              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#35a66b] text-white flex items-center justify-center font-bold text-xl">▣</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.unidadesStock}</p>
                 <p className="text-sm font-semibold text-[#335682]">Unidades en Stock</p>
@@ -287,7 +287,7 @@ export default function Home() {
           </div>
           <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-[#e76868] text-white flex items-center justify-center font-bold text-xl">✚</div>
+              <div className="h-12 w-12 min-h-12 min-w-12 shrink-0 rounded-full bg-[#e76868] text-white flex items-center justify-center font-bold text-xl">✚</div>
               <div>
                 <p className="text-[26px] leading-none font-bold text-[#c03838]">{loading ? "..." : visibleStats.mantenimientosPendientes}</p>
                 <p className="text-sm font-semibold text-[#335682]">Mantenimientos Pendientes</p>
@@ -350,7 +350,7 @@ export default function Home() {
             <div className="px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-2xl font-bold text-[#284a76]">Mapa de Equipos</h2>
             </div>
-            <div className="relative h-[360px] m-5 rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
+            <div className="relative z-0 h-[360px] m-5 rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
               <UruguayMap />
               <div className="absolute left-3 bottom-3 rounded bg-white/85 px-2 py-1 text-[11px] font-semibold text-[#54749a]">
                 Mapa interactivo: arrastra y haz zoom

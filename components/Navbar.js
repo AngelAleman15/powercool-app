@@ -14,7 +14,7 @@ export default function Navbar() {
   return (
     <>
       {/* Desktop Top Navigation */}
-      <nav className="hidden md:block sticky top-0 z-50 border-b border-[#2e5f9f] bg-[linear-gradient(90deg,#0f4f9f_0%,#1f6cca_56%,#2c7fe0_100%)] shadow-[0_4px_14px_rgba(17,70,130,.35)]">
+      <nav className="hidden md:block sticky top-0 z-[1000] border-b border-[#2e5f9f] bg-[linear-gradient(90deg,#0f4f9f_0%,#1f6cca_56%,#2c7fe0_100%)] shadow-[0_4px_14px_rgba(17,70,130,.35)]">
         <div className="max-w-6xl mx-auto px-7 lg:px-10">
           <div className="flex items-center justify-between h-16 gap-4">
             {/* Logo */}

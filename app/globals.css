@@ -307,6 +307,13 @@ body {
 
 .leaflet-container {
   font-family: inherit;
+  z-index: 0;
+}
+
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10;
 }
 
 .leaflet-control-zoom a {
