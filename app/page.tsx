@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import Image from "next/image"
 import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
 import UruguayMap from "@/components/UruguayMap"
@@ -260,7 +261,9 @@ export default function Home() {
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-stretch">
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#2459a8] text-white flex items-center justify-center text-sm">👥</div>
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#2459a8] flex items-center justify-center p-1">
+                <Image src="/logos/clientes.png" alt="Clientes" width={24} height={24} className="object-contain" />
+              </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Clientes Activos</p>
                 <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.clientesActivos} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Empresas Registradas</span></p>
@@ -269,7 +272,9 @@ export default function Home() {
           </div>
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#3f79d6] text-white flex items-center justify-center text-sm">▤</div>
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#3f79d6] flex items-center justify-center p-1">
+                <Image src="/logos/equipos.png" alt="Máquinas instaladas" width={24} height={24} className="object-contain" />
+              </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Máquinas Instaladas</p>
                 <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.maquinasInstaladas} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Equipos en Operación</span></p>
@@ -278,7 +283,9 @@ export default function Home() {
           </div>
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#35a66b] text-white flex items-center justify-center text-sm">▣</div>
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#35a66b] flex items-center justify-center p-1">
+                <Image src="/logos/unidadesstock.png" alt="Unidades en stock" width={24} height={24} className="object-contain" />
+              </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Unidades en Stock</p>
                 <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.unidadesStock} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">En Almacén</span></p>
@@ -287,7 +294,9 @@ export default function Home() {
           </div>
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] text-white flex items-center justify-center text-sm">✚</div>
+              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] flex items-center justify-center p-1">
+                <Image src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={24} height={24} className="object-contain" />
+              </div>
               <div className="leading-tight min-w-0">
                 <p className="text-[13px] font-bold text-[#2b578d] leading-[1.05]">Mantenimientos Pendientes</p>
                 <p className="text-[30px] leading-none font-extrabold text-[#c03838] tracking-[-0.01em]">{loading ? "..." : visibleStats.mantenimientosPendientes} <span className="text-[10px] font-semibold text-[#6f86a8] ml-1">Servicios Programados</span></p>
@@ -369,9 +378,18 @@ export default function Home() {
             <div className="p-5 space-y-3">
               {inventoryMovements.map((m) => (
                 <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
-                  <p className="text-sm text-[#36557b]">
-                    <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
-                  </p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Image
+                      src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
+                      alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
+                      width={14}
+                      height={14}
+                      className="shrink-0 object-contain"
+                    />
+                    <p className="text-sm text-[#36557b] truncate">
+                      <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
+                    </p>
+                  </div>
                   <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
                 </div>
               ))}
