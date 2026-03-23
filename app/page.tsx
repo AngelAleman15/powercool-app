@@ -45,6 +45,8 @@ type MachineStatus = {
   critical: number
 }
 
+const UNIFIED_LOGO_SIZE = 20
+
 export default function Home() {
   const [stats, setStats] = useState({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
   const [clientRows, setClientRows] = useState<ClientSummary[]>([])
@@ -261,7 +263,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#2459a8] flex items-center justify-center p-1">
-                <img src="/logos/clientes.png" alt="Clientes" width={24} height={24} className="object-contain" />
+                <img src="/logos/clientes.png" alt="Clientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Clientes Activos</p>
@@ -272,7 +274,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#3f79d6] flex items-center justify-center p-1">
-                <img src="/logos/equipos.png" alt="Máquinas instaladas" width={24} height={24} className="object-contain" />
+                <img src="/logos/equipos.png" alt="Máquinas instaladas" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Máquinas Instaladas</p>
@@ -283,7 +285,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#35a66b] flex items-center justify-center p-1">
-                <img src="/logos/unidadesstock.png" alt="Unidades en stock" width={24} height={24} className="object-contain" />
+                <img src="/logos/unidadesstock.png" alt="Unidades en stock" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Unidades en Stock</p>
@@ -294,7 +296,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] flex items-center justify-center p-1">
-                <img src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={24} height={24} className="object-contain" />
+                <img src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight min-w-0">
                 <p className="text-[13px] font-bold text-[#2b578d] leading-[1.05]">Mantenimientos Pendientes</p>
@@ -381,8 +383,8 @@ export default function Home() {
                     <img
                       src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
                       alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
-                      width={14}
-                      height={14}
+                      width={UNIFIED_LOGO_SIZE}
+                      height={UNIFIED_LOGO_SIZE}
                       className="shrink-0 object-contain"
                     />
                     <p className="text-sm text-[#36557b] truncate">
