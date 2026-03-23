@@ -231,8 +231,8 @@ export default function Home() {
 
   return (
     <div className="px-4 sm:px-6 py-6 sm:py-8 text-[#223f66]">
-      <div className="space-y-5">
-        <section className="rounded-xl border border-[#d4ddeb] bg-[#f4f7fc] p-4 sm:p-5 shadow-[0_6px_18px_rgba(61,101,152,.13)]">
+      <div className="space-y-6">
+        <section className="pb-3 border-b border-[#cad7e8]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 className="text-4xl font-bold text-[#234876] leading-tight">Bienvenido, Carlos</h1>
@@ -256,8 +256,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-[#2459a8] text-white flex items-center justify-center font-bold text-xl">👥</div>
               <div>
@@ -266,7 +266,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-[#3f79d6] text-white flex items-center justify-center font-bold text-xl">▤</div>
               <div>
@@ -275,7 +275,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-[#35a66b] text-white flex items-center justify-center font-bold text-xl">▣</div>
               <div>
@@ -284,7 +284,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+          <div className="rounded-md border border-[#d1dcec] bg-[#f6f9ff] px-6 py-5 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-[#e76868] text-white flex items-center justify-center font-bold text-xl">✚</div>
               <div>
@@ -295,12 +295,12 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-2xl font-bold text-[#284a76]">Listado de Clientes</h2>
             </div>
-            <div className="p-4">
+            <div className="px-6 pt-5">
               <input
                 type="text"
                 value={search}
@@ -309,7 +309,7 @@ export default function Home() {
                 className="w-full px-3 py-2 rounded-md border border-[#cad8eb] bg-white text-sm text-[#304f76] placeholder:text-[#8fa4c0] focus:outline-none focus:ring-2 focus:ring-[#7fa4d6]"
               />
             </div>
-            <div className="px-4 pb-4 overflow-auto">
+            <div className="px-6 pb-5 pt-4 overflow-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-[#5f789b] border-y border-[#dbe4f3] bg-[#f1f6fd]">
@@ -334,6 +334,9 @@ export default function Home() {
                   ))}
                 </tbody>
               </table>
+              {filteredClients.length === 0 && (
+                <p className="text-center py-6 text-sm text-[#bcc8d7]">no se encuentra el cliente</p>
+              )}
               <div className="pt-3 text-center">
                 <Link href="/clientes" className="inline-flex items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
                   Ver Detalles
@@ -342,39 +345,29 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-2xl font-bold text-[#284a76]">Mapa de Equipos</h2>
             </div>
-            <div className="relative h-[360px] m-4 rounded-lg overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
-              <img src="/mapa-espana-dashboard.svg" alt="Mapa de España" className="absolute inset-0 h-full w-full object-cover" />
-              {[
-                "left-[20%] top-[22%]",
-                "left-[33%] top-[42%]",
-                "left-[47%] top-[28%]",
-                "left-[56%] top-[62%]",
-                "left-[63%] top-[38%]",
-                "left-[74%] top-[27%]",
-                "left-[77%] top-[58%]",
-                "left-[39%] top-[70%]",
-              ].map((pos, idx) => (
-                <div key={idx} className={`absolute ${pos}`}>
-                  <span className="block w-5 h-5 rounded-full bg-[#1e6bc1] border-[3px] border-white shadow-[0_4px_10px_rgba(16,77,145,.4)]" />
-                </div>
-              ))}
-              <div className="absolute left-[66%] top-[46%]">
-                <span className="block w-5 h-5 rounded-full bg-[#3ea55e] border-[3px] border-white shadow-[0_4px_10px_rgba(42,116,72,.4)]" />
+            <div className="relative h-[360px] m-5 rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
+              <iframe
+                title="Mapa funcional de equipos"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=-10.8%2C35.5%2C4.8%2C44.2&layer=mapnik"
+                className="absolute inset-0 h-full w-full"
+              />
+              <div className="absolute left-3 bottom-3 rounded bg-white/85 px-2 py-1 text-[11px] font-semibold text-[#54749a]">
+                Mapa interactivo: arrastra y haz zoom
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-          <div className="xl:col-span-2 rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+        <section className="grid grid-cols-1 xl:grid-cols-5 gap-5">
+          <div className="xl:col-span-2 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
             </div>
-            <div className="p-4 space-y-2">
+            <div className="p-5 space-y-3">
               {inventoryMovements.map((m) => (
                 <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
                   <p className="text-sm text-[#36557b]">
@@ -389,11 +382,11 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="xl:col-span-1 rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+          <div className="xl:col-span-1 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-2xl font-bold text-[#284a76]">Estado de Máquinas</h2>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-5 space-y-3">
               <div>
                 <div className="flex justify-between text-sm mb-1"><span className="text-[#3a9c57] font-semibold">Operativas</span><span className="text-[#2b5e3a] font-bold text-3xl">{machineStatus.ok}</span></div>
                 <div className="h-6 rounded bg-[#d9f0de] overflow-hidden"><div className="h-full bg-[#4aaf61]" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
@@ -409,11 +402,11 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="xl:col-span-2 rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+          <div className="xl:col-span-2 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
             </div>
-            <div className="p-4 space-y-2">
+            <div className="p-5 space-y-3">
               {upcomingMaintenances.length === 0 ? (
                 <p className="text-sm text-[#6d84a5]">No hay mantenimientos programados</p>
               ) : (
