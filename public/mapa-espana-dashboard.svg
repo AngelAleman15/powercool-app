@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" fill="none">
+  <defs>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8fc7ea"/>
+      <stop offset="1" stop-color="#4f9acf"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#496e8c" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect width="960" height="520" rx="20" fill="url(#sea)"/>
+
+  <g opacity="0.25" stroke="#ffffff" stroke-width="1.2">
+    <path d="M12 58h936"/>
+    <path d="M12 118h936"/>
+    <path d="M12 178h936"/>
+    <path d="M12 238h936"/>
+    <path d="M12 298h936"/>
+    <path d="M12 358h936"/>
+    <path d="M12 418h936"/>
+    <path d="M12 478h936"/>
+    <path d="M108 12v496"/>
+    <path d="M208 12v496"/>
+    <path d="M308 12v496"/>
+    <path d="M408 12v496"/>
+    <path d="M508 12v496"/>
+    <path d="M608 12v496"/>
+    <path d="M708 12v496"/>
+    <path d="M808 12v496"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M184 201l58-56 116-33 114 14 95 56 43 62 45 3 71 58-22 64-76 15-29 56-76 6-69-31-77 4-71-29-38-62-94-23-26-74 41-30z" fill="#ece8df" stroke="#b6afa2" stroke-width="2"/>
+    <path d="M742 336l52 6 21 39-16 35-45 8-33-35 21-53z" fill="#ece8df" stroke="#b6afa2" stroke-width="2"/>
+  </g>
+
+  <g stroke="#bdb29d" stroke-width="2" opacity="0.9">
+    <path d="M244 191l88 20 94-16 95 43 30 51"/>
+    <path d="M278 259l95-37 117 16 62 70"/>
+    <path d="M336 324l91-48 105 39 58 66"/>
+    <path d="M455 163l57 80 76 3"/>
+    <path d="M630 236l63 49"/>
+    <path d="M522 367l65-45 85-12"/>
+  </g>
+
+  <g stroke="#ffffff" stroke-width="2.2" opacity="0.8">
+    <path d="M255 223l56 12"/>
+    <path d="M388 205l46-6"/>
+    <path d="M456 252l45 5"/>
+    <path d="M348 284l47-20"/>
+    <path d="M609 295l49-6"/>
+    <path d="M540 336l42-28"/>
+  </g>
+</svg>

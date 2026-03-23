@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 body {
-  background: #0a0a0a;
-  color: white;
+  background: #e9eef5;
+  color: #1f3b61;
 }
 
 @keyframes slide-down {
@@ -47,16 +47,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: #dde6f2;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #94a9c4;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #7890af;
 }
 
 /* React Big Calendar Styles - Dark Theme */

@@ -14,79 +14,88 @@ export default function Navbar() {
   return (
     <>
       {/* Desktop Top Navigation */}
-      <nav className="hidden md:block border-b border-white/10 backdrop-blur-lg bg-black/50 sticky top-0 z-50">
+      <nav className="hidden md:block sticky top-0 z-50 border-b border-[#2e5f9f] bg-[linear-gradient(90deg,#0f4f9f_0%,#1f6cca_56%,#2c7fe0_100%)] shadow-[0_4px_14px_rgba(17,70,130,.35)]">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-14 gap-4">
+          <div className="flex items-center justify-between h-16 gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-              <div className="p-1.5 bg-white rounded-lg group-hover:scale-105 transition-transform">
-                <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+              <div className="p-1.5 bg-[#f2f5fa] rounded-md group-hover:scale-105 transition-transform shadow-inner border border-[#cad8eb]">
+                <svg className="w-5 h-5 text-[#0f4f9f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 9h14M3 13h18M5 17h14M7 5h10" />
                 </svg>
               </div>
-              <span className="text-base font-bold text-white">PowerCool</span>
+              <span className="text-lg font-bold text-[#e9f2ff] tracking-wide">GESTION DE AIRES ACONDICIONADOS</span>
             </Link>
 
             {/* Navigation Links */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
                   isActive("/") && pathname === "/"
-                    ? "bg-white text-black"
-                    : "text-gray-400 hover:bg-white/10 hover:text-white"
+                    ? "text-white border-white"
+                    : "text-[#d5e8ff] border-transparent hover:text-white"
                 }`}
               >
                 Inicio
               </Link>
 
               <Link
-                href="/equipos"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive("/equipos")
-                    ? "bg-white text-black"
-                    : "text-gray-400 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                Equipos
-              </Link>
-
-              <Link
                 href="/clientes"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
                   isActive("/clientes")
-                    ? "bg-white text-black"
-                    : "text-gray-400 hover:bg-white/10 hover:text-white"
+                    ? "text-white border-white"
+                    : "text-[#d5e8ff] border-transparent hover:text-white"
                 }`}
               >
                 Clientes
               </Link>
 
               <Link
-                href="/tramites"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive("/tramites")
-                    ? "bg-white text-black"
-                    : "text-gray-400 hover:bg-white/10 hover:text-white"
+                href="/equipos"
+                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
+                  isActive("/equipos")
+                    ? "text-white border-white"
+                    : "text-[#d5e8ff] border-transparent hover:text-white"
                 }`}
               >
-                Trámites
+                Inventario
               </Link>
 
+              <Link
+                href="/tramites"
+                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
+                  isActive("/tramites")
+                    ? "text-white border-white"
+                    : "text-[#d5e8ff] border-transparent hover:text-white"
+                }`}
+              >
+                Reportes
+              </Link>
+
+              <span className="px-3 py-2 text-sm font-semibold text-[#d5e8ff]">Soporte</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-[#eaf3ff]">
+              <span className="text-sm font-semibold">Hola, Carlos Perez</span>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#f3cf9b] to-[#c98953] border-2 border-[#dce9fa]" />
+              <svg className="w-4 h-4 text-[#dce9fa]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
+              </svg>
             </div>
           </div>
         </div>
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 backdrop-blur-lg bg-black/95 safe-area-inset-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[#2e5f9f] bg-[linear-gradient(90deg,#0f4f9f_0%,#1f6cca_56%,#2c7fe0_100%)] safe-area-inset-bottom">
         <div className="grid grid-cols-4 h-16">
           <Link
             href="/"
             className={`flex flex-col items-center justify-center gap-1 transition-all ${
               pathname === "/"
                 ? "text-white"
-                : "text-gray-400 active:bg-white/5"
+                : "text-[#d5e8ff] active:bg-white/10"
             }`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,7 +109,7 @@ export default function Navbar() {
             className={`flex flex-col items-center justify-center gap-1 transition-all ${
               isActive("/equipos")
                 ? "text-white"
-                : "text-gray-400 active:bg-white/5"
+                : "text-[#d5e8ff] active:bg-white/10"
             }`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +123,7 @@ export default function Navbar() {
             className={`flex flex-col items-center justify-center gap-1 transition-all ${
               isActive("/clientes")
                 ? "text-white"
-                : "text-gray-400 active:bg-white/5"
+                : "text-[#d5e8ff] active:bg-white/10"
             }`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,7 +137,7 @@ export default function Navbar() {
             className={`flex flex-col items-center justify-center gap-1 transition-all ${
               isActive("/tramites")
                 ? "text-white"
-                : "text-gray-400 active:bg-white/5"
+                : "text-[#d5e8ff] active:bg-white/10"
             }`}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

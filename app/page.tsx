@@ -77,11 +77,25 @@ export default function Home() {
         return
       }
 
-      const [{ data: clientesData }, { data: equiposData }, { data: tramitesData }] = await Promise.all([
+      const [clientesRes, equiposRes, tramitesRes] = await Promise.all([
         supabase.from("clientes").select("id, nombre, ciudad").order("created_at", { ascending: false }),
         supabase.from("equipos").select("id, cliente_id"),
         supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, clientes(nombre)").order("created_at", { ascending: false }),
       ])
+
+      const clientesData = clientesRes.data || []
+      const equiposData = equiposRes.data || []
+      const tramitesData = tramitesRes.data || []
+
+      if (clientesRes.error || equiposRes.error || tramitesRes.error) {
+        console.warn("Supabase no disponible, usando datos demo", {
+          clientesError: clientesRes.error,
+          equiposError: equiposRes.error,
+          tramitesError: tramitesRes.error,
+        })
+        loadDemoDashboard()
+        return
+      }
 
       const clientes = clientesData || []
       const equipos = equiposData || []
@@ -216,55 +230,75 @@ export default function Home() {
   const percent = (value: number) => Math.round((value / totalMachine) * 100)
 
   return (
-    <div className="px-4 sm:px-6 py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto space-y-5">
-        <section className="rounded-xl border border-white/10 bg-gradient-to-r from-sky-700/80 via-blue-700/70 to-blue-500/80 p-4 sm:p-5 shadow-lg">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 text-[#223f66]">
+      <div className="space-y-5">
+        <section className="rounded-xl border border-[#d4ddeb] bg-[#f4f7fc] p-4 sm:p-5 shadow-[0_6px_18px_rgba(61,101,152,.13)]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">Bienvenido, Carlos</h1>
-              <p className="text-sm text-white/80 mt-1">Resumen General de Clientes y Equipos</p>
+              <h1 className="text-4xl font-bold text-[#234876] leading-tight">Bienvenido, Carlos</h1>
+              <p className="text-2xl font-semibold text-[#5a7194] mt-1">Resumen General de Clientes y Equipos</p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setDemoModePersistent(!demoMode)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
                   demoMode
-                    ? "bg-green-500/25 text-green-100 border-green-300/50"
-                    : "bg-white/15 text-white border-white/30 hover:bg-white/25"
+                    ? "bg-[#4da869] text-white border-[#2d8f4b]"
+                    : "bg-[#edf4ff] text-[#255088] border-[#9db7de] hover:bg-[#e2edfd]"
                 }`}
               >
                 {demoMode ? "Modo Demo ON" : "Activar Modo Demo"}
               </button>
-              <span className="text-xs sm:text-sm text-white/80">
+              <span className="text-xs sm:text-sm font-semibold text-[#5e7697]">
                 {mounted ? new Date().toLocaleDateString("es-UY", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Cargando..."}
               </span>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-500/15 to-[#111] p-4">
-            <p className="text-xs text-blue-200/90">Clientes Activos</p>
-            <p className="text-3xl font-bold text-white mt-1">{loading ? "..." : visibleStats.clientesActivos}</p>
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-[#2459a8] text-white flex items-center justify-center font-bold text-xl">👥</div>
+              <div>
+                <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.clientesActivos}</p>
+                <p className="text-sm font-semibold text-[#335682]">Clientes Activos</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl border border-sky-500/30 bg-gradient-to-br from-sky-500/15 to-[#111] p-4">
-            <p className="text-xs text-sky-200/90">Maquinas Instaladas</p>
-            <p className="text-3xl font-bold text-white mt-1">{loading ? "..." : visibleStats.maquinasInstaladas}</p>
+          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-[#3f79d6] text-white flex items-center justify-center font-bold text-xl">▤</div>
+              <div>
+                <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.maquinasInstaladas}</p>
+                <p className="text-sm font-semibold text-[#335682]">Máquinas Instaladas</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-[#111] p-4">
-            <p className="text-xs text-emerald-200/90">Unidades en Stock</p>
-            <p className="text-3xl font-bold text-white mt-1">{loading ? "..." : visibleStats.unidadesStock}</p>
+          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-[#35a66b] text-white flex items-center justify-center font-bold text-xl">▣</div>
+              <div>
+                <p className="text-[26px] leading-none font-bold text-[#1d3f6d]">{loading ? "..." : visibleStats.unidadesStock}</p>
+                <p className="text-sm font-semibold text-[#335682]">Unidades en Stock</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl border border-rose-500/30 bg-gradient-to-br from-rose-500/15 to-[#111] p-4">
-            <p className="text-xs text-rose-200/90">Mantenimientos Pendientes</p>
-            <p className="text-3xl font-bold text-rose-300 mt-1">{loading ? "..." : visibleStats.mantenimientosPendientes}</p>
+          <div className="rounded-xl border border-[#d1dcec] bg-[#f6f9ff] px-4 py-3 shadow-[0_4px_12px_rgba(36,84,145,.1)]">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-[#e76868] text-white flex items-center justify-center font-bold text-xl">✚</div>
+              <div>
+                <p className="text-[26px] leading-none font-bold text-[#c03838]">{loading ? "..." : visibleStats.mantenimientosPendientes}</p>
+                <p className="text-sm font-semibold text-[#335682]">Mantenimientos Pendientes</p>
+              </div>
+            </div>
           </div>
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/10">
-              <h2 className="text-lg font-semibold text-white">Listado de Clientes</h2>
+          <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+              <h2 className="text-2xl font-bold text-[#284a76]">Listado de Clientes</h2>
             </div>
             <div className="p-4">
               <input
@@ -272,113 +306,125 @@ export default function Home() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar cliente..."
-                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-black/30 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400/30"
+                className="w-full px-3 py-2 rounded-md border border-[#cad8eb] bg-white text-sm text-[#304f76] placeholder:text-[#8fa4c0] focus:outline-none focus:ring-2 focus:ring-[#7fa4d6]"
               />
             </div>
             <div className="px-4 pb-4 overflow-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-gray-400 border-b border-white/10">
+                  <tr className="text-[#5f789b] border-y border-[#dbe4f3] bg-[#f1f6fd]">
                     <th className="text-left py-2">Cliente</th>
-                    <th className="text-left py-2">Ubicacion</th>
+                    <th className="text-left py-2">Ubicación</th>
                     <th className="text-left py-2">Equipos</th>
                     <th className="text-left py-2">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredClients.slice(0, 6).map((row) => (
-                    <tr key={row.id} className="border-b border-white/5">
-                      <td className="py-2 text-white font-medium">{row.cliente}</td>
-                      <td className="py-2 text-gray-400">{row.ubicacion}</td>
-                      <td className="py-2 text-white">{row.equipos} Activos</td>
+                    <tr key={row.id} className="border-b border-[#e6eef9]">
+                      <td className="py-2 text-[#24476f] font-semibold">{row.cliente}</td>
+                      <td className="py-2 text-[#5d7799]">{row.ubicacion}</td>
+                      <td className="py-2 text-[#2d8857] font-bold">{row.equipos} Activos</td>
                       <td className="py-2">
-                        <span className={`text-xs px-2 py-1 rounded-md ${row.estado === "activo" ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`}>
-                          {row.estado === "activo" ? "Activo" : "En mantenimiento"}
+                        <span className={`text-xs px-2 py-1 rounded-md font-semibold ${row.estado === "activo" ? "bg-[#3ea54f] text-white" : "bg-[#f1a937] text-white"}`}>
+                          {row.estado === "activo" ? "Activo" : "En Mantenimiento"}
                         </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="pt-3">
-                <Link href="/clientes" className="inline-flex items-center px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-gray-200">
+              <div className="pt-3 text-center">
+                <Link href="/clientes" className="inline-flex items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
                   Ver Detalles
                 </Link>
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/10">
-              <h2 className="text-lg font-semibold text-white">Mapa de Equipos</h2>
+          <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+              <h2 className="text-2xl font-bold text-[#284a76]">Mapa de Equipos</h2>
             </div>
-            <div className="relative h-[360px] m-4 rounded-lg overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_center,#9cc7ea_0%,#5da1d6_45%,#2b5f8c_100%)]">
-              <div className="absolute inset-0 opacity-35 bg-[linear-gradient(to_right,transparent_0_9%,rgba(255,255,255,.25)_10%,transparent_11%),linear-gradient(to_bottom,transparent_0_9%,rgba(255,255,255,.2)_10%,transparent_11%)] bg-[size:40px_40px]" />
-              {["left-[15%] top-[22%]", "left-[42%] top-[30%]", "left-[67%] top-[24%]", "left-[74%] top-[52%]", "left-[52%] top-[62%]", "left-[30%] top-[55%]", "left-[60%] top-[42%]"].map((pos, idx) => (
+            <div className="relative h-[360px] m-4 rounded-lg overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
+              <img src="/mapa-espana-dashboard.svg" alt="Mapa de España" className="absolute inset-0 h-full w-full object-cover" />
+              {[
+                "left-[20%] top-[22%]",
+                "left-[33%] top-[42%]",
+                "left-[47%] top-[28%]",
+                "left-[56%] top-[62%]",
+                "left-[63%] top-[38%]",
+                "left-[74%] top-[27%]",
+                "left-[77%] top-[58%]",
+                "left-[39%] top-[70%]",
+              ].map((pos, idx) => (
                 <div key={idx} className={`absolute ${pos}`}>
-                  <span className="block w-4 h-4 rounded-full bg-sky-300 border-2 border-white shadow-[0_0_0_5px_rgba(56,189,248,.2)]" />
+                  <span className="block w-5 h-5 rounded-full bg-[#1e6bc1] border-[3px] border-white shadow-[0_4px_10px_rgba(16,77,145,.4)]" />
                 </div>
               ))}
+              <div className="absolute left-[66%] top-[46%]">
+                <span className="block w-5 h-5 rounded-full bg-[#3ea55e] border-[3px] border-white shadow-[0_4px_10px_rgba(42,116,72,.4)]" />
+              </div>
             </div>
           </div>
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-          <div className="xl:col-span-2 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/10">
-              <h2 className="text-lg font-semibold text-white">Ultimos Movimientos de Inventario</h2>
+          <div className="xl:col-span-2 rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+              <h2 className="text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
             </div>
             <div className="p-4 space-y-2">
               {inventoryMovements.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                  <p className="text-sm text-white">
-                    <span className={m.tipo === "ingreso" ? "text-green-300" : "text-red-300"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
+                <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
+                  <p className="text-sm text-[#36557b]">
+                    <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
                   </p>
-                  <span className="text-xs text-gray-300 bg-white/10 px-2 py-1 rounded">{m.whenLabel}</span>
+                  <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
                 </div>
               ))}
-              <Link href="/equipos" className="inline-flex mt-2 items-center px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-gray-200">
+              <Link href="/equipos" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
                 Ver Inventario
               </Link>
             </div>
           </div>
 
-          <div className="xl:col-span-1 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/10">
-              <h2 className="text-lg font-semibold text-white">Estado de Maquinas</h2>
+          <div className="xl:col-span-1 rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+              <h2 className="text-2xl font-bold text-[#284a76]">Estado de Máquinas</h2>
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-green-300">Operativas</span><span className="text-white">{machineStatus.ok}</span></div>
-                <div className="h-3 rounded bg-white/10 overflow-hidden"><div className="h-full bg-green-500" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#3a9c57] font-semibold">Operativas</span><span className="text-[#2b5e3a] font-bold text-3xl">{machineStatus.ok}</span></div>
+                <div className="h-6 rounded bg-[#d9f0de] overflow-hidden"><div className="h-full bg-[#4aaf61]" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-amber-300">Advertencia</span><span className="text-white">{machineStatus.warning}</span></div>
-                <div className="h-3 rounded bg-white/10 overflow-hidden"><div className="h-full bg-amber-500" style={{ width: `${percent(machineStatus.warning)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#cb8f21] font-semibold">Advertencia</span><span className="text-[#94671c] font-bold text-3xl">{machineStatus.warning}</span></div>
+                <div className="h-6 rounded bg-[#f9ecd1] overflow-hidden"><div className="h-full bg-[#e7a832]" style={{ width: `${percent(machineStatus.warning)}%` }} /></div>
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-rose-300">Criticas</span><span className="text-white">{machineStatus.critical}</span></div>
-                <div className="h-3 rounded bg-white/10 overflow-hidden"><div className="h-full bg-rose-500" style={{ width: `${percent(machineStatus.critical)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#ca4545] font-semibold">Críticas</span><span className="text-[#9d3333] font-bold text-3xl">{machineStatus.critical}</span></div>
+                <div className="h-6 rounded bg-[#fadada] overflow-hidden"><div className="h-full bg-[#e24d4d]" style={{ width: `${percent(machineStatus.critical)}%` }} /></div>
               </div>
             </div>
           </div>
 
-          <div className="xl:col-span-2 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/10">
-              <h2 className="text-lg font-semibold text-white">Proximos Mantenimientos</h2>
+          <div className="xl:col-span-2 rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+              <h2 className="text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
             </div>
             <div className="p-4 space-y-2">
               {upcomingMaintenances.length === 0 ? (
-                <p className="text-sm text-gray-400">No hay mantenimientos programados</p>
+                <p className="text-sm text-[#6d84a5]">No hay mantenimientos programados</p>
               ) : (
                 upcomingMaintenances.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                    <p className="text-sm text-white">{item.title}</p>
-                    <span className="text-xs text-gray-300">{item.dateLabel}</span>
+                  <div key={item.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
+                    <p className="text-sm font-semibold text-[#36557b]">{item.title}</p>
+                    <span className="text-xs text-[#4f6f95] font-semibold">{item.dateLabel}</span>
                   </div>
                 ))
               )}
-              <Link href="/tramites" className="inline-flex mt-2 items-center px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-gray-200">
+              <Link href="/tramites" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
                 Ver Calendario
               </Link>
             </div>
