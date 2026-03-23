@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import Image from "next/image"
 import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
 import UruguayMap from "@/components/UruguayMap"
@@ -262,7 +261,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#2459a8] flex items-center justify-center p-1">
-                <Image src="/logos/clientes.png" alt="Clientes" width={24} height={24} className="object-contain" />
+                <img src="/logos/clientes.png" alt="Clientes" width={24} height={24} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Clientes Activos</p>
@@ -273,7 +272,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#3f79d6] flex items-center justify-center p-1">
-                <Image src="/logos/equipos.png" alt="Máquinas instaladas" width={24} height={24} className="object-contain" />
+                <img src="/logos/equipos.png" alt="Máquinas instaladas" width={24} height={24} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Máquinas Instaladas</p>
@@ -284,7 +283,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#35a66b] flex items-center justify-center p-1">
-                <Image src="/logos/unidadesstock.png" alt="Unidades en stock" width={24} height={24} className="object-contain" />
+                <img src="/logos/unidadesstock.png" alt="Unidades en stock" width={24} height={24} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Unidades en Stock</p>
@@ -295,7 +294,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] flex items-center justify-center p-1">
-                <Image src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={24} height={24} className="object-contain" />
+                <img src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={24} height={24} className="object-contain" />
               </div>
               <div className="leading-tight min-w-0">
                 <p className="text-[13px] font-bold text-[#2b578d] leading-[1.05]">Mantenimientos Pendientes</p>
@@ -379,7 +378,7 @@ export default function Home() {
               {inventoryMovements.map((m) => (
                 <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Image
+                    <img
                       src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
                       alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
                       width={14}
