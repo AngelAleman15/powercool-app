@@ -2,17 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
-import NotificationSettings from "@/components/NotificationSettings"
-import DashboardCharts from "@/components/DashboardCharts"
+import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_ACTIVITY, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
+import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
 
-type ActivityItem = {
-  id: number
-  type: string
-  description: string
-  date: string
-  status: string
+type ClientSummary = {
+  id: string | number
+  cliente: string
+  ubicacion: string
+  equipos: number
+  estado: "activo" | "mantenimiento"
 }
 
 type Tramite = {
@@ -20,56 +19,137 @@ type Tramite = {
   tipo: string
   estado: string
   created_at: string
+  fecha_programada?: string
+  cliente_id?: string
+  clientes?: { nombre?: string } | Array<{ nombre?: string }>
   [key: string]: any
 }
 
+type InventoryMovement = {
+  id: number
+  tipo: "ingreso" | "salida"
+  detalle: string
+  whenLabel: string
+}
+
+type UpcomingMaintenance = {
+  id: number
+  title: string
+  dateLabel: string
+}
+
+type MachineStatus = {
+  ok: number
+  warning: number
+  critical: number
+}
+
 export default function Home() {
-  const [stats, setStats] = useState({ equipos: 0, mantenimientos: 0, clientes: 0, pendientes: 0 })
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
-  const [allTramites, setAllTramites] = useState<Tramite[]>([])
-  const [showMobileAnalytics, setShowMobileAnalytics] = useState(false)
+  const [stats, setStats] = useState({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
+  const [clientRows, setClientRows] = useState<ClientSummary[]>([])
+  const [tramites, setTramites] = useState<Tramite[]>([])
+  const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
+  const [upcomingMaintenances, setUpcomingMaintenances] = useState<UpcomingMaintenance[]>([])
+  const [machineStatus, setMachineStatus] = useState<MachineStatus>({ ok: 0, warning: 0, critical: 0 })
+  const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const { demoMode, setDemoModePersistent } = useDemoMode()
 
+  const getClienteNombre = (clientes: Tramite["clientes"]) => {
+    if (!clientes) return "Cliente"
+    if (Array.isArray(clientes)) return clientes[0]?.nombre || "Cliente"
+    return clientes.nombre || "Cliente"
+  }
+
   useEffect(() => {
     setMounted(true)
-    loadDashboardData()
   }, [])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [demoMode])
 
   async function loadDashboardData() {
     try {
-      const [equiposRes, clientesRes, tramitesRes] = await Promise.all([
-        supabase.from("equipos").select("*", { count: "exact" }),
-        supabase.from("clientes").select("*", { count: "exact" }),
-        supabase.from("tramites").select("*, equipos(modelo, marca), clientes(nombre)").order("created_at", { ascending: false })
+      if (demoMode) {
+        loadDemoDashboard()
+        return
+      }
+
+      const [{ data: clientesData }, { data: equiposData }, { data: tramitesData }] = await Promise.all([
+        supabase.from("clientes").select("id, nombre, ciudad").order("created_at", { ascending: false }),
+        supabase.from("equipos").select("id, cliente_id"),
+        supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, clientes(nombre)").order("created_at", { ascending: false }),
       ])
 
-      // Stats
-      const totalEquipos = equiposRes.count || 0
-      const totalClientes = clientesRes.count || 0
-      const tramitesData = tramitesRes.data || []
-      const mantenimientos = tramitesData.filter(t => t.tipo === "mantenimiento").length
-      const pendientes = tramitesData.filter(t => t.estado === "pendiente").length
+      const clientes = clientesData || []
+      const equipos = equiposData || []
+      const tramitesRaw = tramitesData || []
+      setTramites(tramitesRaw)
 
-      setStats({
-        equipos: totalEquipos,
-        mantenimientos,
-        clientes: totalClientes,
-        pendientes
+      const equiposByCliente = equipos.reduce<Record<string, number>>((acc, equipo) => {
+        const key = String(equipo.cliente_id || "")
+        acc[key] = (acc[key] || 0) + 1
+        return acc
+      }, {})
+
+      const latestByCliente: Record<string, Tramite> = {}
+      tramitesRaw.forEach((t) => {
+        const key = String(t.cliente_id || "")
+        if (!key) return
+        if (!latestByCliente[key]) latestByCliente[key] = t
       })
 
-      setAllTramites(tramitesData)
+      const clientSummary = clientes.slice(0, 8).map((c) => {
+        const hasMaintenance = ["pendiente", "en_proceso"].includes(latestByCliente[String(c.id)]?.estado)
+        const estado: ClientSummary["estado"] = hasMaintenance ? "mantenimiento" : "activo"
+        return {
+          id: c.id,
+          cliente: c.nombre || "Sin nombre",
+          ubicacion: c.ciudad || "Sin ciudad",
+          equipos: equiposByCliente[String(c.id)] || 0,
+          estado,
+        }
+      })
 
-      // Recent Activity (últimos 5 items)
-      const activity = tramitesData.slice(0, 5).map(t => ({
-        id: t.id,
-        type: t.tipo,
-        description: `${t.tipo === "mantenimiento" ? "🔧" : "💰"} ${t.equipos?.marca || ""} ${t.equipos?.modelo || ""} - ${t.clientes?.nombre || "Sin cliente"}`,
-        date: new Date(t.created_at).toLocaleDateString("es-UY"),
-        status: t.estado
-      }))
-      setRecentActivity(activity)
+      setClientRows(clientSummary)
+
+      const mantenimientosPendientes = tramitesRaw.filter(
+        (t) => t.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(t.estado)
+      ).length
+
+      setStats({
+        clientesActivos: clientes.length,
+        maquinasInstaladas: equipos.length,
+        unidadesStock: Math.max(8, Math.round(equipos.length * 0.35)),
+        mantenimientosPendientes,
+      })
+
+      setMachineStatus({
+        ok: tramitesRaw.filter((t) => t.estado === "completado").length,
+        warning: tramitesRaw.filter((t) => ["pendiente", "en_proceso"].includes(t.estado)).length,
+        critical: tramitesRaw.filter((t) => t.estado === "cancelado").length,
+      })
+
+      setInventoryMovements([
+        { id: 1, tipo: "ingreso", detalle: `Ingreso: ${Math.max(4, Math.round(equipos.length / 5))} Unidades Split 3000BTU`, whenLabel: "Hoy" },
+        { id: 2, tipo: "salida", detalle: `Salida: ${Math.max(2, Math.round(equipos.length / 8))} Unidades Piso Techo`, whenLabel: "Ayer" },
+        { id: 3, tipo: "ingreso", detalle: `Ingreso: ${Math.max(3, Math.round(equipos.length / 6))} Unidades Cassette 2400BTU`, whenLabel: "Hace 3 días" },
+      ])
+
+      const today = new Date()
+      const upcoming = tramitesRaw
+        .filter((t) => t.tipo === "mantenimiento" && t.fecha_programada && t.estado !== "cancelado")
+        .filter((t) => new Date(t.fecha_programada) >= today)
+        .slice(0, 3)
+        .map((t) => ({
+          id: t.id,
+          title: `${t.estado === "en_proceso" ? "Servicio" : "Mantenimiento"} - ${getClienteNombre(t.clientes)}`,
+          dateLabel: new Date(t.fecha_programada).toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
+        }))
+
+      setUpcomingMaintenances(upcoming)
     } catch (error) {
       console.error("Error cargando dashboard:", error)
     } finally {
@@ -77,237 +157,233 @@ export default function Home() {
     }
   }
 
-  const visibleStats = demoMode ? DEMO_STATS : stats
-  const visibleActivity = demoMode ? DEMO_ACTIVITY : recentActivity
-  const visibleTramites = demoMode ? DEMO_TRAMITES : allTramites
+  const loadDemoDashboard = () => {
+    setTramites(DEMO_TRAMITES)
+
+    const equiposByCliente = DEMO_EQUIPOS.reduce<Record<string, number>>((acc, e) => {
+      acc[e.cliente_id] = (acc[e.cliente_id] || 0) + 1
+      return acc
+    }, {})
+
+    const statusByCliente = DEMO_TRAMITES.reduce<Record<string, Tramite>>((acc, t) => {
+      if (!acc[t.cliente_id]) acc[t.cliente_id] = t
+      return acc
+    }, {})
+
+    setClientRows(
+      DEMO_CLIENTES.slice(0, 6).map((c) => {
+        const estado: ClientSummary["estado"] = ["pendiente", "en_proceso"].includes(statusByCliente[c.id]?.estado)
+          ? "mantenimiento"
+          : "activo"
+        return {
+          id: c.id,
+          cliente: c.nombre,
+          ubicacion: c.ciudad,
+          equipos: equiposByCliente[c.id] || 0,
+          estado,
+        }
+      })
+    )
+
+    setStats({
+      clientesActivos: DEMO_STATS.clientes,
+      maquinasInstaladas: DEMO_STATS.equipos,
+      unidadesStock: 45,
+      mantenimientosPendientes: DEMO_STATS.pendientes,
+    })
+
+    setMachineStatus({ ok: 95, warning: 18, critical: 5 })
+
+    setInventoryMovements([
+      { id: 1, tipo: "ingreso", detalle: "Ingreso: 10 Unidades Split 3000BTU", whenLabel: "Hoy" },
+      { id: 2, tipo: "salida", detalle: "Salida: 5 Unidades Piso Techo", whenLabel: "Ayer" },
+      { id: 3, tipo: "ingreso", detalle: "Ingreso: 8 Unidades Cassette 2400BTU", whenLabel: "Hace 3 días" },
+    ])
+
+    setUpcomingMaintenances([
+      { id: 1, title: "Mantenimiento - Hotel Oasis", dateLabel: "25 Sep" },
+      { id: 2, title: "Revision - Clinica Medica", dateLabel: "28 Sep" },
+      { id: 3, title: "Servicio - Oficinas TechCorp", dateLabel: "30 Sep" },
+    ])
+
+    setLoading(false)
+  }
+
+  const visibleStats = stats
+  const filteredClients = clientRows.filter((c) => c.cliente.toLowerCase().includes(search.toLowerCase()))
+
+  const totalMachine = Math.max(1, machineStatus.ok + machineStatus.warning + machineStatus.critical)
+  const percent = (value: number) => Math.round((value / totalMachine) * 100)
 
   return (
     <div className="px-4 sm:px-6 py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Hero Section */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white rounded-xl">
-              <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-              </svg>
-            </div>
+      <div className="max-w-7xl mx-auto space-y-5">
+        <section className="rounded-xl border border-white/10 bg-gradient-to-r from-sky-700/80 via-blue-700/70 to-blue-500/80 p-4 sm:p-5 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-              <p className="text-sm text-gray-400">Resumen general del sistema</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Bienvenido, Carlos</h1>
+              <p className="text-sm text-white/80 mt-1">Resumen General de Clientes y Equipos</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDemoModePersistent(!demoMode)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  demoMode
+                    ? "bg-green-500/25 text-green-100 border-green-300/50"
+                    : "bg-white/15 text-white border-white/30 hover:bg-white/25"
+                }`}
+              >
+                {demoMode ? "Modo Demo ON" : "Activar Modo Demo"}
+              </button>
+              <span className="text-xs sm:text-sm text-white/80">
+                {mounted ? new Date().toLocaleDateString("es-UY", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Cargando..."}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setDemoModePersistent(!demoMode)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                demoMode
-                  ? "bg-green-500/20 text-green-300 border-green-500/40"
-                  : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"
-              }`}
-            >
-              {demoMode ? "Modo Demo ON" : "Activar Modo Demo"}
-            </button>
-            <div className="text-sm text-gray-500">
-              {mounted ? new Date().toLocaleDateString("es-UY", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Cargando..."}
+        </section>
+
+        <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-500/15 to-[#111] p-4">
+            <p className="text-xs text-blue-200/90">Clientes Activos</p>
+            <p className="text-3xl font-bold text-white mt-1">{loading ? "..." : visibleStats.clientesActivos}</p>
+          </div>
+          <div className="rounded-xl border border-sky-500/30 bg-gradient-to-br from-sky-500/15 to-[#111] p-4">
+            <p className="text-xs text-sky-200/90">Maquinas Instaladas</p>
+            <p className="text-3xl font-bold text-white mt-1">{loading ? "..." : visibleStats.maquinasInstaladas}</p>
+          </div>
+          <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-[#111] p-4">
+            <p className="text-xs text-emerald-200/90">Unidades en Stock</p>
+            <p className="text-3xl font-bold text-white mt-1">{loading ? "..." : visibleStats.unidadesStock}</p>
+          </div>
+          <div className="rounded-xl border border-rose-500/30 bg-gradient-to-br from-rose-500/15 to-[#111] p-4">
+            <p className="text-xs text-rose-200/90">Mantenimientos Pendientes</p>
+            <p className="text-3xl font-bold text-rose-300 mt-1">{loading ? "..." : visibleStats.mantenimientosPendientes}</p>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10">
+              <h2 className="text-lg font-semibold text-white">Listado de Clientes</h2>
             </div>
-          </div>
-        </div>
-
-        {/* Menú de analíticas en móvil */}
-        <div className="md:hidden mb-6">
-          <button
-            onClick={() => setShowMobileAnalytics(!showMobileAnalytics)}
-            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] text-left flex items-center justify-between"
-          >
-            <span className="text-sm font-semibold text-white">Menú de estadísticas</span>
-            <span className="text-xs text-gray-400">{showMobileAnalytics ? "Ocultar" : "Ver"}</span>
-          </button>
-
-          {showMobileAnalytics && (
-            <div className="mt-3 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-blue-500/20">
-                  <p className="text-xs text-blue-300/80">Equipos</p>
-                  <p className="text-2xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.equipos}</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-purple-500/20">
-                  <p className="text-xs text-purple-300/80">Clientes</p>
-                  <p className="text-2xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.clientes}</p>
-                </div>
-                <div className="bg-gradient-to-br from-green-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-green-500/20">
-                  <p className="text-xs text-green-300/80">Mantenimientos</p>
-                  <p className="text-2xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.mantenimientos}</p>
-                </div>
-                <div className="bg-gradient-to-br from-amber-500/10 via-[#111] to-[#1a1a1a] rounded-xl p-4 border border-amber-500/30">
-                  <p className="text-xs text-amber-300/80">Pendientes</p>
-                  <p className="text-2xl font-bold text-amber-400">{loading && !demoMode ? "..." : visibleStats.pendientes}</p>
-                </div>
-              </div>
-              <DashboardCharts tramites={visibleTramites} />
+            <div className="p-4">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar cliente..."
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-black/30 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-400/30"
+              />
             </div>
-          )}
-        </div>
-
-        {/* Stats Cards */}
-        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-blue-500/20">
-            <p className="text-sm text-blue-300/80 font-medium mb-1">Total Equipos</p>
-            <p className="text-4xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.equipos}</p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-purple-500/20">
-            <p className="text-sm text-purple-300/80 font-medium mb-1">Clientes Activos</p>
-            <p className="text-4xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.clientes}</p>
-          </div>
-          <div className="bg-gradient-to-br from-green-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-green-500/20">
-            <p className="text-sm text-green-300/80 font-medium mb-1">Mantenimientos</p>
-            <p className="text-4xl font-bold text-white">{loading && !demoMode ? "..." : visibleStats.mantenimientos}</p>
-          </div>
-          <div className="bg-gradient-to-br from-amber-500/10 via-[#111] to-[#1a1a1a] rounded-2xl p-5 border border-amber-500/30">
-            <p className="text-sm text-amber-300/80 font-medium mb-1">Trámites Pendientes</p>
-            <p className="text-4xl font-bold text-amber-400">{loading && !demoMode ? "..." : visibleStats.pendientes}</p>
-          </div>
-        </div>
-
-        <div className="hidden md:block mb-8">
-          <DashboardCharts tramites={visibleTramites} />
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          
-          {/* Left Column - Activity */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Recent Activity */}
-            <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-5 border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Actividad Reciente
-                </h2>
-                <a href="/tramites" className="text-xs text-gray-400 hover:text-white transition-colors">Ver todo →</a>
-              </div>
-              
-              {loading && !demoMode ? (
-                <div className="text-center py-8 text-gray-500">Cargando...</div>
-              ) : visibleActivity.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="text-sm">No hay actividad reciente</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {visibleActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        activity.status === "completado" ? "bg-green-500" :
-                        activity.status === "en_proceso" ? "bg-blue-500" :
-                        activity.status === "pendiente" ? "bg-yellow-500" :
-                        "bg-red-500"
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{activity.description}</p>
-                        <p className="text-xs text-gray-500">{activity.date}</p>
-                      </div>
-                      <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
-                        activity.status === "completado" ? "bg-green-500/20 text-green-400" :
-                        activity.status === "en_proceso" ? "bg-blue-500/20 text-blue-400" :
-                        activity.status === "pendiente" ? "bg-yellow-500/20 text-yellow-400" :
-                        "bg-red-500/20 text-red-400"
-                      }`}>
-                        {activity.status === "completado" ? "Completado" :
-                         activity.status === "en_proceso" ? "En Proceso" :
-                         activity.status === "pendiente" ? "Pendiente" :
-                         "Cancelado"}
-                      </span>
-                    </div>
+            <div className="px-4 pb-4 overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-400 border-b border-white/10">
+                    <th className="text-left py-2">Cliente</th>
+                    <th className="text-left py-2">Ubicacion</th>
+                    <th className="text-left py-2">Equipos</th>
+                    <th className="text-left py-2">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClients.slice(0, 6).map((row) => (
+                    <tr key={row.id} className="border-b border-white/5">
+                      <td className="py-2 text-white font-medium">{row.cliente}</td>
+                      <td className="py-2 text-gray-400">{row.ubicacion}</td>
+                      <td className="py-2 text-white">{row.equipos} Activos</td>
+                      <td className="py-2">
+                        <span className={`text-xs px-2 py-1 rounded-md ${row.estado === "activo" ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`}>
+                          {row.estado === "activo" ? "Activo" : "En mantenimiento"}
+                        </span>
+                      </td>
+                    </tr>
                   ))}
+                </tbody>
+              </table>
+              <div className="pt-3">
+                <Link href="/clientes" className="inline-flex items-center px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-gray-200">
+                  Ver Detalles
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10">
+              <h2 className="text-lg font-semibold text-white">Mapa de Equipos</h2>
+            </div>
+            <div className="relative h-[360px] m-4 rounded-lg overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_center,#9cc7ea_0%,#5da1d6_45%,#2b5f8c_100%)]">
+              <div className="absolute inset-0 opacity-35 bg-[linear-gradient(to_right,transparent_0_9%,rgba(255,255,255,.25)_10%,transparent_11%),linear-gradient(to_bottom,transparent_0_9%,rgba(255,255,255,.2)_10%,transparent_11%)] bg-[size:40px_40px]" />
+              {["left-[15%] top-[22%]", "left-[42%] top-[30%]", "left-[67%] top-[24%]", "left-[74%] top-[52%]", "left-[52%] top-[62%]", "left-[30%] top-[55%]", "left-[60%] top-[42%]"].map((pos, idx) => (
+                <div key={idx} className={`absolute ${pos}`}>
+                  <span className="block w-4 h-4 rounded-full bg-sky-300 border-2 border-white shadow-[0_0_0_5px_rgba(56,189,248,.2)]" />
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+          <div className="xl:col-span-2 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10">
+              <h2 className="text-lg font-semibold text-white">Ultimos Movimientos de Inventario</h2>
+            </div>
+            <div className="p-4 space-y-2">
+              {inventoryMovements.map((m) => (
+                <div key={m.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                  <p className="text-sm text-white">
+                    <span className={m.tipo === "ingreso" ? "text-green-300" : "text-red-300"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
+                  </p>
+                  <span className="text-xs text-gray-300 bg-white/10 px-2 py-1 rounded">{m.whenLabel}</span>
+                </div>
+              ))}
+              <Link href="/equipos" className="inline-flex mt-2 items-center px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-gray-200">
+                Ver Inventario
+              </Link>
+            </div>
+          </div>
+
+          <div className="xl:col-span-1 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10">
+              <h2 className="text-lg font-semibold text-white">Estado de Maquinas</h2>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-green-300">Operativas</span><span className="text-white">{machineStatus.ok}</span></div>
+                <div className="h-3 rounded bg-white/10 overflow-hidden"><div className="h-full bg-green-500" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-amber-300">Advertencia</span><span className="text-white">{machineStatus.warning}</span></div>
+                <div className="h-3 rounded bg-white/10 overflow-hidden"><div className="h-full bg-amber-500" style={{ width: `${percent(machineStatus.warning)}%` }} /></div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-rose-300">Criticas</span><span className="text-white">{machineStatus.critical}</span></div>
+                <div className="h-3 rounded bg-white/10 overflow-hidden"><div className="h-full bg-rose-500" style={{ width: `${percent(machineStatus.critical)}%` }} /></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="xl:col-span-2 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10">
+              <h2 className="text-lg font-semibold text-white">Proximos Mantenimientos</h2>
+            </div>
+            <div className="p-4 space-y-2">
+              {upcomingMaintenances.length === 0 ? (
+                <p className="text-sm text-gray-400">No hay mantenimientos programados</p>
+              ) : (
+                upcomingMaintenances.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <p className="text-sm text-white">{item.title}</p>
+                    <span className="text-xs text-gray-300">{item.dateLabel}</span>
+                  </div>
+                ))
               )}
-            </div>
-
-          </div>
-
-          {/* Right Column - Quick Actions + Notifications */}
-          <div className="space-y-6">
-            
-            {/* Notification Settings */}
-            <NotificationSettings />
-
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-5 border border-white/10">
-              <h2 className="text-lg font-bold text-white mb-4">Acciones Rápidas</h2>
-              <div className="space-y-3">
-                <a href="/equipos/nuevo" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
-                  <div className="p-2 bg-white rounded-lg group-hover:scale-110 transition-transform">
-                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                  <span className="font-semibold text-white text-sm">Nuevo Equipo</span>
-                </a>
-
-                <a href="/tramites" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
-                  <div className="p-2 bg-white rounded-lg group-hover:scale-110 transition-transform">
-                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                  </div>
-                  <span className="font-semibold text-white text-sm">Gestionar Trámites</span>
-                </a>
-
-                <a href="/equipos" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
-                  <div className="p-2 bg-white rounded-lg group-hover:scale-110 transition-transform">
-                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                    </svg>
-                  </div>
-                  <span className="font-semibold text-white text-sm">Ver Equipos</span>
-                </a>
-
-                <a href="/clientes" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
-                  <div className="p-2 bg-white rounded-lg group-hover:scale-110 transition-transform">
-                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <span className="font-semibold text-white text-sm">Base de Clientes</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Stock Preview */}
-            <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-5 border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                  Stock Rápido
-                </h2>
-                <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">WIP</span>
-              </div>
-              <div className="space-y-3 opacity-50">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
-                  <span className="text-sm text-gray-400">Filtros</span>
-                  <span className="text-sm font-semibold text-gray-400">-</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
-                  <span className="text-sm text-gray-400">Gas Refrigerante</span>
-                  <span className="text-sm font-semibold text-gray-400">-</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
-                  <span className="text-sm text-gray-400">Repuestos</span>
-                  <span className="text-sm font-semibold text-gray-400">-</span>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-3 text-center">Módulo en desarrollo</p>
+              <Link href="/tramites" className="inline-flex mt-2 items-center px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-gray-200">
+                Ver Calendario
+              </Link>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
