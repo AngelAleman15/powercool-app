@@ -348,75 +348,79 @@ export default function Home() {
 
           <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
             <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
-              <h2 className="text-base font-bold text-[#284a76]">Mapa de Equipos</h2>
+              <h2 className="text-base font-bold text-[#284a76]">Mapa de Clientes</h2>
             </div>
-            <div className="relative z-0 h-[190px] m-4 rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
-              <UruguayMap />
-              <div className="absolute left-2 bottom-2 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-[#54749a]">
-                Mapa interactivo: arrastra y haz zoom
+            <div className="p-4">
+              <div className="relative z-0 h-[280px] rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
+                <UruguayMap />
+                <div className="absolute left-2 bottom-2 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-[#54749a]">
+                  Mapa interactivo: arrastra y haz zoom
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-          <div className="xl:col-span-2 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
+        <section className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div className="xl:col-span-1 space-y-5">
+            <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+              <div className="px-6 py-4 border-b border-[#dbe4f3]">
+                <h2 className="text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
+              </div>
+              <div className="p-5 space-y-3">
+                {inventoryMovements.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
+                    <p className="text-sm text-[#36557b]">
+                      <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
+                    </p>
+                    <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
+                  </div>
+                ))}
+                <Link href="/equipos" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
+                  Ver Inventario
+                </Link>
+              </div>
             </div>
-            <div className="p-5 space-y-3">
-              {inventoryMovements.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
-                  <p className="text-sm text-[#36557b]">
-                    <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
-                  </p>
-                  <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
-                </div>
-              ))}
-              <Link href="/equipos" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
-                Ver Inventario
-              </Link>
+
+            <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+              <div className="px-6 py-4 border-b border-[#dbe4f3]">
+                <h2 className="text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
+              </div>
+              <div className="p-5 space-y-3">
+                {upcomingMaintenances.length === 0 ? (
+                  <p className="text-sm text-[#6d84a5]">No hay mantenimientos programados</p>
+                ) : (
+                  upcomingMaintenances.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
+                      <p className="text-sm font-semibold text-[#36557b]">{item.title}</p>
+                      <span className="text-xs text-[#4f6f95] font-semibold">{item.dateLabel}</span>
+                    </div>
+                  ))
+                )}
+                <Link href="/tramites" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
+                  Ver Calendario
+                </Link>
+              </div>
             </div>
           </div>
 
-          <div className="xl:col-span-1 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="xl:col-span-2 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
             <div className="px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-2xl font-bold text-[#284a76]">Estado de Máquinas</h2>
             </div>
-            <div className="p-5 space-y-3">
+            <div className="p-5 space-y-5">
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[#3a9c57] font-semibold">Operativas</span><span className="text-[#2b5e3a] font-bold text-3xl">{machineStatus.ok}</span></div>
-                <div className="h-6 rounded bg-[#d9f0de] overflow-hidden"><div className="h-full bg-[#4aaf61]" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#3a9c57] font-semibold">Operativas</span><span className="text-[#2b5e3a] font-bold text-4xl">{machineStatus.ok}</span></div>
+                <div className="h-7 rounded bg-[#d9f0de] overflow-hidden"><div className="h-full bg-[#4aaf61]" style={{ width: `${percent(machineStatus.ok)}%` }} /></div>
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[#cb8f21] font-semibold">Advertencia</span><span className="text-[#94671c] font-bold text-3xl">{machineStatus.warning}</span></div>
-                <div className="h-6 rounded bg-[#f9ecd1] overflow-hidden"><div className="h-full bg-[#e7a832]" style={{ width: `${percent(machineStatus.warning)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#cb8f21] font-semibold">Advertencia</span><span className="text-[#94671c] font-bold text-4xl">{machineStatus.warning}</span></div>
+                <div className="h-7 rounded bg-[#f9ecd1] overflow-hidden"><div className="h-full bg-[#e7a832]" style={{ width: `${percent(machineStatus.warning)}%` }} /></div>
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[#ca4545] font-semibold">Críticas</span><span className="text-[#9d3333] font-bold text-3xl">{machineStatus.critical}</span></div>
-                <div className="h-6 rounded bg-[#fadada] overflow-hidden"><div className="h-full bg-[#e24d4d]" style={{ width: `${percent(machineStatus.critical)}%` }} /></div>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[#ca4545] font-semibold">Críticas</span><span className="text-[#9d3333] font-bold text-4xl">{machineStatus.critical}</span></div>
+                <div className="h-7 rounded bg-[#fadada] overflow-hidden"><div className="h-full bg-[#e24d4d]" style={{ width: `${percent(machineStatus.critical)}%` }} /></div>
               </div>
-            </div>
-          </div>
-
-          <div className="xl:col-span-2 rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
-            </div>
-            <div className="p-5 space-y-3">
-              {upcomingMaintenances.length === 0 ? (
-                <p className="text-sm text-[#6d84a5]">No hay mantenimientos programados</p>
-              ) : (
-                upcomingMaintenances.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
-                    <p className="text-sm font-semibold text-[#36557b]">{item.title}</p>
-                    <span className="text-xs text-[#4f6f95] font-semibold">{item.dateLabel}</span>
-                  </div>
-                ))
-              )}
-              <Link href="/tramites" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
-                Ver Calendario
-              </Link>
             </div>
           </div>
         </section>
