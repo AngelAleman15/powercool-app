@@ -147,7 +147,7 @@ export default function ClienteDetallePage() {
         return
       }
 
-      const [clienteRes, equiposRes, tramitesRes] = await Promise.all([
+      const [clienteRes, equiposResOrdered, tramitesResOrdered] = await Promise.all([
         supabase.from("clientes").select("*").eq("id", clienteId).single(),
         supabase.from("equipos").select("*").eq("cliente_id", clienteId).order("created_at", { ascending: false }),
         supabase
@@ -160,6 +160,21 @@ export default function ClienteDetallePage() {
       if (!clienteRes.data) {
         router.push("/clientes")
         return
+      }
+
+      let equiposRes = equiposResOrdered
+      if (equiposResOrdered.error) {
+        // Compatibilidad con esquemas viejos sin created_at en equipos.
+        equiposRes = await supabase.from("equipos").select("*").eq("cliente_id", clienteId)
+      }
+
+      let tramitesRes = tramitesResOrdered
+      if (tramitesResOrdered.error) {
+        // Compatibilidad con esquemas viejos sin created_at en tramites.
+        tramitesRes = await supabase
+          .from("tramites")
+          .select("*, equipos(marca, modelo)")
+          .eq("cliente_id", clienteId)
       }
 
       setCliente(clienteRes.data)

@@ -321,11 +321,21 @@ export default function Clientes() {
         return
       }
 
-      const { data } = await supabase
+      let { data, error } = await supabase
         .from("equipos")
         .select("*")
         .eq("cliente_id", clienteId)
         .order("created_at", { ascending: false })
+
+      if (error) {
+        // Compatibilidad con esquemas antiguos sin created_at.
+        const fallbackRes = await supabase
+          .from("equipos")
+          .select("*")
+          .eq("cliente_id", clienteId)
+
+        data = fallbackRes.data
+      }
 
       setEquiposDetalle(data || [])
     } catch (error) {
@@ -341,11 +351,21 @@ export default function Clientes() {
         return
       }
 
-      const { data } = await supabase
+      let { data, error } = await supabase
         .from("tramites")
         .select("*, equipos(marca, modelo)")
         .eq("cliente_id", clienteId)
         .order("created_at", { ascending: false })
+
+      if (error) {
+        // Compatibilidad con esquemas antiguos sin created_at.
+        const fallbackRes = await supabase
+          .from("tramites")
+          .select("*, equipos(marca, modelo)")
+          .eq("cliente_id", clienteId)
+
+        data = fallbackRes.data
+      }
 
       setTramitesDetalle(data || [])
     } catch (error) {
