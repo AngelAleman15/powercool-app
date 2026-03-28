@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_CLIENTES, DEMO_EQUIPOS } from "@/lib/demoData"
+import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
+import QRCodeComponent from "@/components/QRCodeComponent"
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
@@ -15,6 +16,10 @@ export default function Clientes() {
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showEquiposModal, setShowEquiposModal] = useState(false)
+  const [showMantenimientosModal, setShowMantenimientosModal] = useState(false)
+  const [equiposDetalle, setEquiposDetalle] = useState([])
+  const [tramitesDetalle, setTramitesDetalle] = useState([])
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -201,6 +206,56 @@ export default function Clientes() {
     setShowModal(false)
     setEditingId(null)
     setFormData({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "" })
+  }
+
+  const cargarEquipos = async (clienteId) => {
+    try {
+      if (demoMode) {
+        const equiposFiltrados = DEMO_EQUIPOS.filter(e => String(e.cliente_id) === String(clienteId))
+        setEquiposDetalle(equiposFiltrados)
+        return
+      }
+
+      const { data } = await supabase
+        .from("equipos")
+        .select("*")
+        .eq("cliente_id", clienteId)
+        .order("created_at", { ascending: false })
+
+      setEquiposDetalle(data || [])
+    } catch (error) {
+      console.error("Error cargando equipos:", error)
+    }
+  }
+
+  const cargarTramites = async (clienteId) => {
+    try {
+      if (demoMode) {
+        const tramitesFiltrados = DEMO_TRAMITES.filter(t => String(t.cliente_id) === String(clienteId))
+        setTramitesDetalle(tramitesFiltrados)
+        return
+      }
+
+      const { data } = await supabase
+        .from("tramites")
+        .select("*, equipos(marca, modelo)")
+        .eq("cliente_id", clienteId)
+        .order("created_at", { ascending: false })
+
+      setTramitesDetalle(data || [])
+    } catch (error) {
+      console.error("Error cargando trámites:", error)
+    }
+  }
+
+  const handleVerInstalaciones = async (clienteId) => {
+    await cargarEquipos(clienteId)
+    setShowEquiposModal(true)
+  }
+
+  const handleVerMantenimientos = async (clienteId) => {
+    await cargarTramites(clienteId)
+    setShowMantenimientosModal(true)
   }
 
   return (
@@ -431,18 +486,18 @@ export default function Clientes() {
                   <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Ubicación:</span> {selectedClient.ciudad || "No definida"}</p>
                   <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Total de Equipos:</span> {equiposByCliente[String(selectedClient.id)] || 0}</p>
                   <div className="pt-2 space-y-2">
-                    <Link
-                      href={`/clientes/${selectedClient.id}`}
+                    <button
+                      onClick={() => handleVerInstalaciones(selectedClient.id)}
                       className="w-full inline-flex justify-center items-center px-3 py-2 rounded-md bg-[#1f6bc1] text-white text-sm font-semibold hover:bg-[#19599f]"
                     >
                       Ver Instalaciones
-                    </Link>
-                    <Link
-                      href="/tramites"
+                    </button>
+                    <button
+                      onClick={() => handleVerMantenimientos(selectedClient.id)}
                       className="w-full inline-flex justify-center items-center px-3 py-2 rounded-md bg-[#1f6bc1] text-white text-sm font-semibold hover:bg-[#19599f]"
                     >
                       Historial de Mantenimientos
-                    </Link>
+                    </button>
                   </div>
                 </>
               ) : (
@@ -555,6 +610,167 @@ export default function Clientes() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Instalaciones */}
+      {showEquiposModal && (
+        <div className="fixed inset-0 bg-[#142947]/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white border border-[#cfdced] rounded-md p-6 max-w-2xl w-full my-8 shadow-[0_14px_24px_rgba(29,66,116,.25)]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-[#224a78]">
+                Instalaciones del Cliente
+              </h2>
+              <button
+                onClick={() => setShowEquiposModal(false)}
+                className="text-[#6f87a8] hover:text-[#224a78] transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto">
+              {equiposDetalle.length === 0 ? (
+                <p className="text-center py-8 text-[#b9c7d9]">No hay equipos registrados para este cliente</p>
+              ) : (
+                <div className="space-y-4">
+                  {equiposDetalle.map((equipo) => (
+                    <div key={equipo.id} className="border border-[#dbe6f4] rounded-md p-4 bg-[#f9fbff]">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-[#2462ad]">{equipo.marca} {equipo.modelo}</h3>
+                          <p className="text-sm text-[#425f86] mt-1">
+                            <span className="font-medium">Tipo:</span> {equipo.tipo || "No especificado"}
+                          </p>
+                          {equipo.capacidad && (
+                            <p className="text-sm text-[#425f86]">
+                              <span className="font-medium">Capacidad:</span> {equipo.capacidad}
+                            </p>
+                          )}
+                          {equipo.ubicacion && (
+                            <p className="text-sm text-[#425f86]">
+                              <span className="font-medium">Ubicación:</span> {equipo.ubicacion}
+                            </p>
+                          )}
+                          <Link
+                            href={`/equipos/${equipo.id}`}
+                            className="inline-block mt-2 text-xs text-[#1f6bc1] hover:text-[#19599f] font-semibold"
+                          >
+                            Ver detalles del equipo →
+                          </Link>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <QRCodeComponent id={equipo.id} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-[#dbe6f4]">
+              <button
+                onClick={() => setShowEquiposModal(false)}
+                className="flex-1 px-4 py-2 bg-white border border-[#cad8ea] text-[#48688f] rounded-md text-sm font-semibold hover:bg-[#f2f7ff] transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Mantenimientos */}
+      {showMantenimientosModal && (
+        <div className="fixed inset-0 bg-[#142947]/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white border border-[#cfdced] rounded-md p-6 max-w-2xl w-full my-8 shadow-[0_14px_24px_rgba(29,66,116,.25)]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-[#224a78]">
+                Historial de Mantenimientos
+              </h2>
+              <button
+                onClick={() => setShowMantenimientosModal(false)}
+                className="text-[#6f87a8] hover:text-[#224a78] transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto">
+              {tramitesDetalle.length === 0 ? (
+                <p className="text-center py-8 text-[#b9c7d9]">No hay mantenimientos registrados para este cliente</p>
+              ) : (
+                <div className="space-y-3">
+                  {tramitesDetalle.map((tramite) => {
+                    const estadoConfig = {
+                      pendiente: { bg: "bg-yellow-50", border: "border-yellow-300", text: "text-yellow-700", label: "Pendiente" },
+                      en_proceso: { bg: "bg-blue-50", border: "border-blue-300", text: "text-blue-700", label: "En Proceso" },
+                      completado: { bg: "bg-green-50", border: "border-green-300", text: "text-green-700", label: "Completado" },
+                      cancelado: { bg: "bg-red-50", border: "border-red-300", text: "text-red-700", label: "Cancelado" }
+                    }
+                    const config = estadoConfig[tramite.estado] || estadoConfig.pendiente
+
+                    return (
+                      <div key={tramite.id} className={`border-2 ${config.border} rounded-md p-3 ${config.bg}`}>
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-[#2462ad]">
+                                {tramite.tipo === "mantenimiento" ? "🔧 Mantenimiento" : "💰 Abono"}
+                              </p>
+                              <span className={`text-xs px-2 py-0.5 rounded font-semibold ${config.text}`}>
+                                {config.label}
+                              </span>
+                            </div>
+                            {tramite.equipos && (
+                              <p className="text-sm text-[#425f86]">
+                                <span className="font-medium">Equipo:</span> {tramite.equipos.marca} {tramite.equipos.modelo}
+                              </p>
+                            )}
+                            {tramite.descripcion && (
+                              <p className="text-sm text-[#425f86] mt-1">
+                                <span className="font-medium">Descripción:</span> {tramite.descripcion}
+                              </p>
+                            )}
+                            <div className="flex gap-4 mt-2 text-xs text-[#6f87a8]">
+                              {tramite.fecha_programada && (
+                                <span>📅 {new Date(tramite.fecha_programada).toLocaleDateString("es-UY")}</span>
+                              )}
+                              {tramite.monto && (
+                                <span>💵 {tramite.moneda || "USD"} {tramite.monto}</span>
+                              )}
+                            </div>
+                            {tramite.id && (
+                              <Link
+                                href={`/tramites/${tramite.id}`}
+                                className="inline-block mt-2 text-xs text-[#1f6bc1] hover:text-[#19599f] font-semibold"
+                              >
+                                Ver detalle del trámite →
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-[#dbe6f4]">
+              <button
+                onClick={() => setShowMantenimientosModal(false)}
+                className="flex-1 px-4 py-2 bg-white border border-[#cad8ea] text-[#48688f] rounded-md text-sm font-semibold hover:bg-[#f2f7ff] transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
