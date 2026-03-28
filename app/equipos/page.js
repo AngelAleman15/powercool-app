@@ -134,7 +134,7 @@ export default function Equipos() {
         supabase.from("equipos").select("*"),
         supabase
           .from("tramites")
-          .select("id, equipo_id, tipo, estado, descripcion, created_at, fecha_programada, tecnico, usuario")
+          .select("*")
           .not("equipo_id", "is", null)
           .order("created_at", { ascending: false }),
         supabase.from("equipos").select("id, estado_operativo, prioridad").limit(1),
@@ -144,7 +144,7 @@ export default function Equipos() {
       if (tramitesOrdered.error) {
         tramitesRes = await supabase
           .from("tramites")
-          .select("id, equipo_id, tipo, estado, descripcion, created_at, fecha_programada, tecnico, usuario")
+          .select("*")
           .not("equipo_id", "is", null)
       }
 
