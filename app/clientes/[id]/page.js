@@ -254,6 +254,41 @@ export default function ClienteDetallePage() {
     return "border-[#dbe6f4] bg-white"
   }
 
+  const formatDate = (value) => {
+    if (!value) return "Sin fecha"
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return "Sin fecha"
+    return parsed.toLocaleDateString("es-UY")
+  }
+
+  const getEquipoMaintStats = (equipoId) => {
+    const equipoTramites = tramites.filter((t) => String(t.equipo_id) === String(equipoId))
+
+    const ultimo = [...equipoTramites]
+      .filter((t) => t.estado === "completado")
+      .sort((a, b) => new Date(b.fecha_programada || b.created_at || 0) - new Date(a.fecha_programada || a.created_at || 0))[0]
+
+    const proximo = [...equipoTramites]
+      .filter((t) => t.estado === "pendiente" || t.estado === "en_proceso")
+      .sort((a, b) => new Date(a.fecha_programada || a.created_at || 0) - new Date(b.fecha_programada || b.created_at || 0))[0]
+
+    return {
+      ultimoLabel: ultimo ? formatDate(ultimo.fecha_programada || ultimo.created_at) : "Sin registro",
+      proximoLabel: proximo ? formatDate(proximo.fecha_programada || proximo.created_at) : "Sin programar",
+    }
+  }
+
+  const copyEquipoLink = async (equipoId) => {
+    if (typeof window === "undefined" || !navigator?.clipboard) return
+
+    try {
+      const url = `${window.location.origin}/equipos/${equipoId}`
+      await navigator.clipboard.writeText(url)
+    } catch (error) {
+      console.error("No se pudo copiar el enlace del equipo", error)
+    }
+  }
+
   const handleCreateEquipo = async (e) => {
     e.preventDefault()
 
@@ -439,6 +474,10 @@ export default function ClienteDetallePage() {
                 key={equipo.id}
                 className="rounded-xl border border-[#cfe0f3] bg-gradient-to-b from-white to-[#f7fbff] p-4 shadow-[0_10px_22px_rgba(48,94,152,.08)] hover:shadow-[0_14px_28px_rgba(40,90,150,.14)] transition-shadow"
               >
+                {(() => {
+                  const maintStats = getEquipoMaintStats(equipo.id)
+                  return (
+                    <>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
                     <p className="text-[#1e5ca7] font-bold text-lg leading-tight truncate">
@@ -463,18 +502,47 @@ export default function ClienteDetallePage() {
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_170px] gap-3 items-start">
                   <div className="rounded-lg border border-[#d8e5f4] bg-white p-3">
                     <p className="text-xs text-[#607b9f] mb-2">Acciones</p>
-                    <Link
-                      href={`/equipos/${equipo.id}`}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
-                    >
-                      Ver detalle del equipo
-                    </Link>
+                    <div className="space-y-2">
+                      <Link
+                        href={`/equipos/${equipo.id}`}
+                        className="w-full inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
+                      >
+                        Ver detalle del equipo
+                      </Link>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Link
+                          href="/tramites"
+                          className="inline-flex items-center justify-center px-2 py-1.5 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                        >
+                          Nuevo trámite
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => copyEquipoLink(equipo.id)}
+                          className="inline-flex items-center justify-center px-2 py-1.5 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                        >
+                          Copiar link
+                        </button>
+                      </div>
+
+                      <div className="rounded-md border border-[#e3edf8] bg-[#f8fbff] px-2.5 py-2">
+                        <p className="text-[11px] text-[#5f7fa6]">
+                          <span className="font-semibold">Próximo:</span> {maintStats.proximoLabel}
+                        </p>
+                        <p className="text-[11px] text-[#5f7fa6] mt-1">
+                          <span className="font-semibold">Último:</span> {maintStats.ultimoLabel}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="rounded-lg border border-[#d8e5f4] bg-white p-2">
                     <QRCodeComponent id={equipo.id} />
                   </div>
                 </div>
+                    </>
+                  )
+                })()}
               </article>
             ))}
           </div>
