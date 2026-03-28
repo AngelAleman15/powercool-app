@@ -164,13 +164,7 @@ export default function EquipoPage({ params }) {
 
   return (
 
-    <div
-      className="px-4 sm:px-6 py-4 sm:py-6 text-[#314d72]"
-      style={{
-        backgroundImage: "linear-gradient(rgba(42,77,122,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(42,77,122,0.03) 1px, transparent 1px)",
-        backgroundSize: "26px 26px",
-      }}
-    >
+    <div className="px-4 sm:px-6 py-4 sm:py-6 text-[#314d72]">
 
       {/* Back Button */}
       <Link href="/equipos" className="inline-flex items-center gap-2 text-sm text-[#4f6f98] hover:text-[#1f6bc1] mb-4 transition-colors">
@@ -190,33 +184,44 @@ export default function EquipoPage({ params }) {
           >
 
             {/* Header */}
-            <div className="mb-6 rounded-2xl border border-[#d8e5f5] bg-gradient-to-r from-[#2a4d7a] via-[#2f5f98] to-[#3e79bd] p-5 shadow-[0_14px_26px_rgba(37,76,126,.22)]">
-              <div className="flex items-start justify-between gap-4">
+            <div className="mb-6 rounded-xl border border-[#dbe6f4] bg-white p-4">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-white/15 backdrop-blur rounded-lg border border-white/20">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2.5 bg-[#edf4ff] rounded-lg border border-[#dbe6f4]">
+                    <svg className="w-6 h-6 text-[#1f6bc1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                     </svg>
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-white">{equipo.marca} {equipo.modelo}</h1>
-                    <p className="text-[#d9e8ff] font-mono text-xs mt-1">ID: {equipo.id}</p>
+                    <h1 className="text-2xl font-bold text-[#1f4371]">{equipo.marca} {equipo.modelo}</h1>
+                    <p className="text-[#6f87a8] font-mono text-xs mt-1">ID: {equipo.id}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap justify-end gap-2">
-                  <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/20 text-white font-semibold">
-                    {equipo.tipo || "split"}
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/20 text-white font-semibold">
-                    {equipo.capacidad || "Sin capacidad"}
-                  </span>
+                <div className="flex flex-col items-start md:items-end gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#eaf2ff] text-[#2e67ac] font-semibold border border-[#d6e5f7]">
+                      Tipo: {equipo.tipo || "Split"}
+                    </span>
+                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#eaf2ff] text-[#2e67ac] font-semibold border border-[#d6e5f7]">
+                      Capacidad: {equipo.capacidad || "Sin capacidad"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowExportModal(true)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1f6bc1] hover:bg-[#19599f] text-white text-xs font-semibold rounded-md transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Exportar PDF
+                  </button>
                 </div>
               </div>
             </div>
 
             {/* Info Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
               <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)]">
                 <p className="text-[#6f87a8] text-xs mb-1">Modelo</p>
                 <p className="text-[#2a4d7a] text-base font-semibold">{equipo.modelo || 'No especificado'}</p>
@@ -243,7 +248,7 @@ export default function EquipoPage({ params }) {
                 <p className="text-[#2a4d7a] text-base font-semibold">{equipo.tipo || 'Split'}</p>
               </div>
 
-              <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)] md:col-span-2">
+              <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)] sm:col-span-2 xl:col-span-1">
                 <p className="text-[#6f87a8] text-xs mb-1">Capacidad</p>
                 <p className="text-[#2a4d7a] text-base font-semibold">{equipo.capacidad || 'No especificada'}</p>
               </div>
@@ -334,26 +339,14 @@ export default function EquipoPage({ params }) {
 
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={() => setShowExportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#1f6bc1] hover:bg-[#19599f] text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Exportar a PDF
-            </button>
-          </div>
         </div>
 
         {/* Sidebar - QR Code */}
         <div className="lg:col-span-1">
           <div className="bg-[#f9fbff] rounded-xl p-4 border border-[#d3dfef] shadow-[0_6px_16px_rgba(50,89,141,.1)] sticky top-16 overflow-hidden">
-            <div className="rounded-lg border border-[#d8e5f5] bg-gradient-to-r from-[#2a4d7a] to-[#3e79bd] px-3 py-2 mb-3">
-              <h3 className="text-base font-bold text-white">Tarjeta de Acceso QR</h3>
-              <p className="text-[11px] text-[#d9e8ff]">Escanea para abrir la ficha del equipo</p>
+            <div className="rounded-lg border border-[#d8e5f5] bg-white px-3 py-2 mb-3">
+              <h3 className="text-base font-bold text-[#2a4d7a]">Tarjeta de Acceso QR</h3>
+              <p className="text-[11px] text-[#6f87a8]">Escanea para abrir la ficha del equipo</p>
             </div>
 
             <QRCodeComponent id={equipo.id} />
