@@ -81,6 +81,8 @@ const CITY_COORDS_UY: Record<string, { lat: number; lng: number }> = {
   trinidad: { lat: -33.5442, lng: -56.8886 },
 }
 
+const geocodeCache = new Map<string, { lat: number; lng: number } | null>()
+
 const UNIFIED_LOGO_SIZE = 20
 
 export default function Home() {
@@ -117,6 +119,54 @@ export default function Home() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
 
+  const resolveClientCoords = async (cliente: any): Promise<{ lat: number; lng: number } | null> => {
+    const lat = Number(cliente?.latitud ?? cliente?.latitude)
+    const lng = Number(cliente?.longitud ?? cliente?.longitude)
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return { lat, lng }
+    }
+
+    const address = [cliente?.direccion, cliente?.ciudad, "Uruguay"].filter(Boolean).join(", ")
+    if (address) {
+      const cacheKey = address.toLowerCase()
+      if (geocodeCache.has(cacheKey)) {
+        return geocodeCache.get(cacheKey) || null
+      }
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`,
+          {
+            headers: { "Accept-Language": "es" },
+          }
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          if (Array.isArray(data) && data.length > 0) {
+            const result = {
+              lat: Number(data[0].lat),
+              lng: Number(data[0].lon),
+            }
+
+            if (Number.isFinite(result.lat) && Number.isFinite(result.lng)) {
+              geocodeCache.set(cacheKey, result)
+              return result
+            }
+          }
+        }
+      } catch {
+        // Si el geocoder no responde, seguimos con fallback por ciudad.
+      }
+
+      geocodeCache.set(cacheKey, null)
+    }
+
+    const cityKey = normalizeCityKey(cliente?.ciudad || "")
+    const coords = CITY_COORDS_UY[cityKey]
+    return coords ? { lat: coords.lat, lng: coords.lng } : null
+  }
+
   async function loadDashboardData() {
     try {
       if (demoMode) {
@@ -124,31 +174,11 @@ export default function Home() {
         return
       }
 
-      const [clientesResOrdered, equiposResWithCreated, tramitesResOrdered] = await Promise.all([
-        supabase.from("clientes").select("id, nombre, ciudad").order("created_at", { ascending: false }),
-        supabase.from("equipos").select("id, cliente_id, marca, modelo, created_at"),
-        supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, clientes(nombre)").order("created_at", { ascending: false }),
+      const [clientesRes, equiposRes, tramitesRes] = await Promise.all([
+        supabase.from("clientes").select("*"),
+        supabase.from("equipos").select("*"),
+        supabase.from("tramites").select("*, clientes(nombre)"),
       ])
-
-      let clientesRes = clientesResOrdered
-      if (clientesResOrdered.error) {
-        // Compatibilidad con esquemas antiguos sin created_at en clientes.
-        clientesRes = await supabase.from("clientes").select("id, nombre, ciudad")
-      }
-
-      let equiposRes = equiposResWithCreated
-      if (equiposResWithCreated.error) {
-        // Compatibilidad con esquemas antiguos sin created_at en equipos.
-        equiposRes = await supabase.from("equipos").select("id, cliente_id, marca, modelo")
-      }
-
-      let tramitesRes = tramitesResOrdered
-      if (tramitesResOrdered.error) {
-        // Compatibilidad con esquemas antiguos sin created_at en tramites.
-        tramitesRes = await supabase
-          .from("tramites")
-          .select("id, tipo, estado, fecha_programada, cliente_id, clientes(nombre)")
-      }
 
       const clientesData = clientesRes.data || []
       const equiposData = equiposRes.data || []
@@ -166,24 +196,27 @@ export default function Home() {
 
       const clientes = clientesData || []
       const equipos = equiposData || []
-      const tramitesRaw = tramitesData || []
+      const tramitesRaw = [...(tramitesData || [])].sort(
+        (a, b) => new Date(b.created_at || b.fecha_programada || 0).getTime() - new Date(a.created_at || a.fecha_programada || 0).getTime()
+      )
       setTramites(tramitesRaw)
 
-      const points = clientes
-        .map((c) => {
-          const cityKey = normalizeCityKey(c.ciudad || "")
-          const coords = CITY_COORDS_UY[cityKey]
-          if (!coords) return null
+      const points = (
+        await Promise.all(
+          clientes.map(async (c) => {
+            const coords = await resolveClientCoords(c)
+            if (!coords) return null
 
-          return {
-            id: String(c.id),
-            label: `${c.nombre || "Cliente"} (${c.ciudad || "Sin ciudad"})`,
-            lat: coords.lat,
-            lng: coords.lng,
-            color: "#1e6bc1",
-          }
-        })
-        .filter(Boolean) as MapPoint[]
+            return {
+              id: String(c.id),
+              label: `${c.nombre || "Cliente"} (${c.ciudad || "Sin ciudad"})`,
+              lat: coords.lat,
+              lng: coords.lng,
+              color: "#1e6bc1",
+            }
+          })
+        )
+      ).filter(Boolean) as MapPoint[]
 
       setMapPoints(points)
 

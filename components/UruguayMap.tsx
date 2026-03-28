@@ -18,6 +18,7 @@ type UruguayMapProps = {
 export default function UruguayMap({ points = [] }: UruguayMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
+  const markersLayerRef = useRef<any>(null)
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
@@ -34,29 +35,12 @@ export default function UruguayMap({ points = [] }: UruguayMapProps) {
       }).setView([-32.85, -56.0], 7)
 
       mapRef.current = map
+      markersLayerRef.current = L.layerGroup().addTo(map)
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 18,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(map)
-
-      points.forEach((point) => {
-        L.circleMarker([point.lat, point.lng], {
-          radius: 7,
-          color: "#ffffff",
-          weight: 2,
-          fillColor: point.color,
-          fillOpacity: 1,
-        })
-          .addTo(map)
-          .bindPopup(`<strong>${point.label}</strong>`)
-          .bindTooltip(point.label, { direction: "top", offset: [0, -8] })
-      })
-
-      if (points.length > 0) {
-        const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]))
-        map.fitBounds(bounds.pad(0.25))
-      }
     }
 
     initMap()
@@ -67,6 +51,45 @@ export default function UruguayMap({ points = [] }: UruguayMapProps) {
         mapRef.current.remove()
         mapRef.current = null
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!mapRef.current || !markersLayerRef.current) return
+
+    let mounted = true
+
+    const refreshMarkers = async () => {
+      const L = await import("leaflet")
+      if (!mounted || !mapRef.current || !markersLayerRef.current) return
+
+      markersLayerRef.current.clearLayers()
+
+      points.forEach((point) => {
+        L.circleMarker([point.lat, point.lng], {
+          radius: 7,
+          color: "#ffffff",
+          weight: 2,
+          fillColor: point.color,
+          fillOpacity: 1,
+        })
+          .addTo(markersLayerRef.current)
+          .bindPopup(`<strong>${point.label}</strong>`)
+          .bindTooltip(point.label, { direction: "top", offset: [0, -8] })
+      })
+
+      if (points.length > 0) {
+        const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]))
+        mapRef.current.fitBounds(bounds.pad(0.25))
+      } else {
+        mapRef.current.setView([-32.85, -56.0], 7)
+      }
+    }
+
+    refreshMarkers()
+
+    return () => {
+      mounted = false
     }
   }, [points])
 
