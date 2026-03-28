@@ -124,3 +124,65 @@ COMMENT ON TABLE tramites IS 'Tabla de trámites (mantenimientos y abonos) para 
 COMMENT ON COLUMN tramites.tipo IS 'Tipo de trámite: mantenimiento o abono';
 COMMENT ON COLUMN tramites.estado IS 'Estado actual del trámite';
 COMMENT ON COLUMN tramites.moneda IS 'Moneda del monto: USD (dólares) o UYU (pesos uruguayos)';
+
+-- Tabla de repuestos
+CREATE TABLE IF NOT EXISTS repuestos (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  codigo TEXT UNIQUE,
+  nombre TEXT NOT NULL,
+  descripcion TEXT,
+  categoria TEXT,
+  unidad TEXT DEFAULT 'unidad',
+  stock_actual INTEGER NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
+  stock_minimo INTEGER NOT NULL DEFAULT 0 CHECK (stock_minimo >= 0),
+  ubicacion TEXT,
+  activo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Tabla de movimientos de repuestos (constancia)
+CREATE TABLE IF NOT EXISTS movimientos_repuestos (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  repuesto_id UUID NOT NULL REFERENCES repuestos(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('ingreso', 'salida', 'ajuste')),
+  cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+  motivo TEXT,
+  referencia_tipo TEXT DEFAULT 'manual' CHECK (referencia_tipo IN ('manual', 'tramite', 'mantenimiento', 'compra', 'ajuste')),
+  referencia_id UUID,
+  equipo_id UUID REFERENCES equipos(id) ON DELETE SET NULL,
+  cliente_id UUID REFERENCES clientes(id) ON DELETE SET NULL,
+  usuario TEXT,
+  fecha_movimiento TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Índices para repuestos y movimientos
+CREATE INDEX IF NOT EXISTS idx_repuestos_nombre ON repuestos(nombre);
+CREATE INDEX IF NOT EXISTS idx_repuestos_codigo ON repuestos(codigo);
+CREATE INDEX IF NOT EXISTS idx_repuestos_categoria ON repuestos(categoria);
+CREATE INDEX IF NOT EXISTS idx_repuestos_activo ON repuestos(activo);
+
+CREATE INDEX IF NOT EXISTS idx_mov_repuestos_repuesto_id ON movimientos_repuestos(repuesto_id);
+CREATE INDEX IF NOT EXISTS idx_mov_repuestos_tipo ON movimientos_repuestos(tipo);
+CREATE INDEX IF NOT EXISTS idx_mov_repuestos_fecha ON movimientos_repuestos(fecha_movimiento);
+CREATE INDEX IF NOT EXISTS idx_mov_repuestos_equipo_id ON movimientos_repuestos(equipo_id);
+CREATE INDEX IF NOT EXISTS idx_mov_repuestos_cliente_id ON movimientos_repuestos(cliente_id);
+
+-- Habilitar Row Level Security (RLS) para repuestos y movimientos
+ALTER TABLE repuestos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE movimientos_repuestos ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para permitir todas las operaciones (ajustar según tus necesidades de seguridad)
+DROP POLICY IF EXISTS "Enable all access for repuestos" ON repuestos;
+CREATE POLICY "Enable all access for repuestos" ON repuestos
+  FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable all access for movimientos_repuestos" ON movimientos_repuestos;
+CREATE POLICY "Enable all access for movimientos_repuestos" ON movimientos_repuestos
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- Comentarios para repuestos y movimientos
+COMMENT ON TABLE repuestos IS 'Inventario de repuestos consumibles y de mantenimiento';
+COMMENT ON TABLE movimientos_repuestos IS 'Constancia histórica de ingresos, salidas y ajustes de repuestos';
+COMMENT ON COLUMN movimientos_repuestos.referencia_tipo IS 'Origen del movimiento: manual, tramite, mantenimiento, compra o ajuste';

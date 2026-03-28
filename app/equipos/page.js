@@ -3,9 +3,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
-import UruguayMap from "@/components/UruguayMap"
 
 const ESTADO_STORAGE_KEY = "powercool.equipos.estadoOverrides.v1"
 const TREND_MONTHS = 6
@@ -67,6 +64,12 @@ function getPrioridadBadge(prioridad) {
   return "bg-[#eaf7ef] text-[#2f7d4a]"
 }
 
+function getRepuestoBadgeClass(status) {
+  if (status === "critico") return "bg-[#fdeeee] text-[#b44a4a]"
+  if (status === "bajo") return "bg-[#fff8e8] text-[#a97717]"
+  return "bg-[#eaf7ef] text-[#2f7d4a]"
+}
+
 function downloadTextFile(content, fileName, mimeType) {
   const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
@@ -82,6 +85,8 @@ function downloadTextFile(content, fileName, mimeType) {
 export default function Equipos() {
   const [equipos, setEquipos] = useState([])
   const [tramites, setTramites] = useState([])
+  const [repuestosDb, setRepuestosDb] = useState([])
+  const [movimientosRepuestosDb, setMovimientosRepuestosDb] = useState([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [tipoFilter, setTipoFilter] = useState("todos")
@@ -92,9 +97,10 @@ export default function Equipos() {
   const [minStockThreshold, setMinStockThreshold] = useState(2)
   const [estadoOverrides, setEstadoOverrides] = useState({})
   const [dbColumnsAvailable, setDbColumnsAvailable] = useState(true)
+  const [repuestosSchemaAvailable, setRepuestosSchemaAvailable] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
-
-  const { demoMode } = useDemoMode()
+  const [inventoryView, setInventoryView] = useState("equipos")
+  const [updatingTramiteId, setUpdatingTramiteId] = useState(null)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -119,18 +125,10 @@ export default function Equipos() {
   }, [estadoOverrides])
 
   const cargarEquipos = async () => {
-    if (demoMode) {
-      setEquipos(DEMO_EQUIPOS)
-      setTramites(DEMO_TRAMITES.filter((t) => t.equipo_id))
-      setDbColumnsAvailable(false)
-      setLoading(false)
-      return
-    }
-
     setLoading(true)
 
     try {
-      const [equiposRes, tramitesOrdered, schemaProbe] = await Promise.all([
+      const [equiposRes, tramitesOrdered, schemaProbe, repuestosRes, movimientosRepuestosOrdered] = await Promise.all([
         supabase.from("equipos").select("*"),
         supabase
           .from("tramites")
@@ -138,6 +136,8 @@ export default function Equipos() {
           .not("equipo_id", "is", null)
           .order("created_at", { ascending: false }),
         supabase.from("equipos").select("id, estado_operativo, prioridad").limit(1),
+        supabase.from("repuestos").select("*"),
+        supabase.from("movimientos_repuestos").select("*").order("created_at", { ascending: false }),
       ])
 
       let tramitesRes = tramitesOrdered
@@ -148,14 +148,25 @@ export default function Equipos() {
           .not("equipo_id", "is", null)
       }
 
+      let movRepuestosRes = movimientosRepuestosOrdered
+      if (movimientosRepuestosOrdered.error) {
+        movRepuestosRes = await supabase.from("movimientos_repuestos").select("*")
+      }
+
       setEquipos(equiposRes.data || [])
       setTramites(tramitesRes.data || [])
       setDbColumnsAvailable(!schemaProbe.error)
+      setRepuestosDb(repuestosRes.error ? [] : (repuestosRes.data || []))
+      setMovimientosRepuestosDb(movRepuestosRes.error ? [] : (movRepuestosRes.data || []))
+      setRepuestosSchemaAvailable(!repuestosRes.error)
     } catch (error) {
       console.error("Error cargando inventario", error)
       setEquipos([])
       setTramites([])
+      setRepuestosDb([])
+      setMovimientosRepuestosDb([])
       setDbColumnsAvailable(false)
+      setRepuestosSchemaAvailable(false)
     } finally {
       setLoading(false)
     }
@@ -163,7 +174,7 @@ export default function Equipos() {
 
   useEffect(() => {
     cargarEquipos()
-  }, [demoMode])
+  }, [])
 
   const tramitesByEquipo = useMemo(() => {
     return tramites.reduce((acc, tramite) => {
@@ -225,6 +236,11 @@ export default function Equipos() {
   const movimientosReales = useMemo(() => {
     const events = []
 
+    const repuestosById = repuestosDb.reduce((acc, repuesto) => {
+      acc[String(repuesto.id)] = repuesto
+      return acc
+    }, {})
+
     for (const equipo of equiposEnriquecidos) {
       if (equipo.created_at) {
         events.push({
@@ -252,10 +268,27 @@ export default function Equipos() {
       })
     }
 
+    for (const mov of movimientosRepuestosDb) {
+      const repuesto = repuestosById[String(mov.repuesto_id)]
+      const repuestoNombre = repuesto?.nombre || "Repuesto"
+      const repuestoCodigo = repuesto?.codigo ? `(${repuesto.codigo})` : ""
+      const date = mov.fecha_movimiento || mov.created_at
+
+      events.push({
+        id: `rep-${mov.id}`,
+        tipo: mov.tipo || "ajuste",
+        detalle: `Repuesto ${repuestoNombre} ${repuestoCodigo}`,
+        motivo: mov.motivo || "Movimiento de repuesto",
+        usuario: mov.usuario || "Sistema",
+        referencia: mov.referencia_id ? `${mov.referencia_tipo || "manual"}-${mov.referencia_id}` : (mov.referencia_tipo || "manual"),
+        date,
+      })
+    }
+
     return events
       .filter((e) => e.date)
       .sort((a, b) => new Date(b.date) - new Date(a.date))
-  }, [equiposEnriquecidos, tramites])
+  }, [equiposEnriquecidos, tramites, movimientosRepuestosDb, repuestosDb])
 
   const inventoryMovements = useMemo(() => movimientosReales.slice(0, 8), [movimientosReales])
 
@@ -284,15 +317,58 @@ export default function Equipos() {
     return modelStock.filter((m) => m.total <= Number(minStockThreshold || 0))
   }, [modelStock, minStockThreshold])
 
-  const repuestosCriticos = useMemo(() => {
+  const repuestosInventario = useMemo(() => {
+    if (repuestosSchemaAvailable && repuestosDb.length > 0) {
+      return repuestosDb.map((rep) => {
+        const relatedMovs = movimientosRepuestosDb.filter((m) => String(m.repuesto_id) === String(rep.id))
+        const demand = relatedMovs.filter((m) => m.tipo === "salida").length
+        const ultimoUso = [...relatedMovs]
+          .map((m) => m.fecha_movimiento || m.created_at)
+          .filter(Boolean)
+          .sort((a, b) => new Date(b) - new Date(a))[0]
+
+        const stockActual = Number(rep.stock_actual || 0)
+        const stockMinimo = Number(rep.stock_minimo || minStockThreshold || 0)
+        const status = stockActual <= 1 ? "critico" : stockActual <= stockMinimo ? "bajo" : "ok"
+
+        return {
+          key: String(rep.id),
+          nombre: rep.nombre || "Repuesto",
+          demand,
+          estimatedStock: stockActual,
+          status,
+          ultimoUso,
+        }
+      })
+    }
+
     return RELEVANT_PARTS.map((part) => {
-      const demand = tramites.filter((t) => String(t.descripcion || "").toLowerCase().includes(part.key)).length
+      const matching = tramites.filter((t) => String(t.descripcion || "").toLowerCase().includes(part.key))
+      const demand = matching.length
+      const ultimoUso = matching
+        .map((t) => t.fecha_programada || t.created_at)
+        .filter(Boolean)
+        .sort((a, b) => new Date(b) - new Date(a))[0]
+
+      const estimatedStock = Math.max(0, 12 - demand * 2)
+      const status = estimatedStock <= 1 ? "critico" : estimatedStock <= Number(minStockThreshold || 0) ? "bajo" : "ok"
+
       return {
         ...part,
+        nombre: part.nombre,
         demand,
+        estimatedStock,
+        status,
+        ultimoUso,
       }
-    }).filter((part) => part.demand >= part.umbral)
-  }, [tramites])
+    })
+  }, [tramites, minStockThreshold, repuestosSchemaAvailable, repuestosDb, movimientosRepuestosDb])
+
+  const repuestosCriticos = useMemo(() => {
+    return repuestosInventario
+      .filter((item) => item.status === "critico" || item.status === "bajo")
+      .map((item) => ({ nombre: item.nombre, demand: item.demand }))
+  }, [repuestosInventario])
 
   const depositoSummary = useMemo(() => {
     const grouped = {}
@@ -465,7 +541,7 @@ export default function Equipos() {
   const setEstadoRapido = async (equipoId, estado) => {
     const prioridad = getPrioridadFromEstado(estado)
 
-    if (!demoMode && dbColumnsAvailable) {
+    if (dbColumnsAvailable) {
       const { error } = await supabase
         .from("equipos")
         .update({ estado_operativo: estado, prioridad })
@@ -496,33 +572,36 @@ export default function Equipos() {
     }))
   }
 
+  const updateTramiteEstado = async (tramiteId, newEstado) => {
+    if (!tramiteId || updatingTramiteId) return
+
+    setUpdatingTramiteId(String(tramiteId))
+    const { error } = await supabase.from("tramites").update({ estado: newEstado }).eq("id", tramiteId)
+    setUpdatingTramiteId(null)
+
+    if (!error) {
+      setTramites((prev) => prev.map((t) => (String(t.id) === String(tramiteId) ? { ...t, estado: newEstado } : t)))
+      return
+    }
+
+    console.error("No se pudo actualizar estado del trámite", error)
+  }
+
   return (
     <div className="py-4 sm:py-6">
       <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Inventario</h1>
           <p className="text-xs text-gray-400">Gestión y control de equipos de climatización</p>
-          {demoMode && <p className="mt-1 text-[11px] text-green-300">Modo Demo activo: datos de muestra</p>}
         </div>
 
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {demoMode ? (
-            <button
-              type="button"
-              disabled
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-gray-400 rounded-lg text-sm font-semibold justify-center cursor-not-allowed"
-              title="Deshabilitado en modo demo"
-            >
-              Nuevo Equipo
-            </button>
-          ) : (
-            <Link
-              href="/equipos/nuevo"
-              className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
-            >
-              Nuevo Equipo
-            </Link>
-          )}
+          <Link
+            href="/equipos/nuevo"
+            className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+          >
+            Nuevo Equipo
+          </Link>
 
           <button
             type="button"
@@ -661,7 +740,8 @@ export default function Equipos() {
         </section>
 
         <section className="rounded-xl border border-[#d1dcec] bg-[#f7faff] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-          <h3 className="text-lg font-bold text-[#2a4d7a] mb-3">Tendencia y Rotación (6 meses)</h3>
+          <h3 className="text-lg font-bold text-[#2a4d7a] mb-1">Tendencia de Movimientos y Rotación</h3>
+          <p className="text-xs text-[#6f87a8] mb-2">Compara ingresos/salidas por mes y calcula cuántas salidas hubo por equipo en el período.</p>
 
           <div className="space-y-2">
             {trendData.map((m) => (
@@ -686,7 +766,8 @@ export default function Equipos() {
         </section>
 
         <section className="rounded-xl border border-[#d1dcec] bg-[#f7faff] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-          <h3 className="text-lg font-bold text-[#2a4d7a] mb-3">Inventario por Sucursal/Depósito</h3>
+          <h3 className="text-lg font-bold text-[#2a4d7a] mb-1">Inventario por Sucursal/Depósito</h3>
+          <p className="text-xs text-[#6f87a8] mb-2">Agrupa equipos por ubicación física para ver carga operativa y criticidad por sede.</p>
           {depositoSummary.length === 0 ? (
             <p className="text-sm text-[#5f7ea4]">No hay ubicaciones disponibles.</p>
           ) : (
@@ -714,12 +795,12 @@ export default function Equipos() {
       <div className="px-4 sm:px-6 mb-5">
         <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
           <div className="px-4 py-3 border-b border-[#dbe4f3]">
-            <h2 className="text-lg font-bold text-[#284a76]">Historial Real de Movimientos</h2>
+            <h2 className="text-lg font-bold text-[#284a76]">Historial de Movimientos de Inventario</h2>
             <p className="text-xs text-[#6f87a8] mt-1">Incluye tipo, motivo, usuario y referencia.</p>
           </div>
           <div className="p-4 space-y-2">
             {inventoryMovements.length === 0 ? (
-              <p className="text-sm text-[#6d84a5]">No hay movimientos reales para mostrar.</p>
+              <p className="text-sm text-[#6d84a5]">No hay movimientos para mostrar.</p>
             ) : (
               inventoryMovements.map((m) => (
                 <div key={m.id} className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-2 items-center rounded-md border border-[#dbe6f4] bg-white px-3 py-2">
@@ -745,7 +826,7 @@ export default function Equipos() {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 mb-6 grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="px-4 sm:px-6 mb-6">
         <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
           <div className="px-4 py-3 border-b border-[#dbe4f3]">
             <h2 className="text-lg font-bold text-[#284a76]">Próximos Mantenimientos</h2>
@@ -755,41 +836,125 @@ export default function Equipos() {
               <p className="text-sm text-[#6d84a5]">No hay mantenimientos próximos.</p>
             ) : (
               upcomingMaintenances.map((item) => (
-                <div key={item.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
+                <div key={item.id} className="rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
                   <div>
                     <p className="text-sm font-semibold text-[#36557b]">{item.marca || "Equipo"} {item.modelo || ""}</p>
                     <p className="text-xs text-[#6d84a5]">{item.ubicacion || "Sin ubicación"}</p>
                   </div>
-                  <span className="text-xs text-[#4f6f95] font-semibold">
-                    {formatDate(item.proximo?.fecha_programada || item.proximo?.created_at)}
-                  </span>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-xs text-[#4f6f95] font-semibold">
+                      {formatDate(item.proximo?.fecha_programada || item.proximo?.created_at)}
+                    </span>
+
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {item.proximo?.id && (
+                        <Link
+                          href={`/tramites/${item.proximo.id}`}
+                          className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                        >
+                          Ver detalle
+                        </Link>
+                      )}
+
+                      <Link
+                        href={`/equipos/${item.id}`}
+                        className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                      >
+                        Ver equipo
+                      </Link>
+
+                      {item.proximo?.id && item.proximo?.estado !== "en_proceso" && (
+                        <button
+                          type="button"
+                          disabled={updatingTramiteId === String(item.proximo.id)}
+                          onClick={() => updateTramiteEstado(item.proximo.id, "en_proceso")}
+                          className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#e9f1ff] text-[#2f69b0] text-[11px] font-semibold hover:bg-[#dce8ff] disabled:opacity-60"
+                        >
+                          Iniciar
+                        </button>
+                      )}
+
+                      {item.proximo?.id && item.proximo?.estado !== "completado" && (
+                        <button
+                          type="button"
+                          disabled={updatingTramiteId === String(item.proximo.id)}
+                          onClick={() => updateTramiteEstado(item.proximo.id, "completado")}
+                          className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#eaf7ef] text-[#2f7d4a] text-[11px] font-semibold hover:bg-[#dff2e6] disabled:opacity-60"
+                        >
+                          Completar
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))
             )}
           </div>
         </div>
-
-        <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-          <div className="px-4 py-3 border-b border-[#dbe4f3]">
-            <h2 className="text-lg font-bold text-[#284a76]">Mapa de Clientes</h2>
-          </div>
-          <div className="relative z-0 h-[300px] m-4 rounded-md overflow-hidden border border-[#e0e8f0] bg-[#8ec4e7]">
-            <UruguayMap />
-          </div>
-        </div>
       </div>
 
       <div className="px-4 sm:px-6">
+        <div className="mb-3 rounded-xl border border-[#d1dcec] bg-[#f7faff] p-3 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <h2 className="text-lg font-bold text-[#2a4d7a] mb-2">Vista de Inventario</h2>
+          <p className="text-xs text-[#6f87a8] mb-3">Separamos la operación en dos vistas: equipos instalados y repuestos del depósito.</p>
+          <div className="inline-flex rounded-md border border-[#cad8ea] overflow-hidden bg-white">
+            <button
+              type="button"
+              onClick={() => setInventoryView("equipos")}
+              className={`px-3 py-1.5 text-xs font-semibold ${inventoryView === "equipos" ? "bg-[#1f6bc1] text-white" : "text-[#1f6bc1] hover:bg-[#edf4ff]"}`}
+            >
+              Equipos
+            </button>
+            <button
+              type="button"
+              onClick={() => setInventoryView("repuestos")}
+              className={`px-3 py-1.5 text-xs font-semibold ${inventoryView === "repuestos" ? "bg-[#1f6bc1] text-white" : "text-[#1f6bc1] hover:bg-[#edf4ff]"}`}
+            >
+              Repuestos
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#d8e4f3] border-b-[#2d72c4]" />
           </div>
-        ) : filtrados.length === 0 ? (
+        ) : inventoryView === "equipos" && filtrados.length === 0 ? (
           <div className="text-center py-8 bg-[#f7faff] rounded-xl border border-[#d1dcec]">
             <h3 className="mt-2 text-sm font-semibold text-[#1f4371]">No se encontraron equipos</h3>
             <p className="mt-1 text-xs text-[#6f87a8]">
               {search ? "Intenta con otros filtros de inventario" : "Aún no hay equipos registrados"}
             </p>
+          </div>
+        ) : inventoryView === "repuestos" ? (
+          <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+            <div className="px-4 py-3 border-b border-[#dbe4f3]">
+              <h3 className="text-base font-bold text-[#284a76]">Inventario de Repuestos</h3>
+              <p className="text-xs text-[#6f87a8] mt-1">Estimación operativa basada en consumo detectado en trámites.</p>
+            </div>
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              {repuestosInventario.map((rep) => (
+                <article key={rep.key} className="rounded-md border border-[#dbe6f4] bg-white p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4 className="text-sm font-semibold text-[#2a4d7a]">{rep.nombre}</h4>
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${getRepuestoBadgeClass(rep.status)}`}>
+                      {rep.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#607b9f]">Stock estimado: <span className="font-semibold">{rep.estimatedStock}</span></p>
+                  <p className="text-xs text-[#607b9f] mt-1">Demanda: <span className="font-semibold">{rep.demand} usos</span></p>
+                  <p className="text-xs text-[#607b9f] mt-1">Último uso: <span className="font-semibold">{formatDate(rep.ultimoUso)}</span></p>
+                  <div className="mt-2">
+                    <Link
+                      href="/tramites"
+                      className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                    >
+                      Ver movimientos
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
