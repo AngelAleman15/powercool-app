@@ -7,6 +7,52 @@ import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 import QRCodeComponent from "@/components/QRCodeComponent"
 
+const CIUDADES_URUGUAY = [
+  "Montevideo",
+  "Canelones",
+  "Maldonado",
+  "Punta del Este",
+  "Algarrobo",
+  "Piriápolis",
+  "Rocha",
+  "Chuy",
+  "Castillos",
+  "La Paloma",
+  "Salto",
+  "Salto Grande",
+  "Paysandú",
+  "Mercedes",
+  "New York",
+  "Guichón",
+  "Tacuarembó",
+  "Rivera",
+  "Melo",
+  "Artigas",
+  "Quadro",
+  "Feliciano",
+  "Durazno",
+  "Florida",
+  "San José de Mayo",
+  "Soriano",
+  "Young",
+  "Fray Bentos",
+  "Nueva Palmira",
+  "Colonia del Sacramento",
+  "Colonia Suiza",
+  "Las Flores",
+  "Conlara",
+  "Cerro Largo",
+  "Paso de los Toros",
+  "Bellaco",
+  "Sauce",
+  "Paysandú",
+  "Tarariras",
+  "Santa Rosa",
+  "Blanchard",
+  "Cebollatí",
+  "Bañado de Medina",
+]
+
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
   const [equiposByCliente, setEquiposByCliente] = useState({})
@@ -587,10 +633,17 @@ export default function Clientes() {
                 <input
                   type="text"
                   name="ciudad"
+                  list="ciudades-list"
                   value={formData.ciudad}
                   onChange={handleChange}
+                  placeholder="Escribe una ciudad..."
                   className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
                 />
+                <datalist id="ciudades-list">
+                  {CIUDADES_URUGUAY.map((ciudad) => (
+                    <option key={ciudad} value={ciudad} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="flex gap-3 pt-2">
