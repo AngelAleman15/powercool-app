@@ -107,6 +107,34 @@ export default function EquipoPage({ params }) {
     setShowExportModal(false)
   }
 
+  const getEstadoVisual = (estado) => {
+    if (estado === "completado") {
+      return {
+        badge: "bg-[#eaf7ef] text-[#2f7d4a]",
+        dot: "bg-[#2f7d4a]",
+      }
+    }
+
+    if (estado === "cancelado") {
+      return {
+        badge: "bg-[#fdeeee] text-[#b44a4a]",
+        dot: "bg-[#b44a4a]",
+      }
+    }
+
+    if (estado === "en_proceso") {
+      return {
+        badge: "bg-[#e9f1ff] text-[#2f69b0]",
+        dot: "bg-[#2f69b0]",
+      }
+    }
+
+    return {
+      badge: "bg-[#fff8e8] text-[#a97717]",
+      dot: "bg-[#a97717]",
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen text-[#3f5f87]">
@@ -136,7 +164,13 @@ export default function EquipoPage({ params }) {
 
   return (
 
-    <div className="px-4 sm:px-6 py-4 sm:py-6 text-[#314d72]">
+    <div
+      className="px-4 sm:px-6 py-4 sm:py-6 text-[#314d72]"
+      style={{
+        backgroundImage: "linear-gradient(rgba(42,77,122,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(42,77,122,0.03) 1px, transparent 1px)",
+        backgroundSize: "26px 26px",
+      }}
+    >
 
       {/* Back Button */}
       <Link href="/equipos" className="inline-flex items-center gap-2 text-sm text-[#4f6f98] hover:text-[#1f6bc1] mb-4 transition-colors">
@@ -156,33 +190,44 @@ export default function EquipoPage({ params }) {
           >
 
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-[#edf4ff] rounded-lg border border-[#dbe6f4]">
-                  <svg className="w-6 h-6 text-[#1f6bc1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                  </svg>
+            <div className="mb-6 rounded-2xl border border-[#d8e5f5] bg-gradient-to-r from-[#2a4d7a] via-[#2f5f98] to-[#3e79bd] p-5 shadow-[0_14px_26px_rgba(37,76,126,.22)]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-white/15 backdrop-blur rounded-lg border border-white/20">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">{equipo.marca} {equipo.modelo}</h1>
+                    <p className="text-[#d9e8ff] font-mono text-xs mt-1">ID: {equipo.id}</p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-[#1f4371]">{equipo.marca} {equipo.modelo}</h1>
-                  <p className="text-[#6f87a8] font-mono text-xs mt-1">ID: {equipo.id}</p>
+
+                <div className="flex flex-wrap justify-end gap-2">
+                  <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/20 text-white font-semibold">
+                    {equipo.tipo || "split"}
+                  </span>
+                  <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/20 text-white font-semibold">
+                    {equipo.capacidad || "Sin capacidad"}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-              <div className="bg-white rounded-lg p-3 border border-[#dbe6f4]">
+              <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)]">
                 <p className="text-[#6f87a8] text-xs mb-1">Modelo</p>
                 <p className="text-[#2a4d7a] text-base font-semibold">{equipo.modelo || 'No especificado'}</p>
               </div>
 
-              <div className="bg-white rounded-lg p-3 border border-[#dbe6f4]">
+              <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)]">
                 <p className="text-[#6f87a8] text-xs mb-1">Marca</p>
                 <p className="text-[#2a4d7a] text-base font-semibold">{equipo.marca || 'No especificada'}</p>
               </div>
 
-              <div className="bg-white rounded-lg p-3 border border-[#dbe6f4]">
+              <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)]">
                 <p className="text-[#6f87a8] text-xs mb-1">Ubicación</p>
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-[#6f87a8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,12 +238,12 @@ export default function EquipoPage({ params }) {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-3 border border-[#dbe6f4]">
+              <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)]">
                 <p className="text-[#6f87a8] text-xs mb-1">Tipo</p>
                 <p className="text-[#2a4d7a] text-base font-semibold">{equipo.tipo || 'Split'}</p>
               </div>
 
-              <div className="bg-white rounded-lg p-3 border border-[#dbe6f4]">
+              <div className="bg-white rounded-xl p-3 border border-[#dbe6f4] shadow-[inset_0_1px_0_rgba(255,255,255,.8)] md:col-span-2">
                 <p className="text-[#6f87a8] text-xs mb-1">Capacidad</p>
                 <p className="text-[#2a4d7a] text-base font-semibold">{equipo.capacidad || 'No especificada'}</p>
               </div>
@@ -206,7 +251,7 @@ export default function EquipoPage({ params }) {
 
             {/* Client Info */}
             {equipo.clientes && (
-              <div className="bg-white rounded-lg p-4 border border-[#dbe6f4] mb-6">
+              <div className="bg-white rounded-xl p-4 border border-[#dbe6f4] mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <svg className="w-5 h-5 text-[#1f6bc1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -247,7 +292,7 @@ export default function EquipoPage({ params }) {
             {/* Maintenance History */}
             <div 
               ref={historialRef}
-              className="bg-white rounded-lg p-4 border border-[#dbe6f4]"
+              className="bg-white rounded-xl p-4 border border-[#dbe6f4]"
             >
               <div className="flex items-center gap-2 mb-2">
                 <svg className="w-5 h-5 text-[#1f6bc1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,16 +303,31 @@ export default function EquipoPage({ params }) {
               {historial.length === 0 ? (
                 <p className="text-sm text-[#8ca0bc]">Sin historial registrado</p>
               ) : (
-                <div className="space-y-2 mt-2">
-                  {historial.slice(0, 8).map((item) => (
-                    <div key={item.id} className="rounded-md border border-[#dbe6f4] bg-[#f8fbff] px-3 py-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-[#2a4d7a] uppercase tracking-wide">{item.tipo}</p>
-                        <span className="text-[10px] text-[#6f87a8]">{new Date(item.created_at).toLocaleDateString("es-UY")}</span>
+                <div className="mt-3 space-y-0">
+                  {historial.slice(0, 8).map((item, idx, arr) => {
+                    const estadoVisual = getEstadoVisual(item.estado)
+
+                    return (
+                      <div key={item.id} className="relative pl-6 pb-4 last:pb-0">
+                        <span className={`absolute left-0 top-1.5 h-3 w-3 rounded-full border-2 border-white ${estadoVisual.dot}`}></span>
+                        {idx !== arr.length - 1 && (
+                          <span className="absolute left-[5px] top-5 bottom-0 w-[2px] bg-[#d8e4f3]"></span>
+                        )}
+
+                        <div className="rounded-md border border-[#dbe6f4] bg-[#f8fbff] px-3 py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs text-[#2a4d7a] uppercase tracking-wide">{item.tipo}</p>
+                            <span className="text-[10px] text-[#6f87a8]">{new Date(item.created_at).toLocaleDateString("es-UY")}</span>
+                          </div>
+                          <p className="text-xs mt-1">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full font-semibold ${estadoVisual.badge}`}>
+                              {String(item.estado).replaceAll("_", " ")}
+                            </span>
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-[#607b9f] mt-1">Estado: {String(item.estado).replaceAll("_", " ")}</p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -290,8 +350,12 @@ export default function EquipoPage({ params }) {
 
         {/* Sidebar - QR Code */}
         <div className="lg:col-span-1">
-          <div className="bg-[#f9fbff] rounded-xl p-4 border border-[#d3dfef] shadow-[0_6px_16px_rgba(50,89,141,.1)] sticky top-16">
-            <h3 className="text-base font-bold text-[#2a4d7a] mb-3">Código QR</h3>
+          <div className="bg-[#f9fbff] rounded-xl p-4 border border-[#d3dfef] shadow-[0_6px_16px_rgba(50,89,141,.1)] sticky top-16 overflow-hidden">
+            <div className="rounded-lg border border-[#d8e5f5] bg-gradient-to-r from-[#2a4d7a] to-[#3e79bd] px-3 py-2 mb-3">
+              <h3 className="text-base font-bold text-white">Tarjeta de Acceso QR</h3>
+              <p className="text-[11px] text-[#d9e8ff]">Escanea para abrir la ficha del equipo</p>
+            </div>
+
             <QRCodeComponent id={equipo.id} />
           </div>
         </div>
