@@ -433,24 +433,45 @@ export default function ClienteDetallePage() {
         {equipos.length === 0 ? (
           <p className="text-[#8ca0bc] py-6 text-center">Este cliente no tiene equipos registrados.</p>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {equipos.map((equipo) => (
-              <article key={equipo.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
-                <div className="flex justify-between items-start gap-3">
-                  <div>
-                    <p className="text-[#2462ad] font-semibold">{equipo.marca || "Sin marca"} {equipo.modelo || ""}</p>
-                    <p className="text-sm text-[#4a678f]">{equipo.tipo || "Tipo no definido"}</p>
-                    <p className="text-xs text-[#6f87a8] mt-1">Capacidad: {equipo.capacidad || "N/A"}</p>
-                    <p className="text-xs text-[#6f87a8]">Ubicación interna: {equipo.ubicacion || "No definida"}</p>
+              <article
+                key={equipo.id}
+                className="rounded-xl border border-[#cfe0f3] bg-gradient-to-b from-white to-[#f7fbff] p-4 shadow-[0_10px_22px_rgba(48,94,152,.08)] hover:shadow-[0_14px_28px_rgba(40,90,150,.14)] transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0">
+                    <p className="text-[#1e5ca7] font-bold text-lg leading-tight truncate">
+                      {equipo.marca || "Sin marca"} {equipo.modelo || ""}
+                    </p>
+                    <p className="text-sm text-[#4a678f] mt-0.5">ID: {equipo.id}</p>
+                  </div>
+                  <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#eaf2ff] text-[#2e67ac] font-semibold whitespace-nowrap">
+                    {equipo.tipo || "Tipo no definido"}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className="text-xs px-2.5 py-1 rounded-md bg-[#f0f5fd] text-[#55759c] border border-[#d7e4f4]">
+                    Capacidad: {equipo.capacidad || "N/A"}
+                  </span>
+                  <span className="text-xs px-2.5 py-1 rounded-md bg-[#f0f5fd] text-[#55759c] border border-[#d7e4f4]">
+                    Ubicación: {equipo.ubicacion || "No definida"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_170px] gap-3 items-start">
+                  <div className="rounded-lg border border-[#d8e5f4] bg-white p-3">
+                    <p className="text-xs text-[#607b9f] mb-2">Acciones</p>
                     <Link
                       href={`/equipos/${equipo.id}`}
-                      className="inline-block mt-2 text-xs font-semibold text-[#1f6bc1] hover:text-[#19599f]"
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
                     >
                       Ver detalle del equipo
                     </Link>
                   </div>
 
-                  <div className="w-[130px] shrink-0">
+                  <div className="rounded-lg border border-[#d8e5f4] bg-white p-2">
                     <QRCodeComponent id={equipo.id} />
                   </div>
                 </div>
