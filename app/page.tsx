@@ -124,11 +124,31 @@ export default function Home() {
         return
       }
 
-      const [clientesRes, equiposRes, tramitesRes] = await Promise.all([
+      const [clientesResOrdered, equiposResWithCreated, tramitesResOrdered] = await Promise.all([
         supabase.from("clientes").select("id, nombre, ciudad").order("created_at", { ascending: false }),
         supabase.from("equipos").select("id, cliente_id, marca, modelo, created_at"),
         supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, clientes(nombre)").order("created_at", { ascending: false }),
       ])
+
+      let clientesRes = clientesResOrdered
+      if (clientesResOrdered.error) {
+        // Compatibilidad con esquemas antiguos sin created_at en clientes.
+        clientesRes = await supabase.from("clientes").select("id, nombre, ciudad")
+      }
+
+      let equiposRes = equiposResWithCreated
+      if (equiposResWithCreated.error) {
+        // Compatibilidad con esquemas antiguos sin created_at en equipos.
+        equiposRes = await supabase.from("equipos").select("id, cliente_id, marca, modelo")
+      }
+
+      let tramitesRes = tramitesResOrdered
+      if (tramitesResOrdered.error) {
+        // Compatibilidad con esquemas antiguos sin created_at en tramites.
+        tramitesRes = await supabase
+          .from("tramites")
+          .select("id, tipo, estado, fecha_programada, cliente_id, clientes(nombre)")
+      }
 
       const clientesData = clientesRes.data || []
       const equiposData = equiposRes.data || []
