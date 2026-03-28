@@ -6,6 +6,7 @@ import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import QRCodeComponent from "@/components/QRCodeComponent"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 
@@ -17,9 +18,16 @@ export default function EquipoPage({ params }) {
   const [showExportModal, setShowExportModal] = useState(false)
   const [incluirHistorial, setIncluirHistorial] = useState(true)
   const { demoMode } = useDemoMode()
+  const searchParams = useSearchParams()
 
   const fichaRef = useRef()
   const historialRef = useRef()
+
+  const clienteIdFromQuery = searchParams.get("clienteId")
+  const fromCliente = searchParams.get("from") === "cliente"
+  const clienteIdBack = clienteIdFromQuery || equipo?.cliente_id
+  const backHref = fromCliente && clienteIdBack ? `/clientes/${clienteIdBack}` : "/equipos"
+  const backLabel = fromCliente && clienteIdBack ? "Volver al cliente" : "Volver a equipos"
 
   useEffect(() => {
     cargarEquipo()
@@ -167,11 +175,11 @@ export default function EquipoPage({ params }) {
     <div className="px-4 sm:px-6 py-4 sm:py-6 text-[#314d72]">
 
       {/* Back Button */}
-      <Link href="/equipos" className="inline-flex items-center gap-2 text-sm text-[#4f6f98] hover:text-[#1f6bc1] mb-4 transition-colors">
+      <Link href={backHref} className="inline-flex items-center gap-2 text-sm text-[#4f6f98] hover:text-[#1f6bc1] mb-4 transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        Volver a equipos
+        {backLabel}
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

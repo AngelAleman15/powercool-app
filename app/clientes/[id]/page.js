@@ -624,7 +624,7 @@ export default function ClienteDetallePage() {
                     <p className="text-xs text-[#607b9f] mb-2">Acciones</p>
                     <div className="space-y-2">
                       <Link
-                        href={`/equipos/${equipo.id}`}
+                        href={`/equipos/${equipo.id}?from=cliente&clienteId=${clienteId}`}
                         className="w-full inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
                       >
                         Ver detalle del equipo
