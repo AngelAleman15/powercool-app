@@ -50,6 +50,11 @@ export default function ClienteDetallePage() {
   const [showEquipoModal, setShowEquipoModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savingEquipo, setSavingEquipo] = useState(false)
+  const [searchText, setSearchText] = useState("")
+  const [equipoTipoFilter, setEquipoTipoFilter] = useState("todos")
+  const [tramiteTipoFilter, setTramiteTipoFilter] = useState("todos")
+  const [estadoActivoFilter, setEstadoActivoFilter] = useState("todos")
+  const [estadoHistorialFilter, setEstadoHistorialFilter] = useState("todos")
   const [copiedEquipoId, setCopiedEquipoId] = useState(null)
   const [showCitySuggestions, setShowCitySuggestions] = useState(false)
   const [formData, setFormData] = useState({
@@ -109,6 +114,46 @@ export default function ClienteDetallePage() {
     () => tramites.filter((t) => t.estado === "completado" || t.estado === "cancelado"),
     [tramites]
   )
+
+  const matchText = (value) => String(value || "").toLowerCase().includes(searchText.trim().toLowerCase())
+
+  const equiposFiltrados = useMemo(() => {
+    return equipos.filter((equipo) => {
+      const byTipo = equipoTipoFilter === "todos" ? true : String(equipo.tipo || "split") === equipoTipoFilter
+
+      const bySearch =
+        !searchText.trim() ||
+        matchText(`${equipo.marca} ${equipo.modelo} ${equipo.tipo} ${equipo.capacidad} ${equipo.ubicacion} ${equipo.id}`)
+
+      return byTipo && bySearch
+    })
+  }, [equipos, equipoTipoFilter, searchText])
+
+  const tramitesActivosFiltrados = useMemo(() => {
+    return tramitesActivos.filter((tramite) => {
+      const byTipo = tramiteTipoFilter === "todos" ? true : tramite.tipo === tramiteTipoFilter
+      const byEstado = estadoActivoFilter === "todos" ? true : tramite.estado === estadoActivoFilter
+
+      const bySearch =
+        !searchText.trim() ||
+        matchText(`${tramite.tipo} ${tramite.estado} ${tramite.descripcion} ${tramite.equipos?.marca || ""} ${tramite.equipos?.modelo || ""}`)
+
+      return byTipo && byEstado && bySearch
+    })
+  }, [tramitesActivos, tramiteTipoFilter, estadoActivoFilter, searchText])
+
+  const tramitesHistorialFiltrados = useMemo(() => {
+    return tramitesHistorial.filter((tramite) => {
+      const byTipo = tramiteTipoFilter === "todos" ? true : tramite.tipo === tramiteTipoFilter
+      const byEstado = estadoHistorialFilter === "todos" ? true : tramite.estado === estadoHistorialFilter
+
+      const bySearch =
+        !searchText.trim() ||
+        matchText(`${tramite.tipo} ${tramite.estado} ${tramite.descripcion} ${tramite.equipos?.marca || ""} ${tramite.equipos?.modelo || ""}`)
+
+      return byTipo && byEstado && bySearch
+    })
+  }, [tramitesHistorial, tramiteTipoFilter, estadoHistorialFilter, searchText])
 
   const ciudadesFiltradas = useMemo(() => {
     return CIUDADES_URUGUAY
@@ -458,8 +503,77 @@ export default function ClienteDetallePage() {
       </div>
 
       <section className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)] mb-4">
+        <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Búsqueda y Filtros</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="lg:col-span-2">
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Buscar por marca, modelo, descripción, estado o ID..."
+              className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#5e7da3] mb-1">Tipo de equipo</label>
+            <select
+              value={equipoTipoFilter}
+              onChange={(e) => setEquipoTipoFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+            >
+              <option value="todos">Todos</option>
+              <option value="split">Split</option>
+              <option value="cassette">Cassette</option>
+              <option value="piso-techo">Piso-Techo</option>
+              <option value="multi-split">Multi-Split</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#5e7da3] mb-1">Tipo de trámite</label>
+            <select
+              value={tramiteTipoFilter}
+              onChange={(e) => setTramiteTipoFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+            >
+              <option value="todos">Todos</option>
+              <option value="mantenimiento">Mantenimiento</option>
+              <option value="abono">Abono</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#5e7da3] mb-1">Estado (Activos)</label>
+            <select
+              value={estadoActivoFilter}
+              onChange={(e) => setEstadoActivoFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+            >
+              <option value="todos">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="en_proceso">En proceso</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#5e7da3] mb-1">Estado (Historial)</label>
+            <select
+              value={estadoHistorialFilter}
+              onChange={(e) => setEstadoHistorialFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+            >
+              <option value="todos">Todos</option>
+              <option value="completado">Completado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)] mb-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold text-[#2a4d7a]">Equipos del Cliente</h2>
+          <h2 className="text-xl font-bold text-[#2a4d7a]">Equipos del Cliente ({equiposFiltrados.length}/{equipos.length})</h2>
           <button
             onClick={() => {
               resetEquipoForm()
@@ -471,11 +585,11 @@ export default function ClienteDetallePage() {
           </button>
         </div>
 
-        {equipos.length === 0 ? (
+        {equiposFiltrados.length === 0 ? (
           <p className="text-[#8ca0bc] py-6 text-center">Este cliente no tiene equipos registrados.</p>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {equipos.map((equipo) => (
+            {equiposFiltrados.map((equipo) => (
               <article
                 key={equipo.id}
                 className="rounded-xl border border-[#cfe0f3] bg-gradient-to-b from-white to-[#f7fbff] p-4 shadow-[0_10px_22px_rgba(48,94,152,.08)] hover:shadow-[0_14px_28px_rgba(40,90,150,.14)] transition-shadow"
@@ -561,12 +675,12 @@ export default function ClienteDetallePage() {
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <div className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)]">
-          <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Trámites Activos</h2>
-          {tramitesActivos.length === 0 ? (
+          <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Trámites Activos ({tramitesActivosFiltrados.length}/{tramitesActivos.length})</h2>
+          {tramitesActivosFiltrados.length === 0 ? (
             <p className="text-[#8ca0bc]">No hay trámites activos.</p>
           ) : (
             <div className="space-y-2">
-              {tramitesActivos.map((tramite) => (
+              {tramitesActivosFiltrados.map((tramite) => (
                 <div key={tramite.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-[#2e5e96]">{tramite.tipo === "abono" ? "Abono" : "Mantenimiento"}</p>
@@ -586,12 +700,12 @@ export default function ClienteDetallePage() {
         </div>
 
         <div className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)]">
-          <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Historial</h2>
-          {tramitesHistorial.length === 0 ? (
+          <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Historial ({tramitesHistorialFiltrados.length}/{tramitesHistorial.length})</h2>
+          {tramitesHistorialFiltrados.length === 0 ? (
             <p className="text-[#8ca0bc]">No hay trámites en historial.</p>
           ) : (
             <div className="space-y-2">
-              {tramitesHistorial.map((tramite) => (
+              {tramitesHistorialFiltrados.map((tramite) => (
                 <div key={tramite.id} className={`rounded-md border p-3 ${getHistorialCardClass(tramite.estado)}`}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-[#2e5e96]">{tramite.tipo === "abono" ? "Abono" : "Mantenimiento"}</p>
