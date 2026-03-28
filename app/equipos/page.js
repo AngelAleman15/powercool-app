@@ -1,302 +1,869 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_EQUIPOS } from "@/lib/demoData"
+import { DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 import UruguayMap from "@/components/UruguayMap"
 
-const DEMO_MOVIMIENTOS = [
-  { id: 1, tipo: "Ingreso", cantidad: 10, unidad: "Unidades", modelo: "Sin: 3008TU", color: "green" },
-  { id: 2, tipo: "Salida", cantidad: 5, unidad: "Unidades", modelo: "Frio Techo", color: "red" },
-  { id: 3, tipo: "Ingreso", cantidad: 8, unidad: "Unidades", modelo: "Consola 2400BTU", color: "green" },
+const ESTADO_STORAGE_KEY = "powercool.equipos.estadoOverrides.v1"
+const TREND_MONTHS = 6
+
+const RELEVANT_PARTS = [
+  { key: "filtro", nombre: "Filtro de aire", umbral: 3 },
+  { key: "gas", nombre: "Gas refrigerante", umbral: 2 },
+  { key: "capacitor", nombre: "Capacitor", umbral: 2 },
+  { key: "correa", nombre: "Correa", umbral: 2 },
 ]
 
-const DEMO_ESTADO_MAQUINAS = [
-  { estado: "Perfecto", cantidad: 95, color: "bg-green-500" },
-  { estado: "Mantenimiento", cantidad: 18, color: "bg-yellow-500" },
-  { estado: "Reparacion", cantidad: 5, color: "bg-red-500" },
-]
+function formatDate(value) {
+  if (!value) return "Sin fecha"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return "Sin fecha"
+  return d.toLocaleDateString("es-UY")
+}
 
-const DEMO_PROXIMOS = [
-  { id: 1, servicio: "Mantenimiento", cliente: "Hotel Oasis", fecha: "25 Sep" },
-  { id: 2, servicio: "Revision", cliente: "Clinica Medica", fecha: "28 Sep" },
-  { id: 3, servicio: "Service", cliente: "Oficina TecoCorp", fecha: "30 Sep" },
-]
+function formatMonthLabel(date) {
+  return date.toLocaleDateString("es-UY", { month: "short" })
+}
+
+function parseCapacidad(value) {
+  if (!value) return null
+  const asNumber = Number(String(value).replace(/[^\d]/g, ""))
+  return Number.isFinite(asNumber) ? asNumber : null
+}
+
+function getCapacidadBucket(capacidadNum) {
+  if (!capacidadNum) return "sin-dato"
+  if (capacidadNum <= 12000) return "baja"
+  if (capacidadNum <= 24000) return "media"
+  return "alta"
+}
+
+function getEstadoLabel(estado) {
+  if (estado === "mantenimiento") return "En mantenimiento"
+  if (estado === "atencion") return "Atencion"
+  if (estado === "critico") return "Critico"
+  return "Operativo"
+}
+
+function getEstadoBadgeClass(estado) {
+  if (estado === "mantenimiento") return "bg-[#fff3df] text-[#9f6c16]"
+  if (estado === "atencion") return "bg-[#e9f1ff] text-[#2f69b0]"
+  if (estado === "critico") return "bg-[#fdeeee] text-[#b44a4a]"
+  return "bg-[#eaf7ef] text-[#2f7d4a]"
+}
+
+function getPrioridadFromEstado(estado) {
+  if (estado === "critico" || estado === "mantenimiento") return "critico"
+  if (estado === "atencion") return "atencion"
+  return "normal"
+}
+
+function getPrioridadBadge(prioridad) {
+  if (prioridad === "critico") return "bg-[#fdeeee] text-[#b44a4a]"
+  if (prioridad === "atencion") return "bg-[#fff8e8] text-[#a97717]"
+  return "bg-[#eaf7ef] text-[#2f7d4a]"
+}
+
+function downloadTextFile(content, fileName, mimeType) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 export default function Equipos() {
+  const [equipos, setEquipos] = useState([])
+  const [tramites, setTramites] = useState([])
+  const [search, setSearch] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [tipoFilter, setTipoFilter] = useState("todos")
+  const [ubicacionFilter, setUbicacionFilter] = useState("todas")
+  const [capacidadFilter, setCapacidadFilter] = useState("todas")
+  const [estadoFilter, setEstadoFilter] = useState("todos")
+  const [prioridadFilter, setPrioridadFilter] = useState("todas")
+  const [minStockThreshold, setMinStockThreshold] = useState(2)
+  const [estadoOverrides, setEstadoOverrides] = useState({})
+  const [dbColumnsAvailable, setDbColumnsAvailable] = useState(true)
+  const [exportingPdf, setExportingPdf] = useState(false)
 
-  const [equipos,setEquipos] = useState([])
-  const [search,setSearch] = useState("")
-  const [loading,setLoading] = useState(true)
   const { demoMode } = useDemoMode()
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = window.localStorage.getItem(ESTADO_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        setEstadoOverrides(parsed && typeof parsed === "object" ? parsed : {})
+      }
+    } catch (error) {
+      console.error("No se pudo leer estado local de equipos", error)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      window.localStorage.setItem(ESTADO_STORAGE_KEY, JSON.stringify(estadoOverrides))
+    } catch (error) {
+      console.error("No se pudo guardar estado local de equipos", error)
+    }
+  }, [estadoOverrides])
 
   const cargarEquipos = async () => {
     if (demoMode) {
       setEquipos(DEMO_EQUIPOS)
+      setTramites(DEMO_TRAMITES.filter((t) => t.equipo_id))
+      setDbColumnsAvailable(false)
       setLoading(false)
       return
     }
 
     setLoading(true)
-    const { data } = await supabase
-      .from("equipos")
-      .select("*")
 
-    setEquipos(data || [])
-    setLoading(false)
+    try {
+      const [equiposRes, tramitesOrdered, schemaProbe] = await Promise.all([
+        supabase.from("equipos").select("*"),
+        supabase
+          .from("tramites")
+          .select("id, equipo_id, tipo, estado, descripcion, created_at, fecha_programada, tecnico, usuario")
+          .not("equipo_id", "is", null)
+          .order("created_at", { ascending: false }),
+        supabase.from("equipos").select("id, estado_operativo, prioridad").limit(1),
+      ])
+
+      let tramitesRes = tramitesOrdered
+      if (tramitesOrdered.error) {
+        tramitesRes = await supabase
+          .from("tramites")
+          .select("id, equipo_id, tipo, estado, descripcion, created_at, fecha_programada, tecnico, usuario")
+          .not("equipo_id", "is", null)
+      }
+
+      setEquipos(equiposRes.data || [])
+      setTramites(tramitesRes.data || [])
+      setDbColumnsAvailable(!schemaProbe.error)
+    } catch (error) {
+      console.error("Error cargando inventario", error)
+      setEquipos([])
+      setTramites([])
+      setDbColumnsAvailable(false)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     cargarEquipos()
-  },[demoMode])
+  }, [demoMode])
 
-  const filtrados = equipos.filter(e =>
-    e.modelo?.toLowerCase().includes(search.toLowerCase()) ||
-    e.marca?.toLowerCase().includes(search.toLowerCase()) ||
-    e.ubicacion?.toLowerCase().includes(search.toLowerCase()) ||
-    e.id?.includes(search)
-  )
+  const tramitesByEquipo = useMemo(() => {
+    return tramites.reduce((acc, tramite) => {
+      const key = String(tramite.equipo_id || "")
+      if (!key) return acc
+      if (!acc[key]) acc[key] = []
+      acc[key].push(tramite)
+      return acc
+    }, {})
+  }, [tramites])
+
+  const equiposEnriquecidos = useMemo(() => {
+    return equipos.map((equipo) => {
+      const key = String(equipo.id)
+      const list = tramitesByEquipo[key] || []
+
+      let estadoOperativo = "operativo"
+      if (equipo.estado_operativo) {
+        estadoOperativo = equipo.estado_operativo
+      } else if (estadoOverrides[key]) {
+        estadoOperativo = estadoOverrides[key]
+      } else if (list.some((t) => t.estado === "en_proceso")) {
+        estadoOperativo = "mantenimiento"
+      } else if (list.some((t) => t.estado === "pendiente")) {
+        estadoOperativo = "atencion"
+      }
+
+      const capacidadNum = parseCapacidad(equipo.capacidad)
+      const prioridad = equipo.prioridad || getPrioridadFromEstado(estadoOperativo)
+
+      const proximo = [...list]
+        .filter((t) => t.estado === "pendiente" || t.estado === "en_proceso")
+        .sort((a, b) => new Date(a.fecha_programada || a.created_at || 0) - new Date(b.fecha_programada || b.created_at || 0))[0]
+
+      const ultimo = [...list]
+        .filter((t) => t.estado === "completado")
+        .sort((a, b) => new Date(b.fecha_programada || b.created_at || 0) - new Date(a.fecha_programada || a.created_at || 0))[0]
+
+      return {
+        ...equipo,
+        estadoOperativo,
+        prioridad,
+        capacidadNum,
+        capacidadBucket: getCapacidadBucket(capacidadNum),
+        proximo,
+        ultimo,
+      }
+    })
+  }, [equipos, tramitesByEquipo, estadoOverrides])
+
+  const tiposDisponibles = useMemo(() => {
+    return Array.from(new Set(equiposEnriquecidos.map((e) => (e.tipo || "split").toLowerCase())))
+  }, [equiposEnriquecidos])
+
+  const ubicacionesDisponibles = useMemo(() => {
+    return Array.from(new Set(equiposEnriquecidos.map((e) => e.ubicacion || "Sin ubicación")))
+  }, [equiposEnriquecidos])
+
+  const movimientosReales = useMemo(() => {
+    const events = []
+
+    for (const equipo of equiposEnriquecidos) {
+      if (equipo.created_at) {
+        events.push({
+          id: `ing-${equipo.id}`,
+          tipo: "ingreso",
+          detalle: `Alta de ${equipo.marca || "Equipo"} ${equipo.modelo || ""}`,
+          motivo: "Ingreso al inventario",
+          usuario: "Sistema",
+          referencia: `EQ-${equipo.id}`,
+          date: equipo.created_at,
+        })
+      }
+    }
+
+    for (const tramite of tramites) {
+      const baseDate = tramite.fecha_programada || tramite.created_at
+      events.push({
+        id: `tr-${tramite.id}`,
+        tipo: tramite.estado === "cancelado" ? "ajuste" : (tramite.tipo === "abono" ? "ingreso" : "salida"),
+        detalle: `${tramite.tipo === "abono" ? "Abono" : "Mantenimiento"} (${tramite.estado || "sin estado"})`,
+        motivo: tramite.descripcion || "Movimiento asociado a tramite",
+        usuario: tramite.usuario || tramite.tecnico || "Sistema",
+        referencia: `TR-${tramite.id}`,
+        date: baseDate,
+      })
+    }
+
+    return events
+      .filter((e) => e.date)
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+  }, [equiposEnriquecidos, tramites])
+
+  const inventoryMovements = useMemo(() => movimientosReales.slice(0, 8), [movimientosReales])
+
+  const upcomingMaintenances = useMemo(() => {
+    return equiposEnriquecidos
+      .filter((e) => e.proximo)
+      .sort(
+        (a, b) =>
+          new Date(a.proximo?.fecha_programada || a.proximo?.created_at || 0) -
+          new Date(b.proximo?.fecha_programada || b.proximo?.created_at || 0)
+      )
+      .slice(0, 6)
+  }, [equiposEnriquecidos])
+
+  const modelStock = useMemo(() => {
+    const grouped = {}
+    for (const e of equiposEnriquecidos) {
+      const modeloKey = `${e.marca || "Sin marca"} ${e.modelo || "Sin modelo"}`.trim()
+      if (!grouped[modeloKey]) grouped[modeloKey] = { modeloKey, total: 0 }
+      grouped[modeloKey].total += 1
+    }
+    return Object.values(grouped).sort((a, b) => a.total - b.total)
+  }, [equiposEnriquecidos])
+
+  const stockAlerts = useMemo(() => {
+    return modelStock.filter((m) => m.total <= Number(minStockThreshold || 0))
+  }, [modelStock, minStockThreshold])
+
+  const repuestosCriticos = useMemo(() => {
+    return RELEVANT_PARTS.map((part) => {
+      const demand = tramites.filter((t) => String(t.descripcion || "").toLowerCase().includes(part.key)).length
+      return {
+        ...part,
+        demand,
+      }
+    }).filter((part) => part.demand >= part.umbral)
+  }, [tramites])
+
+  const depositoSummary = useMemo(() => {
+    const grouped = {}
+
+    for (const e of equiposEnriquecidos) {
+      const key = e.ubicacion || "Sin ubicación"
+      if (!grouped[key]) {
+        grouped[key] = {
+          deposito: key,
+          total: 0,
+          criticos: 0,
+          enMantenimiento: 0,
+          operativos: 0,
+        }
+      }
+
+      grouped[key].total += 1
+
+      if (e.estadoOperativo === "critico") grouped[key].criticos += 1
+      if (e.estadoOperativo === "mantenimiento") grouped[key].enMantenimiento += 1
+      if (e.estadoOperativo === "operativo") grouped[key].operativos += 1
+    }
+
+    return Object.values(grouped).sort((a, b) => b.total - a.total)
+  }, [equiposEnriquecidos])
+
+  const trendData = useMemo(() => {
+    const months = []
+    const now = new Date()
+
+    for (let i = TREND_MONTHS - 1; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      months.push({
+        key: `${d.getFullYear()}-${d.getMonth() + 1}`,
+        month: d,
+        ingresos: 0,
+        salidas: 0,
+      })
+    }
+
+    const monthIndex = months.reduce((acc, m, idx) => {
+      acc[m.key] = idx
+      return acc
+    }, {})
+
+    for (const mov of movimientosReales) {
+      if (mov.tipo !== "ingreso" && mov.tipo !== "salida") continue
+      const date = new Date(mov.date)
+      const key = `${date.getFullYear()}-${date.getMonth() + 1}`
+      const idx = monthIndex[key]
+      if (idx === undefined) continue
+      if (mov.tipo === "ingreso") months[idx].ingresos += 1
+      if (mov.tipo === "salida") months[idx].salidas += 1
+    }
+
+    return months
+  }, [movimientosReales])
+
+  const maxTrendValue = useMemo(() => {
+    const all = trendData.flatMap((m) => [m.ingresos, m.salidas])
+    const max = Math.max(...all, 1)
+    return max
+  }, [trendData])
+
+  const rotacion = useMemo(() => {
+    const totalSalidas = trendData.reduce((acc, month) => acc + month.salidas, 0)
+    const base = Math.max(equiposEnriquecidos.length, 1)
+    return (totalSalidas / base).toFixed(2)
+  }, [trendData, equiposEnriquecidos.length])
+
+  const filtrados = useMemo(() => {
+    const term = search.trim().toLowerCase()
+
+    return equiposEnriquecidos.filter((e) => {
+      const bySearch =
+        !term ||
+        `${e.marca || ""} ${e.modelo || ""} ${e.ubicacion || ""} ${e.id || ""}`.toLowerCase().includes(term)
+
+      const byTipo = tipoFilter === "todos" ? true : (e.tipo || "split").toLowerCase() === tipoFilter
+      const byUbicacion = ubicacionFilter === "todas" ? true : (e.ubicacion || "Sin ubicación") === ubicacionFilter
+      const byEstado = estadoFilter === "todos" ? true : e.estadoOperativo === estadoFilter
+      const byPrioridad = prioridadFilter === "todas" ? true : e.prioridad === prioridadFilter
+
+      let byCapacidad = true
+      if (capacidadFilter === "baja") byCapacidad = e.capacidadBucket === "baja"
+      if (capacidadFilter === "media") byCapacidad = e.capacidadBucket === "media"
+      if (capacidadFilter === "alta") byCapacidad = e.capacidadBucket === "alta"
+      if (capacidadFilter === "sin-dato") byCapacidad = e.capacidadBucket === "sin-dato"
+
+      return bySearch && byTipo && byUbicacion && byEstado && byPrioridad && byCapacidad
+    })
+  }, [equiposEnriquecidos, search, tipoFilter, ubicacionFilter, capacidadFilter, estadoFilter, prioridadFilter])
+
+  const exportFilteredAsCsv = () => {
+    const headers = [
+      "ID",
+      "Marca",
+      "Modelo",
+      "Tipo",
+      "Capacidad",
+      "Ubicacion",
+      "Estado",
+      "Prioridad",
+      "Proximo mantenimiento",
+      "Ultimo mantenimiento",
+    ]
+
+    const rows = filtrados.map((e) => [
+      e.id,
+      e.marca || "",
+      e.modelo || "",
+      e.tipo || "",
+      e.capacidad || "",
+      e.ubicacion || "",
+      getEstadoLabel(e.estadoOperativo),
+      e.prioridad,
+      formatDate(e.proximo?.fecha_programada || e.proximo?.created_at),
+      formatDate(e.ultimo?.fecha_programada || e.ultimo?.created_at),
+    ])
+
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n")
+
+    downloadTextFile(csv, `inventario-filtrado-${Date.now()}.csv`, "text/csv;charset=utf-8")
+  }
+
+  const exportFilteredAsPdf = async () => {
+    setExportingPdf(true)
+
+    try {
+      const jsPdfModule = await import("jspdf")
+      const PDF = jsPdfModule.default
+      const pdf = new PDF({ orientation: "portrait", unit: "mm", format: "a4" })
+
+      let y = 12
+      pdf.setFontSize(14)
+      pdf.text("Inventario Filtrado", 10, y)
+      y += 7
+
+      pdf.setFontSize(9)
+      pdf.text(`Fecha: ${new Date().toLocaleString("es-UY")}`, 10, y)
+      y += 6
+      pdf.text(`Total: ${filtrados.length} equipos`, 10, y)
+      y += 8
+
+      filtrados.forEach((e, idx) => {
+        if (y > 275) {
+          pdf.addPage()
+          y = 12
+        }
+
+        const line = `${idx + 1}. ${e.marca || ""} ${e.modelo || ""} | ${e.id} | ${e.ubicacion || "Sin ubicación"}`
+        const line2 = `Estado: ${getEstadoLabel(e.estadoOperativo)} | Prioridad: ${e.prioridad} | Tipo: ${e.tipo || "-"}`
+
+        pdf.text(line.slice(0, 110), 10, y)
+        y += 4
+        pdf.text(line2.slice(0, 110), 10, y)
+        y += 6
+      })
+
+      pdf.save(`inventario-filtrado-${Date.now()}.pdf`)
+    } catch (error) {
+      console.error("No se pudo exportar PDF", error)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  const setEstadoRapido = async (equipoId, estado) => {
+    const prioridad = getPrioridadFromEstado(estado)
+
+    if (!demoMode && dbColumnsAvailable) {
+      const { error } = await supabase
+        .from("equipos")
+        .update({ estado_operativo: estado, prioridad })
+        .eq("id", equipoId)
+
+      if (!error) {
+        setEquipos((prev) =>
+          prev.map((item) =>
+            String(item.id) === String(equipoId)
+              ? { ...item, estado_operativo: estado, prioridad }
+              : item
+          )
+        )
+        return
+      }
+
+      // Compatibilidad: si el esquema aún no tiene las columnas, se usa fallback local.
+      const errorMessage = String(error?.message || "")
+      if (errorMessage.toLowerCase().includes("estado_operativo") || errorMessage.toLowerCase().includes("prioridad")) {
+        setDbColumnsAvailable(false)
+      }
+      console.error("No se pudo guardar estado en Supabase, usando fallback local", error)
+    }
+
+    setEstadoOverrides((prev) => ({
+      ...prev,
+      [String(equipoId)]: estado,
+    }))
+  }
 
   return (
-
     <div className="py-4 sm:py-6">
-
-      {/* Header */}
       <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">
-            Equipos
-          </h1>
-          <p className="text-xs text-gray-400">
-            Gestión y control de equipos de climatización
-          </p>
-          {demoMode && (
-            <p className="mt-1 text-[11px] text-green-300">Modo Demo activo: datos de muestra</p>
-          )}
+          <h1 className="text-2xl font-bold text-white mb-1">Inventario</h1>
+          <p className="text-xs text-gray-400">Gestión y control de equipos de climatización</p>
+          {demoMode && <p className="mt-1 text-[11px] text-green-300">Modo Demo activo: datos de muestra</p>}
         </div>
-        {demoMode ? (
+
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          {demoMode ? (
+            <button
+              type="button"
+              disabled
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-gray-400 rounded-lg text-sm font-semibold justify-center cursor-not-allowed"
+              title="Deshabilitado en modo demo"
+            >
+              Nuevo Equipo
+            </button>
+          ) : (
+            <Link
+              href="/equipos/nuevo"
+              className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+            >
+              Nuevo Equipo
+            </Link>
+          )}
+
           <button
             type="button"
-            disabled
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 text-gray-400 rounded-lg text-sm font-semibold w-full sm:w-auto justify-center cursor-not-allowed"
-            title="Deshabilitado en modo demo"
+            onClick={exportFilteredAsCsv}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#edf4ff] text-[#1f6bc1] border border-[#cad8ea] hover:bg-[#dfeeff]"
           >
-            Nuevo Equipo
+            Exportar Excel (CSV)
           </button>
-        ) : (
-          <Link
-            href="/equipos/nuevo"
-            className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all w-full sm:w-auto justify-center"
+
+          <button
+            type="button"
+            onClick={exportFilteredAsPdf}
+            disabled={exportingPdf}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#edf4ff] text-[#1f6bc1] border border-[#cad8ea] hover:bg-[#dfeeff] disabled:opacity-60"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo Equipo
-          </Link>
-        )}
+            {exportingPdf ? "Generando PDF..." : "Exportar PDF"}
+          </button>
+        </div>
       </div>
 
-      {/* Summary Panels and Map */}
-      <div className="px-4 sm:px-6 mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+      <div className="px-4 sm:px-6 mb-5">
+        <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Búsqueda y Filtros Avanzados</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
+            <input
+              type="text"
+              placeholder="Buscar por modelo, marca, ubicación o ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="lg:col-span-2 w-full px-3 py-2.5 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm placeholder-[#7f96b8] focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
+            />
 
-          <div className="space-y-3 lg:col-span-1">
-            {/* Ultimos Movimientos */}
-            <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
-              <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-                <h2 className="text-[11px] font-bold text-[#284a76]">Ultimos Movimientos de Inventario</h2>
-              </div>
-              <div className="space-y-0.5 px-3 py-2">
-                {DEMO_MOVIMIENTOS.map((mov) => (
-                  <div key={mov.id} className="flex items-center gap-1.5 text-[9px]">
-                    <svg className={`w-2.5 h-2.5 shrink-0 ${mov.color === 'green' ? 'text-green-500' : 'text-red-500'}`} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clipRule="evenodd" />
-                    </svg>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-[#1f6bc1] leading-tight">{mov.tipo}: {mov.cantidad} {mov.unidad}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="px-3 py-1 border-t border-[#dbe4f3] bg-[#f9fbff]">
-                <button className="text-[9px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-1.5 py-0.5 bg-white rounded border border-[#d1dcec]">
-                  Ver inventario
-                </button>
-              </div>
-            </div>
+            <select
+              value={tipoFilter}
+              onChange={(e) => setTipoFilter(e.target.value)}
+              className="w-full px-3 py-2.5 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+            >
+              <option value="todos">Tipo: Todos</option>
+              {tiposDisponibles.map((tipo) => (
+                <option key={tipo} value={tipo}>{tipo}</option>
+              ))}
+            </select>
 
-            {/* Proximos Mantenimientos */}
-            <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
-              <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-                <h2 className="text-[11px] font-bold text-[#284a76]">Proximos Mantenimientos</h2>
-              </div>
-              <div className="space-y-0.5 px-3 py-2">
-                {DEMO_PROXIMOS.map((mant) => (
-                  <div key={mant.id} className="flex items-start gap-1 text-[9px]">
-                    <svg className="w-3 h-3 text-[#2459a8] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-[#1f6bc1] leading-tight">{mant.servicio}</p>
-                      <p className="text-gray-500 text-[8px]">{mant.cliente}</p>
-                      <p className="text-[#2459a8] font-bold text-[8px]">{mant.fecha}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="px-3 py-1 border-t border-[#dbe4f3] bg-[#f9fbff]">
-                <button className="text-[9px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-1.5 py-0.5 bg-white rounded border border-[#d1dcec]">
-                  Cronograma
-                </button>
-              </div>
-            </div>
+            <select
+              value={ubicacionFilter}
+              onChange={(e) => setUbicacionFilter(e.target.value)}
+              className="w-full px-3 py-2.5 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+            >
+              <option value="todas">Ubicación: Todas</option>
+              {ubicacionesDisponibles.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+
+            <select
+              value={capacidadFilter}
+              onChange={(e) => setCapacidadFilter(e.target.value)}
+              className="w-full px-3 py-2.5 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+            >
+              <option value="todas">Capacidad: Todas</option>
+              <option value="baja">Hasta 12.000</option>
+              <option value="media">12.001 a 24.000</option>
+              <option value="alta">Más de 24.000</option>
+              <option value="sin-dato">Sin dato</option>
+            </select>
+
+            <select
+              value={estadoFilter}
+              onChange={(e) => setEstadoFilter(e.target.value)}
+              className="w-full px-3 py-2.5 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+            >
+              <option value="todos">Estado: Todos</option>
+              <option value="operativo">Operativo</option>
+              <option value="mantenimiento">En mantenimiento</option>
+              <option value="atencion">Atención</option>
+              <option value="critico">Crítico</option>
+            </select>
+
+            <select
+              value={prioridadFilter}
+              onChange={(e) => setPrioridadFilter(e.target.value)}
+              className="w-full px-3 py-2.5 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+            >
+              <option value="todas">Prioridad: Todas</option>
+              <option value="normal">Normal</option>
+              <option value="atencion">Atención</option>
+              <option value="critico">Crítico</option>
+            </select>
           </div>
 
-          {/* Estado de Maquinas */}
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden lg:col-span-2 h-full">
-            <div className="px-3 py-1.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-              <h2 className="text-[11px] font-bold text-[#284a76]">Estado de Maquinas</h2>
-            </div>
-            <div className="space-y-2 px-3 py-3">
-              {DEMO_ESTADO_MAQUINAS.map((estado, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-[9px]">
-                  <span className="w-24 shrink-0 font-semibold text-[#284a76]">{estado.estado}</span>
-                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full ${estado.color}`} style={{ width: `${Math.min(estado.cantidad / 100 * 100, 100)}%` }}></div>
-                  </div>
-                  <span className="text-[9px] font-bold text-[#1f6bc1] min-w-[24px] text-right">{estado.cantidad}</span>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#48688f]">
+            <label className="flex items-center gap-2">
+              Alerta de stock mínimo:
+              <input
+                type="number"
+                min="1"
+                value={minStockThreshold}
+                onChange={(e) => setMinStockThreshold(Number(e.target.value || 1))}
+                className="w-16 px-2 py-1 border border-[#cad8ea] rounded bg-white text-[#1f4371]"
+              />
+            </label>
+            <span className="text-[#607b9f]">Mostrando {filtrados.length} de {equiposEnriquecidos.length} equipos</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-6 mb-5 grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <section className="rounded-xl border border-[#d1dcec] bg-[#f7faff] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <h3 className="text-lg font-bold text-[#2a4d7a] mb-3">Alertas de Stock y Repuestos</h3>
+
+          <p className="text-xs font-semibold text-[#607b9f] mb-1">Modelos con bajo stock</p>
+          {stockAlerts.length === 0 ? (
+            <p className="text-sm text-[#5f7ea4] mb-3">Sin alertas de stock mínimo.</p>
+          ) : (
+            <div className="space-y-2 mb-3">
+              {stockAlerts.map((item) => (
+                <div key={item.modeloKey} className="rounded-md border border-[#f3dddd] bg-[#fff8f8] px-3 py-2 text-sm text-[#7f4a4a]">
+                  {item.modeloKey}: {item.total} unidades
                 </div>
               ))}
             </div>
-            <div className="px-3 py-1 border-t border-[#dbe4f3] bg-[#f9fbff]">
-              <button className="text-[9px] font-semibold text-[#1f6bc1] hover:text-[#1550a0] transition-colors px-1.5 py-0.5 bg-white rounded border border-[#d1dcec]">
-                Detalle
-              </button>
+          )}
+
+          <p className="text-xs font-semibold text-[#607b9f] mb-1">Repuestos críticos (demanda alta)</p>
+          {repuestosCriticos.length === 0 ? (
+            <p className="text-sm text-[#5f7ea4]">Sin repuestos críticos detectados.</p>
+          ) : (
+            <div className="space-y-2">
+              {repuestosCriticos.map((part) => (
+                <div key={part.key} className="rounded-md border border-[#fff0cd] bg-[#fffaf0] px-3 py-2 text-sm text-[#946b1d]">
+                  {part.nombre}: {part.demand} solicitudes
+                </div>
+              ))}
             </div>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-[#d1dcec] bg-[#f7faff] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <h3 className="text-lg font-bold text-[#2a4d7a] mb-3">Tendencia y Rotación (6 meses)</h3>
+
+          <div className="space-y-2">
+            {trendData.map((m) => (
+              <div key={m.key} className="grid grid-cols-[52px_1fr_auto] gap-2 items-center text-xs">
+                <span className="font-semibold text-[#58789f]">{formatMonthLabel(m.month)}</span>
+                <div className="space-y-1">
+                  <div className="h-2 rounded-full bg-[#dbe6f4] overflow-hidden">
+                    <div className="h-full bg-[#45a66a]" style={{ width: `${(m.ingresos / maxTrendValue) * 100}%` }} />
+                  </div>
+                  <div className="h-2 rounded-full bg-[#dbe6f4] overflow-hidden">
+                    <div className="h-full bg-[#d05b5b]" style={{ width: `${(m.salidas / maxTrendValue) * 100}%` }} />
+                  </div>
+                </div>
+                <span className="text-[#4f6f95]">I:{m.ingresos} S:{m.salidas}</span>
+              </div>
+            ))}
           </div>
 
+          <div className="mt-3 rounded-md border border-[#dbe6f4] bg-white px-3 py-2 text-sm text-[#4f6f95]">
+            Rotación acumulada: <span className="font-bold text-[#2a4d7a]">{rotacion}</span>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-[#d1dcec] bg-[#f7faff] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <h3 className="text-lg font-bold text-[#2a4d7a] mb-3">Inventario por Sucursal/Depósito</h3>
+          {depositoSummary.length === 0 ? (
+            <p className="text-sm text-[#5f7ea4]">No hay ubicaciones disponibles.</p>
+          ) : (
+            <div className="space-y-2">
+              {depositoSummary.map((dep) => (
+                <div key={dep.deposito} className="rounded-md border border-[#dbe6f4] bg-white px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#2a4d7a] truncate">{dep.deposito}</p>
+                    <span className="text-xs text-[#4f6f95] font-semibold">{dep.total} equipos</span>
+                  </div>
+                  <p className="text-xs text-[#607b9f] mt-1">
+                    Operativos: {dep.operativos} | En mantenimiento: {dep.enMantenimiento} | Críticos: {dep.criticos}
+                  </p>
+                </div>
+              ))}
+
+              <div className="rounded-md border border-[#cad8ea] bg-[#edf4ff] px-3 py-2 text-sm text-[#2f69b0] font-semibold">
+                Consolidado general: {equiposEnriquecidos.length} equipos en total
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="px-4 sm:px-6 mb-5">
+        <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="px-4 py-3 border-b border-[#dbe4f3]">
+            <h2 className="text-lg font-bold text-[#284a76]">Historial Real de Movimientos</h2>
+            <p className="text-xs text-[#6f87a8] mt-1">Incluye tipo, motivo, usuario y referencia.</p>
+          </div>
+          <div className="p-4 space-y-2">
+            {inventoryMovements.length === 0 ? (
+              <p className="text-sm text-[#6d84a5]">No hay movimientos reales para mostrar.</p>
+            ) : (
+              inventoryMovements.map((m) => (
+                <div key={m.id} className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-2 items-center rounded-md border border-[#dbe6f4] bg-white px-3 py-2">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-semibold w-fit ${
+                      m.tipo === "ingreso" ? "bg-[#e8f6ee] text-[#2f7d4a]" : m.tipo === "salida" ? "bg-[#fdeeee] text-[#b44a4a]" : "bg-[#fff8e8] text-[#a97717]"
+                    }`}
+                  >
+                    {m.tipo}
+                  </span>
+
+                  <div>
+                    <p className="text-sm text-[#36557b]">{m.detalle}</p>
+                    <p className="text-xs text-[#6d84a5]">Motivo: {m.motivo}</p>
+                    <p className="text-xs text-[#6d84a5]">Usuario: {m.usuario} | Ref: {m.referencia}</p>
+                  </div>
+
+                  <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded w-fit">{formatDate(m.date)}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-6 mb-6 grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="px-4 py-3 border-b border-[#dbe4f3]">
+            <h2 className="text-lg font-bold text-[#284a76]">Próximos Mantenimientos</h2>
+          </div>
+          <div className="p-4 space-y-2">
+            {upcomingMaintenances.length === 0 ? (
+              <p className="text-sm text-[#6d84a5]">No hay mantenimientos próximos.</p>
+            ) : (
+              upcomingMaintenances.map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
+                  <div>
+                    <p className="text-sm font-semibold text-[#36557b]">{item.marca || "Equipo"} {item.modelo || ""}</p>
+                    <p className="text-xs text-[#6d84a5]">{item.ubicacion || "Sin ubicación"}</p>
+                  </div>
+                  <span className="text-xs text-[#4f6f95] font-semibold">
+                    {formatDate(item.proximo?.fecha_programada || item.proximo?.created_at)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
-        {/* Mapa */}
-        <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#eef5ff]">
-            <h2 className="text-sm font-bold text-[#284a76]">Mapa de Clientes</h2>
+        <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="px-4 py-3 border-b border-[#dbe4f3]">
+            <h2 className="text-lg font-bold text-[#284a76]">Mapa de Clientes</h2>
           </div>
-          <div className="relative z-0 h-[460px] m-4 rounded-md overflow-hidden border border-[#e0e8f0]">
+          <div className="relative z-0 h-[300px] m-4 rounded-md overflow-hidden border border-[#e0e8f0] bg-[#8ec4e7]">
             <UruguayMap />
           </div>
         </div>
       </div>
 
-      {/* Search and Equipment Grid */}
       <div className="px-4 sm:px-6">
-
-        {/* Search Bar */}
-        <div className="mb-4">
-          <div className="relative max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-              <svg className="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Buscar por modelo, marca, ubicación o ID..."
-              value={search}
-              onChange={(e)=>setSearch(e.target.value)}
-              className="block w-full pl-8 pr-3 py-1.5 border border-white/10 rounded-lg bg-[#111] text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all"
-            />
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#d8e4f3] border-b-[#2d72c4]" />
           </div>
-        </div>
-
-      {/* Loading State */}
-      {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-        </div>
-      ) : (
-        <>
-          {/* Results Count */}
-          <div className="mb-4">
-            <p className="text-sm text-gray-400">
-              Mostrando <span className="font-semibold text-white">{filtrados.length}</span> de <span className="font-semibold text-white">{equipos.length}</span> equipos
+        ) : filtrados.length === 0 ? (
+          <div className="text-center py-8 bg-[#f7faff] rounded-xl border border-[#d1dcec]">
+            <h3 className="mt-2 text-sm font-semibold text-[#1f4371]">No se encontraron equipos</h3>
+            <p className="mt-1 text-xs text-[#6f87a8]">
+              {search ? "Intenta con otros filtros de inventario" : "Aún no hay equipos registrados"}
             </p>
           </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filtrados.map((equipo) => (
+              <article
+                key={equipo.id}
+                className="h-full bg-[#f9fbff] rounded-xl border border-[#d1dcec] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h2 className="text-base font-bold text-[#1f4371] line-clamp-1">
+                    {equipo.marca} {equipo.modelo}
+                  </h2>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${getPrioridadBadge(equipo.prioridad)}`}>
+                    {equipo.prioridad}
+                  </span>
+                </div>
 
-          {/* Equipment Grid */}
-          {filtrados.length === 0 ? (
-            <div className="text-center py-8 bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl border border-white/10">
-              <svg className="mx-auto h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="mt-2 text-xs font-medium text-white">No se encontraron equipos</h3>
-              <p className="mt-1 text-xs text-gray-500">
-                {search ? 'Intenta con otros términos de búsqueda' : 'Aún no hay equipos registrados'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <p className="text-xs text-[#5f7ea4]">ID: {equipo.id}</p>
+                <p className="text-xs text-[#5f7ea4] mt-1">Ubicación: {equipo.ubicacion || "Sin ubicación"}</p>
+                <p className="text-xs text-[#5f7ea4] mt-1">Tipo: {equipo.tipo || "Sin tipo"}</p>
+                <p className="text-xs text-[#5f7ea4] mt-1">Capacidad: {equipo.capacidad || "Sin dato"}</p>
 
-              {filtrados.map(equipo => (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${getEstadoBadgeClass(equipo.estadoOperativo)}`}>
+                    {getEstadoLabel(equipo.estadoOperativo)}
+                  </span>
+                </div>
 
-                <Link
-                  key={equipo.id}
-                  href={`/equipos/${equipo.id}`}
-                  className="group"
-                >
+                <div className="mt-3 text-[11px] text-[#607b9f] space-y-1">
+                  <p>Próximo: {formatDate(equipo.proximo?.fecha_programada || equipo.proximo?.created_at)}</p>
+                  <p>Último: {formatDate(equipo.ultimo?.fecha_programada || equipo.ultimo?.created_at)}</p>
+                </div>
 
-                  <div className="h-full bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-lg border border-white/10 p-3 hover:border-white/30 transition-all duration-300 hover:-translate-y-1">
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link
+                    href={`/equipos/${equipo.id}`}
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
+                  >
+                    Ver detalle
+                  </Link>
 
-                    {/* Icon */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-white rounded-md group-hover:scale-110 transition-transform">
-                        <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                        </svg>
-                      </div>
-                      <svg className="w-3.5 h-3.5 text-gray-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+                  <Link
+                    href={`/tramites?nuevo=1&equipoId=${equipo.id}`}
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-xs font-semibold hover:bg-[#dfebff]"
+                  >
+                    Nuevo trámite
+                  </Link>
 
-                    {/* Equipment Info */}
-                    <h2 className="text-base font-bold text-white mb-1.5 line-clamp-1">
-                      {equipo.marca} {equipo.modelo}
-                    </h2>
+                  <Link
+                    href={`/tramites?nuevo=1&tipo=mantenimiento&equipoId=${equipo.id}`}
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-xs font-semibold hover:bg-[#dfebff] col-span-2"
+                  >
+                    Programar mantenimiento
+                  </Link>
+                </div>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="text-gray-400 text-xs">{equipo.ubicacion || 'Sin ubicación'}</span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                        <span className="text-gray-500 font-mono text-xs">{equipo.id}</span>
-                      </div>
-                    </div>
-
-                  </div>
-
-                </Link>
-
-              ))}
-
-            </div>
-          )}
-        </>
-      )}
-
-  </div>
-
+                <div className="mt-2">
+                  <label className="block text-[11px] font-semibold text-[#5e7da3] mb-1">Marcar estado rápido</label>
+                  <select
+                    value={equipo.estadoOperativo}
+                    onChange={(e) => setEstadoRapido(equipo.id, e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-xs"
+                  >
+                    <option value="operativo">Operativo</option>
+                    <option value="atencion">Atención</option>
+                    <option value="mantenimiento">En mantenimiento</option>
+                    <option value="critico">Crítico</option>
+                  </select>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-
   )
 }

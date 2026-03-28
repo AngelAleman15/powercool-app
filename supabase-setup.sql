@@ -40,10 +40,28 @@ BEGIN
   ) THEN
     ALTER TABLE equipos ADD COLUMN capacidad TEXT;
   END IF;
+
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns 
+    WHERE table_name = 'equipos' AND column_name = 'estado_operativo'
+  ) THEN
+    ALTER TABLE equipos ADD COLUMN estado_operativo TEXT DEFAULT 'operativo'
+      CHECK (estado_operativo IN ('operativo', 'atencion', 'mantenimiento', 'critico'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns 
+    WHERE table_name = 'equipos' AND column_name = 'prioridad'
+  ) THEN
+    ALTER TABLE equipos ADD COLUMN prioridad TEXT DEFAULT 'normal'
+      CHECK (prioridad IN ('normal', 'atencion', 'critico'));
+  END IF;
 END $$;
 
 -- Índices para mejorar el rendimiento
 CREATE INDEX IF NOT EXISTS idx_equipos_cliente_id ON equipos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_equipos_estado_operativo ON equipos(estado_operativo);
+CREATE INDEX IF NOT EXISTS idx_equipos_prioridad ON equipos(prioridad);
 CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre);
 CREATE INDEX IF NOT EXISTS idx_clientes_email ON clientes(email);
 
@@ -58,6 +76,8 @@ CREATE POLICY "Enable all access for clientes" ON clientes
 -- Comentarios informativos
 COMMENT ON TABLE clientes IS 'Tabla de clientes para el sistema PowerCool';
 COMMENT ON COLUMN equipos.cliente_id IS 'Relación con el cliente propietario del equipo';
+COMMENT ON COLUMN equipos.estado_operativo IS 'Estado operativo del equipo: operativo, atencion, mantenimiento o critico';
+COMMENT ON COLUMN equipos.prioridad IS 'Prioridad de atención del equipo: normal, atencion o critico';
 
 -- Tabla de trámites (mantenimientos y abonos)
 CREATE TABLE IF NOT EXISTS tramites (
