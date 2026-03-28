@@ -70,7 +70,7 @@ export default function Navbar() {
                     : "text-[#d5e8ff] border-transparent hover:text-white"
                 }`}
               >
-                Reportes
+                Trámites y Revisiones
               </Link>
 
               <span className="px-3 py-2 text-sm font-semibold text-[#d5e8ff]">Soporte</span>

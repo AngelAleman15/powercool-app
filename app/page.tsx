@@ -27,7 +27,7 @@ type Tramite = {
 }
 
 type InventoryMovement = {
-  id: number
+  id: string
   tipo: "ingreso" | "salida"
   detalle: string
   whenLabel: string
@@ -45,6 +45,42 @@ type MachineStatus = {
   critical: number
 }
 
+type MapPoint = {
+  id: string
+  label: string
+  lat: number
+  lng: number
+  color: string
+}
+
+const CITY_COORDS_UY: Record<string, { lat: number; lng: number }> = {
+  montevideo: { lat: -34.9011, lng: -56.1645 },
+  canelones: { lat: -34.5228, lng: -56.2778 },
+  maldonado: { lat: -34.9068, lng: -54.958 },
+  "punta del este": { lat: -34.9683, lng: -54.95 },
+  rocha: { lat: -34.4833, lng: -54.3333 },
+  chuy: { lat: -33.6971, lng: -53.4593 },
+  "la paloma": { lat: -34.6639, lng: -54.1645 },
+  salto: { lat: -31.3833, lng: -57.9667 },
+  paysandu: { lat: -32.3214, lng: -58.0756 },
+  "paysandú": { lat: -32.3214, lng: -58.0756 },
+  mercedes: { lat: -33.2524, lng: -58.0305 },
+  tacuarembo: { lat: -31.7333, lng: -55.9833 },
+  "tacuarembó": { lat: -31.7333, lng: -55.9833 },
+  rivera: { lat: -30.9053, lng: -55.5508 },
+  melo: { lat: -32.3667, lng: -54.1833 },
+  artigas: { lat: -30.4, lng: -56.4667 },
+  durazno: { lat: -33.4131, lng: -56.5006 },
+  florida: { lat: -34.0994, lng: -56.2142 },
+  "san jose de mayo": { lat: -34.3375, lng: -56.7136 },
+  "san josé de mayo": { lat: -34.3375, lng: -56.7136 },
+  "colonia del sacramento": { lat: -34.4698, lng: -57.8442 },
+  "fray bentos": { lat: -33.1325, lng: -58.2956 },
+  minas: { lat: -34.3759, lng: -55.2377 },
+  "treinta y tres": { lat: -33.2333, lng: -54.3833 },
+  trinidad: { lat: -33.5442, lng: -56.8886 },
+}
+
 const UNIFIED_LOGO_SIZE = 20
 
 export default function Home() {
@@ -53,6 +89,7 @@ export default function Home() {
   const [tramites, setTramites] = useState<Tramite[]>([])
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
   const [upcomingMaintenances, setUpcomingMaintenances] = useState<UpcomingMaintenance[]>([])
+  const [mapPoints, setMapPoints] = useState<MapPoint[]>([])
   const [machineStatus, setMachineStatus] = useState<MachineStatus>({ ok: 0, warning: 0, critical: 0 })
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
@@ -73,6 +110,13 @@ export default function Home() {
     loadDashboardData()
   }, [demoMode])
 
+  const normalizeCityKey = (city: string) =>
+    String(city || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+
   async function loadDashboardData() {
     try {
       if (demoMode) {
@@ -82,7 +126,7 @@ export default function Home() {
 
       const [clientesRes, equiposRes, tramitesRes] = await Promise.all([
         supabase.from("clientes").select("id, nombre, ciudad").order("created_at", { ascending: false }),
-        supabase.from("equipos").select("id, cliente_id"),
+        supabase.from("equipos").select("id, cliente_id, marca, modelo, created_at"),
         supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, clientes(nombre)").order("created_at", { ascending: false }),
       ])
 
@@ -104,6 +148,24 @@ export default function Home() {
       const equipos = equiposData || []
       const tramitesRaw = tramitesData || []
       setTramites(tramitesRaw)
+
+      const points = clientes
+        .map((c) => {
+          const cityKey = normalizeCityKey(c.ciudad || "")
+          const coords = CITY_COORDS_UY[cityKey]
+          if (!coords) return null
+
+          return {
+            id: String(c.id),
+            label: `${c.nombre || "Cliente"} (${c.ciudad || "Sin ciudad"})`,
+            lat: coords.lat,
+            lng: coords.lng,
+            color: "#1e6bc1",
+          }
+        })
+        .filter(Boolean) as MapPoint[]
+
+      setMapPoints(points)
 
       const equiposByCliente = equipos.reduce<Record<string, number>>((acc, equipo) => {
         const key = String(equipo.cliente_id || "")
@@ -149,11 +211,21 @@ export default function Home() {
         critical: tramitesRaw.filter((t) => t.estado === "cancelado").length,
       })
 
-      setInventoryMovements([
-        { id: 1, tipo: "ingreso", detalle: `Ingreso: ${Math.max(4, Math.round(equipos.length / 5))} Unidades Split 3000BTU`, whenLabel: "Hoy" },
-        { id: 2, tipo: "salida", detalle: `Salida: ${Math.max(2, Math.round(equipos.length / 8))} Unidades Piso Techo`, whenLabel: "Ayer" },
-        { id: 3, tipo: "ingreso", detalle: `Ingreso: ${Math.max(3, Math.round(equipos.length / 6))} Unidades Cassette 2400BTU`, whenLabel: "Hace 3 días" },
-      ])
+      const movements = [...equipos]
+        .filter((e) => !!e.created_at)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5)
+        .map((e) => {
+          const created = new Date(e.created_at)
+          return {
+            id: String(e.id),
+            tipo: "ingreso" as const,
+            detalle: `Alta de equipo: ${e.marca || "Marca"} ${e.modelo || "Modelo"}`,
+            whenLabel: created.toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
+          }
+        })
+
+      setInventoryMovements(movements)
 
       const today = new Date()
       const upcoming = tramitesRaw
@@ -169,6 +241,9 @@ export default function Home() {
       setUpcomingMaintenances(upcoming)
     } catch (error) {
       console.error("Error cargando dashboard:", error)
+      setMapPoints([])
+      setInventoryMovements([])
+      setUpcomingMaintenances([])
     } finally {
       setLoading(false)
     }
@@ -209,13 +284,32 @@ export default function Home() {
       mantenimientosPendientes: DEMO_STATS.pendientes,
     })
 
+    setMapPoints(
+      DEMO_CLIENTES.map((c) => {
+        const cityKey = normalizeCityKey(c.ciudad || "")
+        const coords = CITY_COORDS_UY[cityKey]
+        if (!coords) return null
+
+        return {
+          id: String(c.id),
+          label: `${c.nombre} (${c.ciudad})`,
+          lat: coords.lat,
+          lng: coords.lng,
+          color: "#1e6bc1",
+        }
+      }).filter(Boolean) as MapPoint[]
+    )
+
     setMachineStatus({ ok: 95, warning: 18, critical: 5 })
 
-    setInventoryMovements([
-      { id: 1, tipo: "ingreso", detalle: "Ingreso: 10 Unidades Split 3000BTU", whenLabel: "Hoy" },
-      { id: 2, tipo: "salida", detalle: "Salida: 5 Unidades Piso Techo", whenLabel: "Ayer" },
-      { id: 3, tipo: "ingreso", detalle: "Ingreso: 8 Unidades Cassette 2400BTU", whenLabel: "Hace 3 días" },
-    ])
+    setInventoryMovements(
+      DEMO_EQUIPOS.slice(0, 5).map((e) => ({
+        id: String(e.id),
+        tipo: "ingreso" as const,
+        detalle: `Alta de equipo: ${e.marca} ${e.modelo}`,
+        whenLabel: new Date(e.created_at).toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
+      }))
+    )
 
     setUpcomingMaintenances([
       { id: 1, title: "Mantenimiento - Hotel Oasis", dateLabel: "25 Sep" },
@@ -352,11 +446,14 @@ export default function Home() {
             </div>
             <div className="p-4">
               <div className="relative z-0 h-[280px] rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
-                <UruguayMap />
+                <UruguayMap points={mapPoints} />
                 <div className="absolute left-2 bottom-2 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-[#54749a]">
                   Mapa interactivo: arrastra y haz zoom
                 </div>
               </div>
+              {!loading && mapPoints.length === 0 && (
+                <p className="mt-2 text-xs text-[#6f87a8]">No hay clientes con ubicación válida para mostrar en el mapa.</p>
+              )}
             </div>
           </div>
         </section>
@@ -367,23 +464,27 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
             </div>
             <div className="p-5 space-y-3">
-              {inventoryMovements.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <img
-                      src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
-                      alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
-                      width={UNIFIED_LOGO_SIZE}
-                      height={UNIFIED_LOGO_SIZE}
-                      className="shrink-0 object-contain"
-                    />
-                    <p className="text-sm text-[#36557b] truncate">
-                      <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
-                    </p>
+              {inventoryMovements.length === 0 ? (
+                <p className="text-sm text-[#6d84a5]">No hay movimientos de inventario reales para mostrar.</p>
+              ) : (
+                inventoryMovements.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img
+                        src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
+                        alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
+                        width={UNIFIED_LOGO_SIZE}
+                        height={UNIFIED_LOGO_SIZE}
+                        className="shrink-0 object-contain"
+                      />
+                      <p className="text-sm text-[#36557b] truncate">
+                        <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
+                      </p>
+                    </div>
+                    <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
                   </div>
-                  <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
-                </div>
-              ))}
+                ))
+              )}
               <Link href="/equipos" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
                 Ver Inventario
               </Link>
