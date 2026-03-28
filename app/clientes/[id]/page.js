@@ -47,7 +47,9 @@ export default function ClienteDetallePage() {
   const [tramites, setTramites] = useState([])
 
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showEquipoModal, setShowEquipoModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [savingEquipo, setSavingEquipo] = useState(false)
   const [showCitySuggestions, setShowCitySuggestions] = useState(false)
   const [formData, setFormData] = useState({
     nombre: "",
@@ -55,6 +57,13 @@ export default function ClienteDetallePage() {
     telefono: "",
     direccion: "",
     ciudad: "",
+  })
+  const [equipoFormData, setEquipoFormData] = useState({
+    marca: "",
+    modelo: "",
+    tipo: "split",
+    capacidad: "",
+    ubicacion: "",
   })
 
   const locationText = useMemo(() => {
@@ -181,6 +190,103 @@ export default function ClienteDetallePage() {
     setShowCitySuggestions(false)
   }
 
+  const handleEquipoChange = (e) => {
+    setEquipoFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const resetEquipoForm = () => {
+    setEquipoFormData({
+      marca: "",
+      modelo: "",
+      tipo: "split",
+      capacidad: "",
+      ubicacion: "",
+    })
+  }
+
+  const getEstadoLabel = (estado) => {
+    if (estado === "en_proceso") return "En proceso"
+    if (estado === "completado") return "Completado"
+    if (estado === "cancelado") return "Cancelado"
+    return "Pendiente"
+  }
+
+  const getEstadoBadgeClass = (estado) => {
+    if (estado === "completado") {
+      return "bg-[#eaf7ef] text-[#2f7d4a]"
+    }
+
+    if (estado === "cancelado") {
+      return "bg-[#fdeeee] text-[#b44a4a]"
+    }
+
+    if (estado === "en_proceso") {
+      return "bg-[#e9f1ff] text-[#2f69b0]"
+    }
+
+    return "bg-[#fff8e8] text-[#a97717]"
+  }
+
+  const getHistorialCardClass = (estado) => {
+    if (estado === "completado") {
+      return "border-[#d8ebdf] bg-[#f8fdf9]"
+    }
+
+    if (estado === "cancelado") {
+      return "border-[#f3dddd] bg-[#fff8f8]"
+    }
+
+    return "border-[#dbe6f4] bg-white"
+  }
+
+  const handleCreateEquipo = async (e) => {
+    e.preventDefault()
+
+    if (!equipoFormData.marca.trim() || !equipoFormData.modelo.trim()) {
+      return
+    }
+
+    if (demoMode) {
+      const fakeId = `demo-eq-${Date.now()}`
+      setEquipos((prev) => [
+        {
+          id: fakeId,
+          cliente_id: clienteId,
+          marca: equipoFormData.marca,
+          modelo: equipoFormData.modelo,
+          tipo: equipoFormData.tipo,
+          capacidad: equipoFormData.capacidad,
+          ubicacion: equipoFormData.ubicacion,
+        },
+        ...prev,
+      ])
+      setShowEquipoModal(false)
+      resetEquipoForm()
+      return
+    }
+
+    setSavingEquipo(true)
+
+    const { error } = await supabase.from("equipos").insert([
+      {
+        cliente_id: clienteId,
+        marca: equipoFormData.marca,
+        modelo: equipoFormData.modelo,
+        tipo: equipoFormData.tipo,
+        capacidad: equipoFormData.capacidad || null,
+        ubicacion: equipoFormData.ubicacion || null,
+      },
+    ])
+
+    setSavingEquipo(false)
+
+    if (!error) {
+      setShowEquipoModal(false)
+      resetEquipoForm()
+      await cargarDatos()
+    }
+  }
+
   const handleUpdateClient = async (e) => {
     e.preventDefault()
 
@@ -298,12 +404,15 @@ export default function ClienteDetallePage() {
       <section className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)] mb-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-bold text-[#2a4d7a]">Equipos del Cliente</h2>
-          <Link
-            href="/equipos/nuevo"
+          <button
+            onClick={() => {
+              resetEquipoForm()
+              setShowEquipoModal(true)
+            }}
             className="px-3 py-1 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
           >
             Agregar Equipo
-          </Link>
+          </button>
         </div>
 
         {equipos.length === 0 ? (
@@ -347,8 +456,8 @@ export default function ClienteDetallePage() {
                 <div key={tramite.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-[#2e5e96]">{tramite.tipo === "abono" ? "Abono" : "Mantenimiento"}</p>
-                    <span className="text-xs px-2 py-0.5 rounded bg-[#e9f1ff] text-[#2f69b0] font-semibold">
-                      {tramite.estado || "pendiente"}
+                    <span className={`text-xs px-2 py-0.5 rounded font-semibold ${getEstadoBadgeClass(tramite.estado)}`}>
+                      {getEstadoLabel(tramite.estado)}
                     </span>
                   </div>
                   <p className="text-xs text-[#59779f] mt-1">{tramite.descripcion || "Sin descripción"}</p>
@@ -369,11 +478,11 @@ export default function ClienteDetallePage() {
           ) : (
             <div className="space-y-2">
               {tramitesHistorial.map((tramite) => (
-                <div key={tramite.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
+                <div key={tramite.id} className={`rounded-md border p-3 ${getHistorialCardClass(tramite.estado)}`}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-[#2e5e96]">{tramite.tipo === "abono" ? "Abono" : "Mantenimiento"}</p>
-                    <span className="text-xs px-2 py-0.5 rounded bg-[#eef3fb] text-[#5c769a] font-semibold">
-                      {tramite.estado || "completado"}
+                    <span className={`text-xs px-2 py-0.5 rounded font-semibold ${getEstadoBadgeClass(tramite.estado)}`}>
+                      {getEstadoLabel(tramite.estado)}
                     </span>
                   </div>
                   <p className="text-xs text-[#59779f] mt-1">{tramite.descripcion || "Sin descripción"}</p>
@@ -390,7 +499,7 @@ export default function ClienteDetallePage() {
 
       {showEditModal && (
         <div className="fixed inset-0 bg-[#142947]/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#cfdced] rounded-md p-6 max-w-md w-full shadow-[0_14px_24px_rgba(29,66,116,.25)]">
+          <div className="bg-white border border-[#cfdced] rounded-md p-6 max-w-2xl w-full shadow-[0_14px_24px_rgba(29,66,116,.25)]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-[#224a78]">Editar Cliente</h2>
               <button
@@ -403,84 +512,90 @@ export default function ClienteDetallePage() {
               </button>
             </div>
 
+            <p className="text-sm text-[#607b9f] mb-4">
+              Actualiza los datos principales del cliente. La ciudad sugerida mantiene el mismo formato visual del sistema.
+            </p>
+
             <form onSubmit={handleUpdateClient} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Nombre *</label>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Teléfono</label>
-                <input
-                  type="tel"
-                  name="telefono"
-                  value={formData.telefono}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Dirección</label>
-                <input
-                  type="text"
-                  name="direccion"
-                  value={formData.direccion}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Ciudad</label>
-                <div className="relative">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">Nombre *</label>
                   <input
                     type="text"
-                    name="ciudad"
-                    value={formData.ciudad}
-                    onFocus={() => setShowCitySuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowCitySuggestions(false), 120)}
-                    onChange={(e) => {
-                      handleChange(e)
-                      setShowCitySuggestions(true)
-                    }}
-                    placeholder="Escribe una ciudad de Uruguay..."
+                    name="nombre"
+                    value={formData.nombre}
+                    onChange={handleChange}
+                    required
                     className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
-                    autoComplete="off"
                   />
+                </div>
 
-                  {showCitySuggestions && ciudadesFiltradas.length > 0 && (
-                    <div className="absolute z-20 mt-1 w-full bg-[#f8fbff] border border-[#cad8ea] rounded-md shadow-[0_8px_18px_rgba(31,107,193,.18)] max-h-44 overflow-y-auto">
-                      {ciudadesFiltradas.map((city) => (
-                        <button
-                          key={city}
-                          type="button"
-                          onClick={() => handleSelectCity(city)}
-                          className="w-full text-left px-3 py-2 text-sm text-[#2a4f7d] hover:bg-[#eaf2ff] hover:text-[#1f6bc1] transition-colors"
-                        >
-                          {city}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                <div>
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">Teléfono</label>
+                  <input
+                    type="tel"
+                    name="telefono"
+                    value={formData.telefono}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">Dirección</label>
+                  <input
+                    type="text"
+                    name="direccion"
+                    value={formData.direccion}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">Ciudad</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="ciudad"
+                      value={formData.ciudad}
+                      onFocus={() => setShowCitySuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowCitySuggestions(false), 120)}
+                      onChange={(e) => {
+                        handleChange(e)
+                        setShowCitySuggestions(true)
+                      }}
+                      placeholder="Escribe una ciudad de Uruguay..."
+                      className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                      autoComplete="off"
+                    />
+
+                    {showCitySuggestions && ciudadesFiltradas.length > 0 && (
+                      <div className="absolute z-20 mt-1 w-full bg-[#f8fbff] border border-[#cad8ea] rounded-md shadow-[0_8px_18px_rgba(31,107,193,.18)] max-h-44 overflow-y-auto">
+                        {ciudadesFiltradas.map((city) => (
+                          <button
+                            key={city}
+                            type="button"
+                            onClick={() => handleSelectCity(city)}
+                            className="w-full text-left px-3 py-2 text-sm text-[#2a4f7d] hover:bg-[#eaf2ff] hover:text-[#1f6bc1] transition-colors"
+                          >
+                            {city}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -498,6 +613,108 @@ export default function ClienteDetallePage() {
                   className="flex-1 px-4 py-2 bg-[#1f6bc1] text-white rounded-md text-sm font-semibold hover:bg-[#19599f] transition-all disabled:opacity-50"
                 >
                   {saving ? "Guardando..." : "Guardar Cambios"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEquipoModal && (
+        <div className="fixed inset-0 bg-[#142947]/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-[#cfdced] rounded-md p-6 max-w-md w-full shadow-[0_14px_24px_rgba(29,66,116,.25)]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-[#224a78]">Añadir Equipo</h2>
+              <button
+                onClick={() => setShowEquipoModal(false)}
+                className="text-[#6f87a8] hover:text-[#224a78] transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-sm text-[#607b9f] mb-4">Este equipo quedará asociado automáticamente a {cliente.nombre || "este cliente"}.</p>
+
+            <form onSubmit={handleCreateEquipo} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Marca *</label>
+                <input
+                  type="text"
+                  name="marca"
+                  value={equipoFormData.marca}
+                  onChange={handleEquipoChange}
+                  required
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Modelo *</label>
+                <input
+                  type="text"
+                  name="modelo"
+                  value={equipoFormData.modelo}
+                  onChange={handleEquipoChange}
+                  required
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Tipo</label>
+                <select
+                  name="tipo"
+                  value={equipoFormData.tipo}
+                  onChange={handleEquipoChange}
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                >
+                  <option value="split">Split</option>
+                  <option value="cassette">Cassette</option>
+                  <option value="piso-techo">Piso-Techo</option>
+                  <option value="multi-split">Multi-Split</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Capacidad</label>
+                <input
+                  type="text"
+                  name="capacidad"
+                  value={equipoFormData.capacidad}
+                  onChange={handleEquipoChange}
+                  placeholder="Ej: 12000 BTU"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Ubicación interna</label>
+                <input
+                  type="text"
+                  name="ubicacion"
+                  value={equipoFormData.ubicacion}
+                  onChange={handleEquipoChange}
+                  placeholder="Ej: Sala principal"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEquipoModal(false)}
+                  className="flex-1 px-4 py-2 bg-white border border-[#cad8ea] text-[#48688f] rounded-md text-sm font-semibold hover:bg-[#f2f7ff] transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEquipo}
+                  className="flex-1 px-4 py-2 bg-[#1f6bc1] text-white rounded-md text-sm font-semibold hover:bg-[#19599f] transition-all disabled:opacity-50"
+                >
+                  {savingEquipo ? "Guardando..." : "Guardar Equipo"}
                 </button>
               </div>
             </form>
