@@ -1,301 +1,219 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import { supabase } from "@/lib/supabase"
+import { useDemoMode } from "@/lib/useDemoMode"
+import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
+import QRCodeComponent from "@/components/QRCodeComponent"
 
-export default function ClienteDetalle() {
+const CIUDADES_URUGUAY = [
+  "Montevideo",
+  "Canelones",
+  "Maldonado",
+  "Punta del Este",
+  "Piriápolis",
+  "Rocha",
+  "Chuy",
+  "La Paloma",
+  "Salto",
+  "Paysandú",
+  "Mercedes",
+  "Tacuarembó",
+  "Rivera",
+  "Melo",
+  "Artigas",
+  "Durazno",
+  "Florida",
+  "San José de Mayo",
+  "Colonia del Sacramento",
+  "Fray Bentos",
+  "Minas",
+  "Treinta y Tres",
+  "Trinidad",
+]
+
+export default function ClienteDetallePage() {
   const params = useParams()
   const router = useRouter()
+  const { demoMode } = useDemoMode()
+
   const clienteId = Array.isArray(params.id) ? params.id[0] : params.id
+
+  const [loading, setLoading] = useState(true)
   const [cliente, setCliente] = useState(null)
   const [equipos, setEquipos] = useState([])
-  const [tramitesPendientes, setTramitesPendientes] = useState([])
-  const [tramitesHistorial, setTramitesHistorial] = useState([])
-  const [seccionActiva, setSeccionActiva] = useState("equipos")
-  const [searchPerfil, setSearchPerfil] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [tramites, setTramites] = useState([])
+
   const [showEditModal, setShowEditModal] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false)
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
     telefono: "",
     direccion: "",
-    ciudad: ""
-  })
-  const [saving, setSaving] = useState(false)
-
-  // Estados para modales de equipos
-  const [showEquipoModal, setShowEquipoModal] = useState(false)
-  const [editingEquipo, setEditingEquipo] = useState(null)
-  const [equipoFormData, setEquipoFormData] = useState({
-    marca: "",
-    modelo: "",
-    tipo: "split",
-    capacidad: "",
-    ubicacion: ""
+    ciudad: "",
   })
 
-  // Estados para modales de trámites
-  const [showTramiteModal, setShowTramiteModal] = useState(false)
-  const [editingTramite, setEditingTramite] = useState(null)
-  const [tramiteFormData, setTramiteFormData] = useState({
-    tipo: "mantenimiento",
-    equipo_id: "",
-    descripcion: "",
-    monto: "",
-    moneda: "USD",
-    fecha_programada: "",
-    estado: "pendiente"
-  })
+  const locationText = useMemo(() => {
+    if (!cliente) return ""
+    return [cliente.direccion, cliente.ciudad, "Uruguay"].filter(Boolean).join(", ")
+  }, [cliente])
+
+  const mapEmbedUrl = useMemo(() => {
+    if (!cliente) return ""
+
+    const lat = Number(cliente.latitud ?? cliente.latitude)
+    const lng = Number(cliente.longitud ?? cliente.longitude)
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return `https://www.google.com/maps?q=${lat},${lng}&z=16&output=embed`
+    }
+
+    if (!locationText) return ""
+    return `https://www.google.com/maps?q=${encodeURIComponent(locationText)}&output=embed`
+  }, [cliente, locationText])
+
+  const mapExternalUrl = useMemo(() => {
+    if (!cliente) return ""
+
+    const lat = Number(cliente.latitud ?? cliente.latitude)
+    const lng = Number(cliente.longitud ?? cliente.longitude)
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+    }
+
+    if (!locationText) return ""
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`
+  }, [cliente, locationText])
+
+  const tramitesActivos = useMemo(
+    () => tramites.filter((t) => t.estado === "pendiente" || t.estado === "en_proceso"),
+    [tramites]
+  )
+
+  const tramitesHistorial = useMemo(
+    () => tramites.filter((t) => t.estado === "completado" || t.estado === "cancelado"),
+    [tramites]
+  )
+
+  const ciudadesFiltradas = useMemo(() => {
+    return CIUDADES_URUGUAY
+      .filter((city, index, arr) => arr.indexOf(city) === index)
+      .filter((city) => city.toLowerCase().includes((formData.ciudad || "").toLowerCase().trim()))
+      .slice(0, 8)
+  }, [formData.ciudad])
 
   useEffect(() => {
-    if (clienteId) {
-      cargarDatos()
-    }
-  }, [clienteId])
+    if (!clienteId) return
+    cargarDatos()
+  }, [clienteId, demoMode])
 
   async function cargarDatos() {
     setLoading(true)
-    try {
-      // Cargar cliente
-      const { data: clienteData } = await supabase
-        .from("clientes")
-        .select("*")
-        .eq("id", clienteId)
-        .single()
 
-      if (!clienteData) {
+    try {
+      if (demoMode) {
+        const clienteDemo = DEMO_CLIENTES.find((c) => String(c.id) === String(clienteId))
+
+        if (!clienteDemo) {
+          router.push("/clientes")
+          return
+        }
+
+        setCliente(clienteDemo)
+        setFormData({
+          nombre: clienteDemo.nombre || "",
+          email: clienteDemo.email || "",
+          telefono: clienteDemo.telefono || "",
+          direccion: clienteDemo.direccion || "",
+          ciudad: clienteDemo.ciudad || "",
+        })
+
+        setEquipos(DEMO_EQUIPOS.filter((e) => String(e.cliente_id) === String(clienteId)))
+        setTramites(DEMO_TRAMITES.filter((t) => String(t.cliente_id) === String(clienteId)))
+        return
+      }
+
+      const [clienteRes, equiposRes, tramitesRes] = await Promise.all([
+        supabase.from("clientes").select("*").eq("id", clienteId).single(),
+        supabase.from("equipos").select("*").eq("cliente_id", clienteId).order("created_at", { ascending: false }),
+        supabase
+          .from("tramites")
+          .select("*, equipos(marca, modelo)")
+          .eq("cliente_id", clienteId)
+          .order("created_at", { ascending: false }),
+      ])
+
+      if (!clienteRes.data) {
         router.push("/clientes")
         return
       }
 
-      setCliente(clienteData)
+      setCliente(clienteRes.data)
+      setEquipos(equiposRes.data || [])
+      setTramites(tramitesRes.data || [])
+
       setFormData({
-        nombre: clienteData.nombre || "",
-        email: clienteData.email || "",
-        telefono: clienteData.telefono || "",
-        direccion: clienteData.direccion || "",
-        ciudad: clienteData.ciudad || ""
+        nombre: clienteRes.data.nombre || "",
+        email: clienteRes.data.email || "",
+        telefono: clienteRes.data.telefono || "",
+        direccion: clienteRes.data.direccion || "",
+        ciudad: clienteRes.data.ciudad || "",
       })
-
-      // Cargar equipos del cliente
-      const { data: equiposData } = await supabase
-        .from("equipos")
-        .select("*")
-        .eq("cliente_id", clienteId)
-        .order("created_at", { ascending: false })
-
-      setEquipos(equiposData || [])
-
-      // Cargar trámites del cliente
-      const { data: tramitesData } = await supabase
-        .from("tramites")
-        .select("*, equipos(marca, modelo)")
-        .eq("cliente_id", clienteId)
-        .order("created_at", { ascending: false })
-
-      // Separar pendientes y completados
-      const pendientes = (tramitesData || []).filter(t => 
-        t.estado === "pendiente" || t.estado === "en_proceso"
-      )
-      const historial = (tramitesData || []).filter(t => 
-        t.estado === "completado" || t.estado === "cancelado"
-      )
-
-      setTramitesPendientes(pendientes)
-      setTramitesHistorial(historial)
     } catch (error) {
-      console.error("Error cargando datos:", error)
+      console.error("Error cargando detalle del cliente:", error)
+      router.push("/clientes")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleEdit = async (e) => {
+  const handleChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const handleSelectCity = (city) => {
+    setFormData((prev) => ({ ...prev, ciudad: city }))
+    setShowCitySuggestions(false)
+  }
+
+  const handleUpdateClient = async (e) => {
     e.preventDefault()
+
+    if (demoMode) {
+      setShowEditModal(false)
+      return
+    }
+
     setSaving(true)
 
     const { error } = await supabase
       .from("clientes")
-      .update(formData)
+      .update({
+        nombre: formData.nombre,
+        email: formData.email,
+        telefono: formData.telefono,
+        direccion: formData.direccion,
+        ciudad: formData.ciudad,
+      })
       .eq("id", clienteId)
+
+    setSaving(false)
 
     if (!error) {
       setShowEditModal(false)
-      cargarDatos()
-    }
-    setSaving(false)
-  }
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  // Funciones para Equipos
-  const handleEquipoChange = (e) => {
-    setEquipoFormData({ ...equipoFormData, [e.target.name]: e.target.value })
-  }
-
-  const handleAddEquipo = () => {
-    setEditingEquipo(null)
-    setEquipoFormData({
-      marca: "",
-      modelo: "",
-      tipo: "split",
-      capacidad: "",
-      ubicacion: ""
-    })
-    setShowEquipoModal(true)
-  }
-
-  const handleEditEquipo = (equipo) => {
-    setEditingEquipo(equipo)
-    setEquipoFormData({
-      marca: equipo.marca || "",
-      modelo: equipo.modelo || "",
-      tipo: equipo.tipo || "split",
-      capacidad: equipo.capacidad || "",
-      ubicacion: equipo.ubicacion || ""
-    })
-    setShowEquipoModal(true)
-  }
-
-  const handleSubmitEquipo = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-
-    let error
-    if (editingEquipo) {
-      const result = await supabase
-        .from("equipos")
-        .update(equipoFormData)
-        .eq("id", editingEquipo.id)
-      error = result.error
-    } else {
-      const result = await supabase
-        .from("equipos")
-        .insert([{ ...equipoFormData, cliente_id: clienteId }])
-      error = result.error
-    }
-
-    if (!error) {
-      setShowEquipoModal(false)
-      setEditingEquipo(null)
-      cargarDatos()
-    }
-    setSaving(false)
-  }
-
-  // Funciones para Trámites
-  const handleTramiteChange = (e) => {
-    setTramiteFormData({ ...tramiteFormData, [e.target.name]: e.target.value })
-  }
-
-  const handleAddTramite = () => {
-    setEditingTramite(null)
-    setTramiteFormData({
-      tipo: "mantenimiento",
-      equipo_id: "",
-      descripcion: "",
-      monto: "",
-      moneda: "USD",
-      fecha_programada: "",
-      estado: "pendiente"
-    })
-    setShowTramiteModal(true)
-  }
-
-  const handleEditTramite = (tramite) => {
-    setEditingTramite(tramite)
-    setTramiteFormData({
-      tipo: tramite.tipo || "mantenimiento",
-      equipo_id: tramite.equipo_id || "",
-      descripcion: tramite.descripcion || "",
-      monto: tramite.monto || "",
-      moneda: tramite.moneda || "USD",
-      fecha_programada: tramite.fecha_programada || "",
-      estado: tramite.estado || "pendiente"
-    })
-    setShowTramiteModal(true)
-  }
-
-  const handleSubmitTramite = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-
-    let error
-    if (editingTramite) {
-      const result = await supabase
-        .from("tramites")
-        .update(tramiteFormData)
-        .eq("id", editingTramite.id)
-      error = result.error
-    } else {
-      const result = await supabase
-        .from("tramites")
-        .insert([{ ...tramiteFormData, cliente_id: clienteId }])
-      error = result.error
-    }
-
-    if (!error) {
-      setShowTramiteModal(false)
-      setEditingTramite(null)
-      cargarDatos()
-    }
-    setSaving(false)
-  }
-
-  const estadoConfig = {
-    pendiente: {
-      bg: "bg-yellow-500/20",
-      text: "text-yellow-500",
-      border: "border-yellow-500/30",
-      label: "Pendiente"
-    },
-    en_proceso: {
-      bg: "bg-blue-500/20",
-      text: "text-blue-500",
-      border: "border-blue-500/30",
-      label: "En Proceso"
-    },
-    completado: {
-      bg: "bg-green-500/20",
-      text: "text-green-500",
-      border: "border-green-500/30",
-      label: "Completado"
-    },
-    cancelado: {
-      bg: "bg-red-500/20",
-      text: "text-red-500",
-      border: "border-red-500/30",
-      label: "Cancelado"
+      await cargarDatos()
     }
   }
-
-  const matchSearch = (text) =>
-    String(text || "").toLowerCase().includes(searchPerfil.trim().toLowerCase())
-
-  const equiposFiltrados = equipos.filter(equipo => {
-    if (!searchPerfil.trim()) return true
-    return matchSearch(`${equipo.marca} ${equipo.modelo} ${equipo.tipo} ${equipo.capacidad} ${equipo.ubicacion}`)
-  })
-
-  const tramitesPendientesFiltrados = tramitesPendientes.filter(tramite => {
-    if (!searchPerfil.trim()) return true
-    return matchSearch(`${tramite.descripcion} ${tramite.tipo} ${tramite.estado} ${tramite.equipos?.marca || ""} ${tramite.equipos?.modelo || ""}`)
-  })
-
-  const tramitesHistorialFiltrados = tramitesHistorial.filter(tramite => {
-    if (!searchPerfil.trim()) return true
-    return matchSearch(`${tramite.descripcion} ${tramite.tipo} ${tramite.estado} ${tramite.equipos?.marca || ""} ${tramite.equipos?.modelo || ""}`)
-  })
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#d8e4f3] border-b-[#2d72c4]"></div>
       </div>
     )
   }
@@ -303,343 +221,181 @@ export default function ClienteDetalle() {
   if (!cliente) return null
 
   return (
-    <div className="px-4 sm:px-6 py-4 sm:py-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          href="/clientes"
-          className="p-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all"
-        >
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">Perfil de Cliente</h1>
-          <p className="text-xs text-gray-400">Información detallada y actividad</p>
+    <div className="px-2 sm:px-3 py-4 sm:py-6 text-[#314d72]">
+      <div className="flex items-start sm:items-center gap-3 justify-between flex-col sm:flex-row border-b border-[#d4dfec] pb-4 mb-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/clientes"
+            className="p-2 rounded-md border border-[#cad8ea] text-[#48688f] hover:bg-[#edf4ff]"
+            aria-label="Volver a clientes"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+          <div>
+            <h1 className="text-4xl font-bold text-[#1f4371] tracking-tight">Detalle del Cliente</h1>
+            <p className="text-sm text-[#607b9f] mt-1">Información real, ubicación y equipos asociados.</p>
+          </div>
         </div>
+
         <button
           onClick={() => setShowEditModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+          className="px-4 py-2 rounded-md bg-[#1f6bc1] text-white text-sm font-semibold hover:bg-[#19599f]"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          Editar
+          Editar Cliente
         </button>
       </div>
 
-      {/* Cliente Info Card */}
-      <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-6 border border-white/10 mb-6">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-white rounded-xl">
-            <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 mb-4">
+        <section className="xl:col-span-5 rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)]">
+          <h2 className="text-xl font-bold text-[#2a4d7a] mb-3">Datos del Cliente</h2>
+          <div className="space-y-2 text-[#47658d]">
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Nombre:</span> {cliente.nombre || "No definido"}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Correo:</span> {cliente.email || "No definido"}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Teléfono:</span> {cliente.telefono || "No definido"}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Dirección:</span> {cliente.direccion || "No definida"}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Ciudad:</span> {cliente.ciudad || "No definida"}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Equipos:</span> {equipos.length}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Trámites activos:</span> {tramitesActivos.length}</p>
+            <p className="py-1"><span className="font-semibold">Trámites en historial:</span> {tramitesHistorial.length}</p>
           </div>
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-white mb-3">{cliente.nombre}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {cliente.email && (
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-sm text-gray-300">{cliente.email}</span>
-                </div>
-              )}
-              {cliente.telefono && (
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span className="text-sm text-gray-300">{cliente.telefono}</span>
-                </div>
-              )}
-              {cliente.direccion && (
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  <span className="text-sm text-gray-300">{cliente.direccion}</span>
-                </div>
-              )}
-              {cliente.ciudad && (
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="text-sm text-gray-300">{cliente.ciudad}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10">
-          <p className="text-xs text-gray-400 mb-1">Equipos</p>
-          <p className="text-3xl font-bold text-white">{equipos.length}</p>
-        </div>
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-yellow-500/30">
-          <p className="text-xs text-gray-400 mb-1">Pendientes</p>
-          <p className="text-3xl font-bold text-yellow-400">{tramitesPendientes.length}</p>
-        </div>
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10">
-          <p className="text-xs text-gray-400 mb-1">Completados</p>
-          <p className="text-3xl font-bold text-gray-400">{tramitesHistorial.filter(t => t.estado === "completado").length}</p>
-        </div>
-      </div>
-
-      {/* Navegación y búsqueda del perfil */}
-      <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-white/10 mb-6">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
-          <button
-            onClick={() => setSeccionActiva("equipos")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              seccionActiva === "equipos" ? "bg-sky-500 text-black" : "bg-white/5 text-gray-300"
-            }`}
-          >
-            Equipos
-          </button>
-          <button
-            onClick={() => setSeccionActiva("activos")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              seccionActiva === "activos" ? "bg-sky-500 text-black" : "bg-white/5 text-gray-300"
-            }`}
-          >
-            Trámites Activos
-          </button>
-          <button
-            onClick={() => setSeccionActiva("historial")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              seccionActiva === "historial" ? "bg-sky-500 text-black" : "bg-white/5 text-gray-300"
-            }`}
-          >
-            Historial
-          </button>
-        </div>
-
-        <input
-          type="text"
-          value={searchPerfil}
-          onChange={(e) => setSearchPerfil(e.target.value)}
-          placeholder="Buscar equipos o trámites de este cliente..."
-          className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-        />
-      </div>
-
-      {/* Equipos Section */}
-      <div className={`mb-6 ${seccionActiva !== "equipos" ? "hidden" : ""}`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Equipos Asignados</h2>
-          <button
-            onClick={handleAddEquipo}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white text-black rounded-lg text-xs font-semibold hover:bg-gray-200 transition-all"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Agregar equipo
-          </button>
-        </div>
-
-        {equiposFiltrados.length === 0 ? (
-          <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-8 border border-white/10 text-center">
-            <p className="text-sm text-gray-400">No hay equipos que coincidan con la búsqueda</p>
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {equiposFiltrados.map(equipo => (
-              <div
-                key={equipo.id}
-                className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10 hover:border-white/30 transition-all"
+        <section className="xl:col-span-7 rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)]">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-xl font-bold text-[#2a4d7a]">Ubicación en Mapa</h2>
+            {mapExternalUrl && (
+              <a
+                href={mapExternalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-semibold text-[#1f6bc1] hover:text-[#19599f]"
               >
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="p-2 bg-white rounded-lg">
-                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                    </svg>
+                Abrir en Google Maps
+              </a>
+            )}
+          </div>
+
+          {mapEmbedUrl ? (
+            <div className="rounded-md overflow-hidden border border-[#cad8ea] bg-white">
+              <iframe
+                title="Mapa de ubicación del cliente"
+                src={mapEmbedUrl}
+                className="w-full h-[320px]"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          ) : (
+            <div className="h-[320px] rounded-md border border-dashed border-[#c6d4e9] bg-white flex items-center justify-center text-[#7f96b8] text-sm">
+              Este cliente no tiene dirección suficiente para mostrar un mapa.
+            </div>
+          )}
+        </section>
+      </div>
+
+      <section className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)] mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-bold text-[#2a4d7a]">Equipos del Cliente</h2>
+          <Link
+            href="/equipos/nuevo"
+            className="px-3 py-1 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
+          >
+            Agregar Equipo
+          </Link>
+        </div>
+
+        {equipos.length === 0 ? (
+          <p className="text-[#8ca0bc] py-6 text-center">Este cliente no tiene equipos registrados.</p>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {equipos.map((equipo) => (
+              <article key={equipo.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
+                <div className="flex justify-between items-start gap-3">
+                  <div>
+                    <p className="text-[#2462ad] font-semibold">{equipo.marca || "Sin marca"} {equipo.modelo || ""}</p>
+                    <p className="text-sm text-[#4a678f]">{equipo.tipo || "Tipo no definido"}</p>
+                    <p className="text-xs text-[#6f87a8] mt-1">Capacidad: {equipo.capacidad || "N/A"}</p>
+                    <p className="text-xs text-[#6f87a8]">Ubicación interna: {equipo.ubicacion || "No definida"}</p>
+                    <Link
+                      href={`/equipos/${equipo.id}`}
+                      className="inline-block mt-2 text-xs font-semibold text-[#1f6bc1] hover:text-[#19599f]"
+                    >
+                      Ver detalle del equipo
+                    </Link>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-bold text-white">{equipo.marca} {equipo.modelo}</h3>
-                    <p className="text-xs text-gray-400">{equipo.tipo || "Split"} • {equipo.capacidad || "N/A"}</p>
-                    {equipo.ubicacion && <p className="text-xs text-gray-500 mt-1">{equipo.ubicacion}</p>}
+
+                  <div className="w-[130px] shrink-0">
+                    <QRCodeComponent id={equipo.id} />
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2 border-t border-white/10">
-                  <Link
-                    href={`/equipos/${equipo.id}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs font-semibold hover:bg-white/10 transition-all"
-                  >
-                    Ver
-                  </Link>
-                  <button
-                    onClick={() => handleEditEquipo(equipo)}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white text-black rounded-lg text-xs font-semibold hover:bg-gray-200 transition-all"
-                  >
-                    Editar
-                  </button>
-                </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Trámites Pendientes */}
-      <div className={`mb-6 ${seccionActiva !== "activos" ? "hidden" : ""}`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Trámites Activos</h2>
-          <button
-            onClick={handleAddTramite}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white text-black rounded-lg text-xs font-semibold hover:bg-gray-200 transition-all"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo trámite
-          </button>
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <div className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)]">
+          <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Trámites Activos</h2>
+          {tramitesActivos.length === 0 ? (
+            <p className="text-[#8ca0bc]">No hay trámites activos.</p>
+          ) : (
+            <div className="space-y-2">
+              {tramitesActivos.map((tramite) => (
+                <div key={tramite.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#2e5e96]">{tramite.tipo === "abono" ? "Abono" : "Mantenimiento"}</p>
+                    <span className="text-xs px-2 py-0.5 rounded bg-[#e9f1ff] text-[#2f69b0] font-semibold">
+                      {tramite.estado || "pendiente"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#59779f] mt-1">{tramite.descripcion || "Sin descripción"}</p>
+                  <p className="text-xs text-[#6f87a8] mt-1">Equipo: {tramite.equipos?.marca || "-"} {tramite.equipos?.modelo || ""}</p>
+                  <Link href={`/tramites/${tramite.id}`} className="inline-block mt-2 text-xs font-semibold text-[#1f6bc1] hover:text-[#19599f]">
+                    Ver trámite
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {tramitesPendientesFiltrados.length === 0 ? (
-          <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-8 border border-white/10 text-center">
-            <p className="text-sm text-gray-400">No hay trámites activos que coincidan</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tramitesPendientesFiltrados.map(tramite => {
-              const config = estadoConfig[tramite.estado]
-              return (
-                <div
-                  key={tramite.id}
-                  className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">
-                          {tramite.tipo === "mantenimiento" ? "🔧" : "💰"}
-                        </span>
-                        <h3 className="text-sm font-bold text-white">
-                          {tramite.equipos?.marca} {tramite.equipos?.modelo}
-                        </h3>
-                      </div>
-                      <p className="text-xs text-gray-400 mb-2">{tramite.descripcion || "Sin descripción"}</p>
-                      <div className="flex items-center gap-3 text-xs">
-                        {tramite.fecha_programada && (
-                          <span className="text-gray-500">
-                            📅 {new Date(tramite.fecha_programada).toLocaleDateString("es-UY")}
-                          </span>
-                        )}
-                        {tramite.monto && (
-                          <span className="text-gray-500">
-                            💵 {tramite.moneda || "USD"} {tramite.monto}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text} border ${config.border} whitespace-nowrap`}>
-                      {config.label}
+
+        <div className="rounded-md border border-[#d3dfef] bg-[#f9fbff] p-4 shadow-[0_6px_16px_rgba(50,89,141,.1)]">
+          <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Historial</h2>
+          {tramitesHistorial.length === 0 ? (
+            <p className="text-[#8ca0bc]">No hay trámites en historial.</p>
+          ) : (
+            <div className="space-y-2">
+              {tramitesHistorial.map((tramite) => (
+                <div key={tramite.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#2e5e96]">{tramite.tipo === "abono" ? "Abono" : "Mantenimiento"}</p>
+                    <span className="text-xs px-2 py-0.5 rounded bg-[#eef3fb] text-[#5c769a] font-semibold">
+                      {tramite.estado || "completado"}
                     </span>
                   </div>
-                  <div className="flex gap-2 pt-2 border-t border-white/10">
-                    <Link
-                      href={`/tramites/${tramite.id}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs font-semibold hover:bg-white/10 transition-all"
-                    >
-                      Ver
-                    </Link>
-                    <button
-                      onClick={() => handleEditTramite(tramite)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white text-black rounded-lg text-xs font-semibold hover:bg-gray-200 transition-all"
-                    >
-                      Editar
-                    </button>
-                  </div>
+                  <p className="text-xs text-[#59779f] mt-1">{tramite.descripcion || "Sin descripción"}</p>
+                  <p className="text-xs text-[#6f87a8] mt-1">Equipo: {tramite.equipos?.marca || "-"} {tramite.equipos?.modelo || ""}</p>
+                  <Link href={`/tramites/${tramite.id}`} className="inline-block mt-2 text-xs font-semibold text-[#1f6bc1] hover:text-[#19599f]">
+                    Ver trámite
+                  </Link>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
-      {/* Historial */}
-      <div className={seccionActiva !== "historial" ? "hidden" : ""}>
-        <h2 className="text-xl font-bold text-white mb-4">Historial</h2>
-        {tramitesHistorialFiltrados.length === 0 ? (
-          <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-8 border border-white/10 text-center">
-            <p className="text-sm text-gray-400">Sin historial que coincida con la búsqueda</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tramitesHistorialFiltrados.map(tramite => {
-              const config = estadoConfig[tramite.estado]
-              return (
-                <div
-                  key={tramite.id}
-                  className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10 opacity-75 hover:opacity-100 transition-opacity"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">
-                          {tramite.tipo === "mantenimiento" ? "🔧" : "💰"}
-                        </span>
-                        <h3 className="text-sm font-bold text-white">
-                          {tramite.equipos?.marca} {tramite.equipos?.modelo}
-                        </h3>
-                      </div>
-                      <p className="text-xs text-gray-400 mb-2">{tramite.descripcion || "Sin descripción"}</p>
-                      <div className="flex items-center gap-3 text-xs">
-                        {tramite.fecha_programada && (
-                          <span className="text-gray-500">
-                            📅 {new Date(tramite.fecha_programada).toLocaleDateString("es-UY")}
-                          </span>
-                        )}
-                        {tramite.monto && (
-                          <span className="text-gray-500">
-                            💵 {tramite.moneda || "USD"} {tramite.monto}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text} border ${config.border} whitespace-nowrap`}>
-                      {config.label}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 pt-2 border-t border-white/10">
-                    <Link
-                      href={`/tramites/${tramite.id}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-white rounded-lg text-xs font-semibold hover:bg-white/10 transition-all"
-                    >
-                      Ver
-                    </Link>
-                    <button
-                      onClick={() => handleEditTramite(tramite)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/10 border border-white/10 text-white rounded-lg text-xs font-semibold hover:bg-white/20 transition-all"
-                    >
-                      Editar
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111] border border-white/10 rounded-xl p-6 max-w-md w-full">
+        <div className="fixed inset-0 bg-[#142947]/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-[#cfdced] rounded-md p-6 max-w-md w-full shadow-[0_14px_24px_rgba(29,66,116,.25)]">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-white">Editar Cliente</h2>
+              <h2 className="text-2xl font-bold text-[#224a78]">Editar Cliente</h2>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-[#6f87a8] hover:text-[#224a78] transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -647,364 +403,101 @@ export default function ClienteDetalle() {
               </button>
             </div>
 
-            <form onSubmit={handleEdit} className="space-y-3">
+            <form onSubmit={handleUpdateClient} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Nombre *
-                </label>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Nombre *</label>
                 <input
                   type="text"
                   name="nombre"
                   value={formData.nombre}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Email
-                </label>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Email</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Teléfono
-                </label>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Teléfono</label>
                 <input
                   type="tel"
                   name="telefono"
                   value={formData.telefono}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Dirección
-                </label>
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Dirección</label>
                 <input
                   type="text"
                   name="direccion"
                   value={formData.direccion}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Ciudad
-                </label>
-                <input
-                  type="text"
-                  name="ciudad"
-                  value={formData.ciudad}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
+                <label className="block text-xs font-medium text-[#5e7da3] mb-1">Ciudad</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="ciudad"
+                    value={formData.ciudad}
+                    onFocus={() => setShowCitySuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowCitySuggestions(false), 120)}
+                    onChange={(e) => {
+                      handleChange(e)
+                      setShowCitySuggestions(true)
+                    }}
+                    placeholder="Escribe una ciudad de Uruguay..."
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                    autoComplete="off"
+                  />
+
+                  {showCitySuggestions && ciudadesFiltradas.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full bg-[#f8fbff] border border-[#cad8ea] rounded-md shadow-[0_8px_18px_rgba(31,107,193,.18)] max-h-44 overflow-y-auto">
+                      {ciudadesFiltradas.map((city) => (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() => handleSelectCity(city)}
+                          className="w-full text-left px-3 py-2 text-sm text-[#2a4f7d] hover:bg-[#eaf2ff] hover:text-[#1f6bc1] transition-colors"
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-sm font-semibold hover:bg-white/10 transition-all"
+                  className="flex-1 px-4 py-2 bg-white border border-[#cad8ea] text-[#48688f] rounded-md text-sm font-semibold hover:bg-[#f2f7ff] transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-[#1f6bc1] text-white rounded-md text-sm font-semibold hover:bg-[#19599f] transition-all disabled:opacity-50"
                 >
-                  {saving ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Equipo */}
-      {showEquipoModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111] border border-white/10 rounded-xl p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-white">
-                {editingEquipo ? "Editar Equipo" : "Nuevo Equipo"}
-              </h2>
-              <button
-                onClick={() => setShowEquipoModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitEquipo} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Marca *
-                </label>
-                <input
-                  type="text"
-                  name="marca"
-                  value={equipoFormData.marca}
-                  onChange={handleEquipoChange}
-                  required
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Modelo *
-                </label>
-                <input
-                  type="text"
-                  name="modelo"
-                  value={equipoFormData.modelo}
-                  onChange={handleEquipoChange}
-                  required
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Tipo
-                </label>
-                <select
-                  name="tipo"
-                  value={equipoFormData.tipo}
-                  onChange={handleEquipoChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                >
-                  <option value="split">Split</option>
-                  <option value="cassette">Cassette</option>
-                  <option value="piso-techo">Piso-Techo</option>
-                  <option value="multi-split">Multi-Split</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Capacidad
-                </label>
-                <input
-                  type="text"
-                  name="capacidad"
-                  value={equipoFormData.capacidad}
-                  onChange={handleEquipoChange}
-                  placeholder="Ej: 12000 BTU, 3500 Frigorías"
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Ubicación
-                </label>
-                <input
-                  type="text"
-                  name="ubicacion"
-                  value={equipoFormData.ubicacion}
-                  onChange={handleEquipoChange}
-                  placeholder="Ej: Sala principal, Oficina 2"
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEquipoModal(false)}
-                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-sm font-semibold hover:bg-white/10 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all disabled:opacity-50"
-                >
-                  {saving ? 'Guardando...' : (editingEquipo ? 'Actualizar' : 'Guardar')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Trámite */}
-      {showTramiteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111] border border-white/10 rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-white">
-                {editingTramite ? "Editar Trámite" : "Nuevo Trámite"}
-              </h2>
-              <button
-                onClick={() => setShowTramiteModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitTramite} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Tipo de Trámite *
-                </label>
-                <select
-                  name="tipo"
-                  value={tramiteFormData.tipo}
-                  onChange={handleTramiteChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                >
-                  <option value="mantenimiento">Mantenimiento</option>
-                  <option value="abono">Abono</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Equipo *
-                </label>
-                <select
-                  name="equipo_id"
-                  value={tramiteFormData.equipo_id}
-                  onChange={handleTramiteChange}
-                  required
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                >
-                  <option value="">Seleccionar equipo...</option>
-                  {equipos.map(equipo => (
-                    <option key={equipo.id} value={equipo.id}>
-                      {equipo.marca} {equipo.modelo}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Descripción
-                </label>
-                <textarea
-                  name="descripcion"
-                  value={tramiteFormData.descripcion}
-                  onChange={handleTramiteChange}
-                  rows={3}
-                  placeholder="Describe el trabajo a realizar..."
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Moneda
-                </label>
-                <div className="flex gap-3 mb-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="moneda"
-                      value="USD"
-                      checked={tramiteFormData.moneda === "USD"}
-                      onChange={handleTramiteChange}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-white">USD</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="moneda"
-                      value="UYU"
-                      checked={tramiteFormData.moneda === "UYU"}
-                      onChange={handleTramiteChange}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-white">UYU</span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Monto
-                </label>
-                <input
-                  type="number"
-                  name="monto"
-                  value={tramiteFormData.monto}
-                  onChange={handleTramiteChange}
-                  step="0.01"
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Fecha Programada
-                </label>
-                <input
-                  type="date"
-                  name="fecha_programada"
-                  value={tramiteFormData.fecha_programada}
-                  onChange={handleTramiteChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
-                  Estado
-                </label>
-                <select
-                  name="estado"
-                  value={tramiteFormData.estado}
-                  onChange={handleTramiteChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="en_proceso">En Proceso</option>
-                  <option value="completado">Completado</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowTramiteModal(false)}
-                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-sm font-semibold hover:bg-white/10 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all disabled:opacity-50"
-                >
-                  {saving ? 'Guardando...' : (editingTramite ? 'Actualizar' : 'Guardar')}
+                  {saving ? "Guardando..." : "Guardar Cambios"}
                 </button>
               </div>
             </form>
