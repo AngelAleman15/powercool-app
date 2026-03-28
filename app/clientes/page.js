@@ -9,48 +9,96 @@ import QRCodeComponent from "@/components/QRCodeComponent"
 
 const CIUDADES_URUGUAY = [
   "Montevideo",
+  "Las Piedras",
+  "La Paz",
+  "Pando",
+  "Ciudad de la Costa",
+  "Barros Blancos",
+  "Toledo",
+  "Santa Lucía",
   "Canelones",
   "Maldonado",
   "Punta del Este",
-  "Algarrobo",
+  "San Carlos",
+  "Pan de Azúcar",
   "Piriápolis",
+  "Aiguá",
   "Rocha",
   "Chuy",
   "Castillos",
   "La Paloma",
+  "Lascano",
+  "Velázquez",
   "Salto",
-  "Salto Grande",
+  "Bella Unión",
+  "Constitución",
+  "San Antonio",
   "Paysandú",
+  "Quebracho",
+  "Porvenir",
   "Mercedes",
-  "New York",
+  "Dolores",
+  "Cardona",
+  "Palmitas",
   "Guichón",
   "Tacuarembó",
+  "Paso de los Toros",
+  "San Gregorio de Polanco",
+  "Ansina",
   "Rivera",
+  "Tranqueras",
+  "Vichadero",
+  "Minas de Corrales",
   "Melo",
+  "Río Branco",
+  "Fraile Muerto",
+  "Tupambaé",
   "Artigas",
-  "Quadro",
-  "Feliciano",
+  "Tomás Gomensoro",
+  "Baltasar Brum",
+  "Bella Unión",
   "Durazno",
+  "Sarandí del Yí",
+  "Carmen",
+  "Blanquillo",
   "Florida",
+  "Sarandí Grande",
+  "Fray Marcos",
+  "Casupá",
   "San José de Mayo",
-  "Soriano",
+  "Ciudad del Plata",
+  "Libertad",
+  "Ecilda Paullier",
+  "Rodríguez",
   "Young",
   "Fray Bentos",
   "Nueva Palmira",
   "Colonia del Sacramento",
+  "Rosario",
+  "Juan Lacaze",
+  "Carmelo",
+  "Ombúes de Lavalle",
+  "Nueva Helvecia",
   "Colonia Suiza",
-  "Las Flores",
-  "Conlara",
-  "Cerro Largo",
-  "Paso de los Toros",
-  "Bellaco",
-  "Sauce",
-  "Paysandú",
+  "Trinidad",
+  "Ismael Cortinas",
+  "Cardona",
+  "Minas",
+  "José Pedro Varela",
+  "Mariscala",
+  "Solís de Mataojo",
+  "Treinta y Tres",
+  "Vergara",
+  "Santa Clara de Olimar",
+  "Rincón",
   "Tarariras",
+  "Sauce",
   "Santa Rosa",
-  "Blanchard",
+  "Progreso",
+  "Atenas",
   "Cebollatí",
-  "Bañado de Medina",
+  "Cebollatí",
+  "Bañado de Medina"
 ]
 
 export default function Clientes() {
@@ -75,6 +123,7 @@ export default function Clientes() {
   })
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false)
   const { demoMode } = useDemoMode()
   const rowsPerPage = 5
 
@@ -233,6 +282,16 @@ export default function Clientes() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const filteredCities = CIUDADES_URUGUAY
+    .filter((city, index, arr) => arr.indexOf(city) === index)
+    .filter((city) => city.toLowerCase().includes((formData.ciudad || "").toLowerCase().trim()))
+    .slice(0, 8)
+
+  const handleSelectCity = (city) => {
+    setFormData((prev) => ({ ...prev, ciudad: city }))
+    setShowCitySuggestions(false)
   }
 
   const handleEdit = (cliente) => {
@@ -630,20 +689,37 @@ export default function Clientes() {
                 <label className="block text-xs font-medium text-[#5e7da3] mb-1">
                   Ciudad
                 </label>
-                <input
-                  type="text"
-                  name="ciudad"
-                  list="ciudades-list"
-                  value={formData.ciudad}
-                  onChange={handleChange}
-                  placeholder="Escribe una ciudad..."
-                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
-                />
-                <datalist id="ciudades-list">
-                  {CIUDADES_URUGUAY.map((ciudad) => (
-                    <option key={ciudad} value={ciudad} />
-                  ))}
-                </datalist>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="ciudad"
+                    value={formData.ciudad}
+                    onFocus={() => setShowCitySuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowCitySuggestions(false), 120)}
+                    onChange={(e) => {
+                      handleChange(e)
+                      setShowCitySuggestions(true)
+                    }}
+                    placeholder="Escribe una ciudad de Uruguay..."
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                    autoComplete="off"
+                  />
+
+                  {showCitySuggestions && filteredCities.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full bg-[#f8fbff] border border-[#cad8ea] rounded-md shadow-[0_8px_18px_rgba(31,107,193,.18)] max-h-44 overflow-y-auto">
+                      {filteredCities.map((city) => (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() => handleSelectCity(city)}
+                          className="w-full text-left px-3 py-2 text-sm text-[#2a4f7d] hover:bg-[#eaf2ff] hover:text-[#1f6bc1] transition-colors"
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">
