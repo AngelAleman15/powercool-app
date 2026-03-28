@@ -50,6 +50,7 @@ export default function ClienteDetallePage() {
   const [showEquipoModal, setShowEquipoModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savingEquipo, setSavingEquipo] = useState(false)
+  const [copiedEquipoId, setCopiedEquipoId] = useState(null)
   const [showCitySuggestions, setShowCitySuggestions] = useState(false)
   const [formData, setFormData] = useState({
     nombre: "",
@@ -284,6 +285,11 @@ export default function ClienteDetallePage() {
     try {
       const url = `${window.location.origin}/equipos/${equipoId}`
       await navigator.clipboard.writeText(url)
+
+      setCopiedEquipoId(String(equipoId))
+      window.setTimeout(() => {
+        setCopiedEquipoId((currentId) => (currentId === String(equipoId) ? null : currentId))
+      }, 1800)
     } catch (error) {
       console.error("No se pudo copiar el enlace del equipo", error)
     }
@@ -519,18 +525,22 @@ export default function ClienteDetallePage() {
                         <button
                           type="button"
                           onClick={() => copyEquipoLink(equipo.id)}
-                          className="inline-flex items-center justify-center px-2 py-1.5 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                          className={`inline-flex items-center justify-center px-2 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${
+                            copiedEquipoId === String(equipo.id)
+                              ? "bg-[#eaf7ef] text-[#2f7d4a]"
+                              : "bg-[#edf4ff] text-[#1f6bc1] hover:bg-[#dfebff]"
+                          }`}
                         >
-                          Copiar link
+                          {copiedEquipoId === String(equipo.id) ? "Link copiado" : "Copiar link"}
                         </button>
                       </div>
 
                       <div className="rounded-md border border-[#e3edf8] bg-[#f8fbff] px-2.5 py-2">
                         <p className="text-[11px] text-[#5f7fa6]">
-                          <span className="font-semibold">Próximo:</span> {maintStats.proximoLabel}
+                          <span className="font-semibold">Próximo mantenimiento/trámite:</span> {maintStats.proximoLabel}
                         </p>
                         <p className="text-[11px] text-[#5f7fa6] mt-1">
-                          <span className="font-semibold">Último:</span> {maintStats.ultimoLabel}
+                          <span className="font-semibold">Última revisión/mantenimiento:</span> {maintStats.ultimoLabel}
                         </p>
                       </div>
                     </div>
