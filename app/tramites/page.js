@@ -307,26 +307,19 @@ export default function Tramites() {
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
   return (
-    <div className="px-4 sm:px-6 py-4 sm:py-6">
+    <div className="py-4 sm:py-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+      <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">
-            Trámites
-          </h1>
-          <p className="text-xs text-gray-400">
-            Gestión de mantenimientos y abonos
-          </p>
-          {demoMode && (
-            <p className="mt-1 text-[11px] text-green-300">Modo Demo activo: datos de muestra</p>
-          )}
+          <h1 className="text-2xl font-bold text-white mb-1">Trámites</h1>
+          <p className="text-xs text-gray-400">Gestión integral de mantenimientos y abonos</p>
         </div>
         <button
           onClick={() => !demoMode && setShowModal(true)}
           disabled={demoMode}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full sm:w-auto justify-center ${
             demoMode
-              ? "bg-white/10 text-gray-400 cursor-not-allowed"
+              ? "bg-[#e8eff9] text-[#7f96b8] cursor-not-allowed"
               : "bg-white text-black hover:bg-gray-200"
           }`}
         >
@@ -337,175 +330,198 @@ export default function Tramites() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-white/10 overflow-x-auto">
-        <button
-          onClick={() => setTipoTramite("mantenimiento")}
-          className={`px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${
-            tipoTramite === "mantenimiento"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          Mantenimientos
-        </button>
-        <button
-          onClick={() => setTipoTramite("abono")}
-          className={`px-4 py-2 text-sm font-medium transition-all ${
-            tipoTramite === "abono"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          Abonos
-        </button>
-        <button
-          onClick={() => setTipoTramite("historial")}
-          className={`px-4 py-2 text-sm font-medium transition-all ${
-            tipoTramite === "historial"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          Historial
-        </button>
+      {/* Tabs con nuevo estilo */}
+      <div className="px-4 sm:px-6 mb-6">
+        <div className="inline-flex rounded-lg border border-[#cad8ea] bg-white overflow-hidden">
+          <button
+            onClick={() => setTipoTramite("mantenimiento")}
+            className={`px-4 py-2 text-sm font-semibold transition-all ${
+              tipoTramite === "mantenimiento"
+                ? "bg-[#1f6bc1] text-white"
+                : "text-[#1f6bc1] hover:bg-[#f7faff]"
+            }`}
+          >
+            Mantenimientos
+          </button>
+          <div className="w-px bg-[#e8eff9]" />
+          <button
+            onClick={() => setTipoTramite("abono")}
+            className={`px-4 py-2 text-sm font-semibold transition-all ${
+              tipoTramite === "abono"
+                ? "bg-[#1f6bc1] text-white"
+                : "text-[#1f6bc1] hover:bg-[#f7faff]"
+            }`}
+          >
+            Abonos
+          </button>
+          <div className="w-px bg-[#e8eff9]" />
+          <button
+            onClick={() => setTipoTramite("historial")}
+            className={`px-4 py-2 text-sm font-semibold transition-all ${
+              tipoTramite === "historial"
+                ? "bg-[#1f6bc1] text-white"
+                : "text-[#1f6bc1] hover:bg-[#f7faff]"
+            }`}
+          >
+            Historial
+          </button>
+        </div>
       </div>
 
       {/* Loading State */}
       {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        <div className="px-4 sm:px-6 flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#d8e4f3] border-b-[#2d72c4]" />
         </div>
       ) : (
         <>
           {/* Historial */}
           {tipoTramite === "historial" ? (
             tramitesHistorial.length === 0 ? (
-              <div className="text-center py-12 bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl border border-white/10">
-                <svg className="mx-auto h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 className="mt-2 text-xs font-medium text-white">No hay trámites en historial</h3>
+              <div className="px-4 sm:px-6">
+                <div className="text-center py-12 bg-[#f7faff] rounded-xl border border-[#d1dcec]">
+                  <svg className="mx-auto h-8 w-8 text-[#a2bbe0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-semibold text-[#2a4d7a]">No hay trámites completados</h3>
+                </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl border border-white/10 p-3 sm:p-4 max-h-[68vh] overflow-y-auto no-scrollbar space-y-2">
-                {tramitesHistorial.map((tramite) => (
-                  <div key={tramite.id} className="rounded-lg border border-white/10 bg-black/20 p-2.5 sm:p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <p className="text-sm font-semibold text-white truncate">
-                            {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : "Equipo no especificado"}
-                          </p>
-                          {getEstadoBadge(tramite.estado, tramite.id)}
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300 uppercase tracking-wide">
-                            {tramite.tipo}
-                          </span>
-                        </div>
-                        {tramite.clientes && <p className="text-xs text-gray-400">{tramite.clientes.nombre}</p>}
-                        <p className="text-[11px] text-gray-500 mt-1">
-                          Creado: {new Date(tramite.created_at).toLocaleDateString("es-UY")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Link
-                          href={`/tramites/${tramite.id}`}
-                          className="px-2.5 py-1.5 rounded-md bg-white/10 text-white text-xs hover:bg-white/20 transition-all"
-                        >
-                          Ver
-                        </Link>
-                        <button
-                          onClick={() => handleEditTramite(tramite)}
-                          className="px-2.5 py-1.5 rounded-md bg-white text-black text-xs font-semibold hover:bg-gray-200 transition-all"
-                        >
-                          Editar
-                        </button>
-                      </div>
-                    </div>
+              <div className="px-4 sm:px-6">
+                <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+                  <div className="px-4 py-3 border-b border-[#dbe4f3]">
+                    <h2 className="text-lg font-bold text-[#284a76]">Historial de Trámites</h2>
+                    <p className="text-xs text-[#6f87a8] mt-1">Trámites completados y cancelados.</p>
                   </div>
-                ))}
+                  <div className="p-4 space-y-2 max-h-[68vh] overflow-y-auto">
+                    {tramitesHistorial.map((tramite) => (
+                      <div key={tramite.id} className="rounded-md border border-[#dbe6f4] bg-white p-3">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <p className="text-sm font-semibold text-[#2a4d7a] truncate">
+                                {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : "Equipo no especificado"}
+                              </p>
+                              {getEstadoBadge(tramite.estado, tramite.id)}
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#e8eff9] text-[#2f69b0] font-semibold uppercase tracking-wide">
+                                {tramite.tipo}
+                              </span>
+                            </div>
+                            {tramite.clientes && <p className="text-xs text-[#607b9f]">Cliente: {tramite.clientes.nombre}</p>}
+                            <p className="text-[11px] text-[#6d84a5] mt-1">
+                              Creado: {new Date(tramite.created_at).toLocaleDateString("es-UY")}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Link
+                              href={`/tramites/${tramite.id}`}
+                              className="px-2.5 py-1.5 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-xs font-semibold hover:bg-[#dfebff]"
+                            >
+                              Ver
+                            </Link>
+                            <button
+                              onClick={() => handleEditTramite(tramite)}
+                              className="px-2.5 py-1.5 rounded-md bg-white text-black text-xs font-semibold hover:bg-gray-200 border border-[#cad8ea]"
+                            >
+                              Editar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )
           ) :
           /* Tramites Activos por categoria */
           tramitesActivos.length === 0 ? (
-            <div className="text-center py-12 bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl border border-white/10">
-              <svg className="mx-auto h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-xs font-medium text-white">
-                No hay {tipoTramite === "mantenimiento" ? "mantenimientos" : "abonos"} activos
-              </h3>
-              <p className="mt-1 text-xs text-gray-500">
-                Los completados y cancelados están en Historial
-              </p>
+            <div className="px-4 sm:px-6">
+              <div className="text-center py-12 bg-[#f7faff] rounded-xl border border-[#d1dcec]">
+                <svg className="mx-auto h-8 w-8 text-[#a2bbe0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 className="mt-2 text-sm font-semibold text-[#2a4d7a]">
+                  No hay {tipoTramite === "mantenimiento" ? "mantenimientos" : "abonos"} activos
+                </h3>
+                <p className="mt-1 text-xs text-[#6f87a8]">
+                  Los completados y cancelados están en Historial
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {tramitesActivos.map(tramite => (
-                <div
-                  key={tramite.id}
-                  className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-lg border border-white/10 p-4 hover:border-white/30 transition-all"
-                >
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-3">
-                    <div className="flex-1 w-full">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="text-base font-bold text-white">
+            <div className="px-4 sm:px-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {tramitesActivos.map(tramite => (
+                  <article
+                    key={tramite.id}
+                    className="rounded-xl border border-[#d4e0f1] bg-white p-4 shadow-[0_4px_12px_rgba(36,84,145,.08)] hover:shadow-[0_6px_16px_rgba(36,84,145,.12)] transition-all"
+                  >
+                    {/* Header con tipo y estado */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#e8eff9] text-[#2f69b0]">
+                            {tramite.tipo === "mantenimiento" ? "Mantenimiento" : "Abono"}
+                          </span>
+                          {getEstadoBadge(tramite.estado, tramite.id)}
+                        </div>
+                        <h3 className="text-base font-bold text-[#294f7d] truncate">
                           {tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : 'Equipo no especificado'}
                         </h3>
-                        {getEstadoBadge(tramite.estado, tramite.id)}
-                      </div>
-                      {tramite.clientes && (
-                        <p className="text-xs text-gray-400 mb-2">
-                          Cliente: {tramite.clientes.nombre}
-                        </p>
-                      )}
-                      {tramite.descripcion && (
-                        <p className="text-sm text-gray-300 mb-2">{tramite.descripcion}</p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-3">
-                        {tramite.fecha_programada && (
-                          <div className="flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {new Date(tramite.fecha_programada).toLocaleDateString()}
-                          </div>
-                        )}
-                        {tramite.monto && (
-                          <div className="flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            ${parseFloat(tramite.monto).toLocaleString()} {tramite.moneda || 'USD'}
-                          </div>
+                        {tramite.clientes && (
+                          <p className="text-xs text-[#607b9f] mt-1">
+                            Cliente: {tramite.clientes.nombre}
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Acciones */}
-                  <div className="border-t border-white/10 pt-3">
-                    <div className="flex gap-2">
+
+                    {/* Descripción */}
+                    {tramite.descripcion && (
+                      <p className="text-xs text-[#5f7ea4] bg-[#f8fbff] px-2.5 py-2 rounded-md mb-3">
+                        {tramite.descripcion}
+                      </p>
+                    )}
+
+                    {/* Información de fecha y monto */}
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {tramite.fecha_programada && (
+                        <div className="rounded-md border border-[#dbe6f4] bg-[#f8fbff] px-2.5 py-2 flex flex-col">
+                          <p className="text-[11px] text-[#5f7ea4]">Fecha programada</p>
+                          <span className="text-xs text-[#355985] font-bold mt-1">
+                            {new Date(tramite.fecha_programada).toLocaleDateString("es-UY")}
+                          </span>
+                        </div>
+                      )}
+                      {tramite.monto && (
+                        <div className="rounded-md border border-[#dbe6f4] bg-[#f8fbff] px-2.5 py-2 flex flex-col">
+                          <p className="text-[11px] text-[#5f7ea4]">Monto</p>
+                          <span className="text-xs text-[#355985] font-bold mt-1">
+                            ${parseFloat(tramite.monto).toLocaleString()} {tramite.moneda || 'USD'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/tramites/${tramite.id}`}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-semibold hover:bg-white/20 transition-all"
+                        className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
                       >
-                        Ver detalle
+                        Ver detalles
                       </Link>
                       <button
                         onClick={() => handleEditTramite(tramite)}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white text-black rounded-lg text-xs font-semibold hover:bg-gray-200 transition-all"
+                        className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-white text-black text-[11px] font-semibold hover:bg-gray-200 border border-[#cad8ea]"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
                         Editar
                       </button>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </article>
+                ))}
+              </div>
             </div>
           )}
         </>
@@ -514,14 +530,14 @@ export default function Tramites() {
       {/* Modal Crear Trámite */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111] border border-white/10 rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white border border-[#d1dcec] rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-[#2a4d7a]">
                 {editingTramite ? "Editar" : "Nuevo"} {tipoTramite === "mantenimiento" ? "Mantenimiento" : "Abono"}
               </h2>
               <button
                 onClick={handleCloseModal}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-[#a2bbe0] hover:text-[#2a4d7a] transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -532,7 +548,7 @@ export default function Tramites() {
             <form onSubmit={handleSubmit} className="space-y-3">
               {/* Cliente primero */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Cliente *
                 </label>
                 <select
@@ -540,7 +556,7 @@ export default function Tramites() {
                   value={formData.cliente_id}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                 >
                   <option value="">Seleccionar cliente...</option>
                   {clientes.map(cliente => (
@@ -553,7 +569,7 @@ export default function Tramites() {
 
               {/* Equipo con filtro y creación rápida */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Equipo *
                 </label>
                 <div className="flex gap-2">
@@ -563,7 +579,7 @@ export default function Tramites() {
                     onChange={handleChange}
                     required
                     disabled={!formData.cliente_id}
-                    className="flex-1 px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">
                       {formData.cliente_id ? "Seleccionar equipo..." : "Primero seleccione un cliente"}
@@ -578,7 +594,7 @@ export default function Tramites() {
                     type="button"
                     onClick={() => setShowEquipoModal(true)}
                     disabled={!formData.cliente_id}
-                    className="px-3 py-2 bg-white/5 border border-white/10 text-white text-sm rounded-lg hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    className="px-3 py-2 bg-[#edf4ff] border border-[#cad8ea] text-[#1f6bc1] text-sm rounded-lg hover:bg-[#dfeeff] transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap font-semibold"
                     title="Crear equipo rápido"
                   >
                     + Equipo
@@ -587,7 +603,7 @@ export default function Tramites() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Descripción
                 </label>
                 <textarea
@@ -596,13 +612,13 @@ export default function Tramites() {
                   onChange={handleChange}
                   rows={3}
                   placeholder={tipoTramite === "mantenimiento" ? "Ej: Limpieza de filtros, revisión general..." : "Ej: Pago mensual, anticipo..."}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                 />
               </div>
 
               {/* Selector de moneda */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Moneda *
                 </label>
                 <div className="flex gap-3">
@@ -613,9 +629,9 @@ export default function Tramites() {
                       value="USD"
                       checked={formData.moneda === "USD"}
                       onChange={handleChange}
-                      className="w-4 h-4 text-white bg-black border-white/20 focus:ring-white/20"
+                      className="w-4 h-4"
                     />
-                    <span className="text-sm text-white">USD (Dólares)</span>
+                    <span className="text-sm text-[#1f4371]">USD (Dólares)</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -624,15 +640,15 @@ export default function Tramites() {
                       value="UYU"
                       checked={formData.moneda === "UYU"}
                       onChange={handleChange}
-                      className="w-4 h-4 text-white bg-black border-white/20 focus:ring-white/20"
+                      className="w-4 h-4"
                     />
-                    <span className="text-sm text-white">UYU (Pesos)</span>
+                    <span className="text-sm text-[#1f4371]">UYU (Pesos)</span>
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Monto ({formData.moneda}) {tipoTramite === "abono" && "*"}
                 </label>
                 <input
@@ -643,12 +659,12 @@ export default function Tramites() {
                   required={tipoTramite === "abono"}
                   placeholder="0.00"
                   step="0.01"
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Fecha Programada
                 </label>
                 <input
@@ -656,19 +672,19 @@ export default function Tramites() {
                   name="fecha_programada"
                   value={formData.fecha_programada}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Estado
                 </label>
                 <select
                   name="estado"
                   value={formData.estado}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                 >
                   <option value="pendiente">Pendiente</option>
                   <option value="en_proceso">En Proceso</option>
@@ -681,31 +697,28 @@ export default function Tramites() {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-sm font-semibold hover:bg-white/10 transition-all"
+                  className="flex-1 px-4 py-2 bg-[#edf4ff] border border-[#cad8ea] text-[#1f6bc1] rounded-lg text-sm font-semibold hover:bg-[#dfeeff] transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 border border-[#cad8ea] transition-all"
                 >
                   {editingTramite ? "Actualizar" : "Crear Trámite"}
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
-
       {/* Modal Crear Equipo Rápido */}
       {showEquipoModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-[#111] border border-white/10 rounded-xl p-6 max-w-md w-full">
+          <div className="bg-white border border-[#d1dcec] rounded-xl p-6 max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-white">Crear Equipo Rápido</h2>
+              <h2 className="text-xl font-bold text-[#2a4d7a]">Crear Equipo Rápido</h2>
               <button
                 onClick={() => setShowEquipoModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-[#a2bbe0] hover:text-[#2a4d7a] transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -715,7 +728,7 @@ export default function Tramites() {
 
             <form onSubmit={(e) => { e.preventDefault(); crearEquipoRapido(); }} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Marca *
                 </label>
                 <input
@@ -723,13 +736,13 @@ export default function Tramites() {
                   value={nuevoEquipo.marca}
                   onChange={(e) => handleEquipoChange('marca', e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                   placeholder="Ej: LG, Samsung, Carrier..."
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Modelo *
                 </label>
                 <input
@@ -737,19 +750,19 @@ export default function Tramites() {
                   value={nuevoEquipo.modelo}
                   onChange={(e) => handleEquipoChange('modelo', e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                   placeholder="Ej: ABC-123"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Tipo
                 </label>
                 <select
                   value={nuevoEquipo.tipo}
                   onChange={(e) => handleEquipoChange('tipo', e.target.value)}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                 >
                   <option value="split">Split</option>
                   <option value="ventana">Ventana</option>
@@ -759,27 +772,27 @@ export default function Tramites() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Ubicación
                 </label>
                 <input
                   type="text"
                   value={nuevoEquipo.ubicacion}
                   onChange={(e) => handleEquipoChange('ubicacion', e.target.value)}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                   placeholder="Ej: Sala, Dormitorio principal..."
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-[#607b9f] mb-1">
                   Capacidad
                 </label>
                 <input
                   type="text"
                   value={nuevoEquipo.capacidad}
                   onChange={(e) => handleEquipoChange('capacidad', e.target.value)}
-                  className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-lg text-[#1f4371] text-sm focus:outline-none focus:ring-2 focus:ring-[#a2bbe0]"
                   placeholder="Ej: 12000 BTU, 3000 frigorías..."
                 />
               </div>
@@ -788,13 +801,13 @@ export default function Tramites() {
                 <button
                   type="button"
                   onClick={() => setShowEquipoModal(false)}
-                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-sm font-semibold hover:bg-white/10 transition-all"
+                  className="flex-1 px-4 py-2 bg-[#edf4ff] border border-[#cad8ea] text-[#1f6bc1] rounded-lg text-sm font-semibold hover:bg-[#dfeeff] transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 border border-[#cad8ea] transition-all"
                 >
                   Crear Equipo
                 </button>
