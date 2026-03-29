@@ -309,25 +309,27 @@ export default function Tramites() {
   return (
     <div className="py-4 sm:py-6">
       {/* Header */}
-      <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1f4371] mb-1">Trámites</h1>
-          <p className="text-xs text-[#607b9f]">Gestión integral de mantenimientos y abonos</p>
+      <div className="px-4 sm:px-6 border-b border-[#d4dfec] pb-4 mb-5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#1f4371] tracking-tight">Trámites</h1>
+            <p className="text-sm sm:text-base font-medium text-[#4f6f95] mt-1">Gestión integral de mantenimientos y abonos</p>
+          </div>
+          <button
+            onClick={() => !demoMode && setShowModal(true)}
+            disabled={demoMode}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full sm:w-auto justify-center ${
+              demoMode
+                ? "bg-[#e8eff9] text-[#7f96b8] cursor-not-allowed"
+                : "bg-white text-black hover:bg-gray-200"
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo Trámite
+          </button>
         </div>
-        <button
-          onClick={() => !demoMode && setShowModal(true)}
-          disabled={demoMode}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full sm:w-auto justify-center ${
-            demoMode
-              ? "bg-[#e8eff9] text-[#7f96b8] cursor-not-allowed"
-              : "bg-white text-black hover:bg-gray-200"
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo Trámite
-        </button>
       </div>
 
       {/* Tabs con nuevo estilo */}

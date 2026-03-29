@@ -634,36 +634,38 @@ export default function Equipos() {
 
   return (
     <div className="py-4 sm:py-6">
-      <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1f4371] mb-1">Inventario</h1>
-          <p className="text-xs text-[#607b9f]">Gestión y control de equipos de climatización</p>
-        </div>
+      <div className="px-4 sm:px-6 border-b border-[#d4dfec] pb-4 mb-5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#1f4371] tracking-tight">Inventario</h1>
+            <p className="text-sm sm:text-base font-medium text-[#4f6f95] mt-1">Gestión y control de equipos de climatización</p>
+          </div>
 
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <Link
-            href="/equipos/nuevo"
-            className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
-          >
-            Nuevo Equipo
-          </Link>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Link
+              href="/equipos/nuevo"
+              className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+            >
+              Nuevo Equipo
+            </Link>
 
-          <button
-            type="button"
-            onClick={exportFilteredAsCsv}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#edf4ff] text-[#1f6bc1] border border-[#cad8ea] hover:bg-[#dfeeff]"
-          >
-            Exportar Excel (CSV)
-          </button>
+            <button
+              type="button"
+              onClick={exportFilteredAsCsv}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#edf4ff] text-[#1f6bc1] border border-[#cad8ea] hover:bg-[#dfeeff]"
+            >
+              Exportar Excel (CSV)
+            </button>
 
-          <button
-            type="button"
-            onClick={exportFilteredAsPdf}
-            disabled={exportingPdf}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#edf4ff] text-[#1f6bc1] border border-[#cad8ea] hover:bg-[#dfeeff] disabled:opacity-60"
-          >
-            {exportingPdf ? "Generando PDF..." : "Exportar PDF"}
-          </button>
+            <button
+              type="button"
+              onClick={exportFilteredAsPdf}
+              disabled={exportingPdf}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#edf4ff] text-[#1f6bc1] border border-[#cad8ea] hover:bg-[#dfeeff] disabled:opacity-60"
+            >
+              {exportingPdf ? "Generando PDF..." : "Exportar PDF"}
+            </button>
+          </div>
         </div>
       </div>
 
