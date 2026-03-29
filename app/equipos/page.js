@@ -70,6 +70,19 @@ function getRepuestoBadgeClass(status) {
   return "bg-[#eaf7ef] text-[#2f7d4a]"
 }
 
+function getMovimientoBadge(movimiento) {
+  if (movimiento.tipo === "tramite") {
+    if (movimiento.estadoTramite === "completado") return { label: "completado", cls: "bg-[#e8f6ee] text-[#2f7d4a]" }
+    if (movimiento.estadoTramite === "cancelado") return { label: "cancelado", cls: "bg-[#fdeeee] text-[#b44a4a]" }
+    if (movimiento.estadoTramite === "en_proceso") return { label: "en proceso", cls: "bg-[#e9f1ff] text-[#2f69b0]" }
+    return { label: "pendiente", cls: "bg-[#fff8e8] text-[#a97717]" }
+  }
+
+  if (movimiento.tipo === "ingreso") return { label: "ingreso", cls: "bg-[#e8f6ee] text-[#2f7d4a]" }
+  if (movimiento.tipo === "salida") return { label: "salida", cls: "bg-[#fdeeee] text-[#b44a4a]" }
+  return { label: "ajuste", cls: "bg-[#fff8e8] text-[#a97717]" }
+}
+
 function downloadTextFile(content, fileName, mimeType) {
   const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
@@ -259,8 +272,9 @@ export default function Equipos() {
       const baseDate = tramite.fecha_programada || tramite.created_at
       events.push({
         id: `tr-${tramite.id}`,
-        tipo: tramite.estado === "cancelado" ? "ajuste" : (tramite.tipo === "abono" ? "ingreso" : "salida"),
-        detalle: `${tramite.tipo === "abono" ? "Abono" : "Mantenimiento"} (${tramite.estado || "sin estado"})`,
+        tipo: "tramite",
+        estadoTramite: tramite.estado || "pendiente",
+        detalle: `${tramite.tipo === "abono" ? "Abono" : "Mantenimiento"}`,
         motivo: tramite.descripcion || "Movimiento asociado a tramite",
         usuario: tramite.usuario || tramite.tecnico || "Sistema",
         referencia: `TR-${tramite.id}`,
@@ -804,13 +818,16 @@ export default function Equipos() {
             ) : (
               inventoryMovements.map((m) => (
                 <div key={m.id} className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-2 items-center rounded-md border border-[#dbe6f4] bg-white px-3 py-2">
+                  {(() => {
+                    const badge = getMovimientoBadge(m)
+                    return (
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-semibold w-fit ${
-                      m.tipo === "ingreso" ? "bg-[#e8f6ee] text-[#2f7d4a]" : m.tipo === "salida" ? "bg-[#fdeeee] text-[#b44a4a]" : "bg-[#fff8e8] text-[#a97717]"
-                    }`}
+                    className={`text-xs px-2 py-0.5 rounded-full font-semibold w-fit ${badge.cls}`}
                   >
-                    {m.tipo}
+                    {badge.label}
                   </span>
+                    )
+                  })()}
 
                   <div>
                     <p className="text-sm text-[#36557b]">{m.detalle}</p>
@@ -828,65 +845,104 @@ export default function Equipos() {
 
       <div className="px-4 sm:px-6 mb-6">
         <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-          <div className="px-4 py-3 border-b border-[#dbe4f3]">
-            <h2 className="text-lg font-bold text-[#284a76]">Próximos Mantenimientos</h2>
+          <div className="px-4 py-3 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#edf4ff]">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-lg font-bold text-[#284a76]">Próximos Mantenimientos</h2>
+                <p className="text-xs text-[#6f87a8] mt-0.5">Agenda operativa de mantenimientos por prioridad y fecha.</p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#e8eff9] text-[#355985]">
+                {upcomingMaintenances.length} programados
+              </span>
+            </div>
           </div>
-          <div className="p-4 space-y-2">
+          <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
             {upcomingMaintenances.length === 0 ? (
-              <p className="text-sm text-[#6d84a5]">No hay mantenimientos próximos.</p>
+              <p className="text-sm text-[#6d84a5] lg:col-span-2">No hay mantenimientos próximos.</p>
             ) : (
               upcomingMaintenances.map((item) => (
-                <div key={item.id} className="rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
-                  <div>
-                    <p className="text-sm font-semibold text-[#36557b]">{item.marca || "Equipo"} {item.modelo || ""}</p>
-                    <p className="text-xs text-[#6d84a5]">{item.ubicacion || "Sin ubicación"}</p>
+                <article key={item.id} className="rounded-xl border border-[#d4e0f1] bg-white p-3 shadow-[0_4px_12px_rgba(36,84,145,.08)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[#294f7d] truncate">{item.marca || "Equipo"} {item.modelo || ""}</p>
+                      <p className="text-xs text-[#6d84a5] mt-0.5 truncate">{item.ubicacion || "Sin ubicación"}</p>
+                    </div>
+                    {(() => {
+                      const scheduled = new Date(item.proximo?.fecha_programada || item.proximo?.created_at || 0)
+                      const today = new Date()
+                      const diffDays = Number.isNaN(scheduled.getTime())
+                        ? null
+                        : Math.ceil((new Date(scheduled.getFullYear(), scheduled.getMonth(), scheduled.getDate()) - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000)
+
+                      const urgencyClass = diffDays !== null && diffDays <= 1
+                        ? "bg-[#fdeeee] text-[#b44a4a]"
+                        : diffDays !== null && diffDays <= 3
+                          ? "bg-[#fff8e8] text-[#a97717]"
+                          : "bg-[#eaf2ff] text-[#2f69b0]"
+
+                      const urgencyLabel = diffDays === null
+                        ? "Sin fecha"
+                        : diffDays <= 0
+                          ? "Hoy"
+                          : diffDays === 1
+                            ? "Mañana"
+                            : `En ${diffDays} días`
+
+                      return (
+                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${urgencyClass}`}>
+                          {urgencyLabel}
+                        </span>
+                      )
+                    })()}
                   </div>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-xs text-[#4f6f95] font-semibold">
+
+                  <div className="mt-3 rounded-md border border-[#dbe6f4] bg-[#f8fbff] px-2.5 py-2 flex items-center justify-between">
+                    <p className="text-[11px] text-[#5f7ea4]">Fecha programada</p>
+                    <span className="text-xs text-[#355985] font-bold">
                       {formatDate(item.proximo?.fecha_programada || item.proximo?.created_at)}
                     </span>
-
-                    <div className="flex flex-wrap gap-2 justify-end">
-                      {item.proximo?.id && (
-                        <Link
-                          href={`/tramites/${item.proximo.id}`}
-                          className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
-                        >
-                          Ver detalle
-                        </Link>
-                      )}
-
-                      <Link
-                        href={`/equipos/${item.id}`}
-                        className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
-                      >
-                        Ver equipo
-                      </Link>
-
-                      {item.proximo?.id && item.proximo?.estado !== "en_proceso" && (
-                        <button
-                          type="button"
-                          disabled={updatingTramiteId === String(item.proximo.id)}
-                          onClick={() => updateTramiteEstado(item.proximo.id, "en_proceso")}
-                          className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#e9f1ff] text-[#2f69b0] text-[11px] font-semibold hover:bg-[#dce8ff] disabled:opacity-60"
-                        >
-                          Iniciar
-                        </button>
-                      )}
-
-                      {item.proximo?.id && item.proximo?.estado !== "completado" && (
-                        <button
-                          type="button"
-                          disabled={updatingTramiteId === String(item.proximo.id)}
-                          onClick={() => updateTramiteEstado(item.proximo.id, "completado")}
-                          className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#eaf7ef] text-[#2f7d4a] text-[11px] font-semibold hover:bg-[#dff2e6] disabled:opacity-60"
-                        >
-                          Completar
-                        </button>
-                      )}
-                    </div>
                   </div>
-                </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {item.proximo?.id && (
+                      <Link
+                        href={`/tramites/${item.proximo.id}`}
+                        className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                      >
+                        Ver trámite
+                      </Link>
+                    )}
+
+                    <Link
+                      href={`/equipos/${item.id}`}
+                      className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                    >
+                      Ver equipo
+                    </Link>
+
+                    {item.proximo?.id && item.proximo?.estado !== "en_proceso" && (
+                      <button
+                        type="button"
+                        disabled={updatingTramiteId === String(item.proximo.id)}
+                        onClick={() => updateTramiteEstado(item.proximo.id, "en_proceso")}
+                        className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#e9f1ff] text-[#2f69b0] text-[11px] font-semibold hover:bg-[#dce8ff] disabled:opacity-60"
+                      >
+                        Iniciar
+                      </button>
+                    )}
+
+                    {item.proximo?.id && item.proximo?.estado !== "completado" && (
+                      <button
+                        type="button"
+                        disabled={updatingTramiteId === String(item.proximo.id)}
+                        onClick={() => updateTramiteEstado(item.proximo.id, "completado")}
+                        className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#eaf7ef] text-[#2f7d4a] text-[11px] font-semibold hover:bg-[#dff2e6] disabled:opacity-60"
+                      >
+                        Completar
+                      </button>
+                    )}
+                  </div>
+                </article>
               ))
             )}
           </div>
