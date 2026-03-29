@@ -226,10 +226,10 @@ export default function Tramites() {
 
   const getEstadoBadge = (estado, tramiteId, canChange = true) => {
     const estilos = {
-      pendiente: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
-      en_proceso: "bg-blue-500/20 text-blue-500 border-blue-500/30",
-      completado: "bg-green-500/20 text-green-500 border-green-500/30",
-      cancelado: "bg-red-500/20 text-red-500 border-red-500/30"
+      pendiente: "bg-[#fff8e8] text-[#a97717] border border-[#f3dddd]",
+      en_proceso: "bg-[#e9f1ff] text-[#2f69b0] border border-[#dbe6f4]",
+      completado: "bg-[#eaf7ef] text-[#2f7d4a] border border-[#d1f0d9]",
+      cancelado: "bg-[#fdeeee] text-[#b44a4a] border border-[#f3dddd]"
     }
     
     const textos = {
@@ -241,7 +241,7 @@ export default function Tramites() {
     
     if (!canChange) {
       return (
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]}`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${estilos[estado]}`}>
           {textos[estado]}
         </span>
       )
@@ -262,15 +262,15 @@ export default function Tramites() {
             }
             setEstadoMenuAbierto((prev) => (prev === tramiteId ? null : tramiteId))
           }}
-          className={`px-2 py-1 rounded-full text-xs font-semibold border ${estilos[estado]} hover:brightness-110 transition-all`}
-          title="Hover o toque para cambiar estado"
+          className={`px-2 py-1 rounded-full text-xs font-semibold ${estilos[estado]} hover:brightness-95 transition-all cursor-pointer`}
+          title="Haz clic para cambiar estado"
         >
           {textos[estado]}
         </button>
 
         {estadoMenuAbierto === tramiteId && (
           <div
-            className="absolute left-0 top-full mt-1 z-30 min-w-[150px] rounded-lg border border-white/15 bg-[#0c0d10] p-1.5 shadow-xl"
+            className="absolute left-0 top-full mt-1 z-30 min-w-[150px] rounded-lg border border-[#d1dcec] bg-white shadow-lg p-1"
             onMouseEnter={() => openEstadoMenu(tramiteId)}
             onMouseLeave={() => scheduleCloseEstadoMenu(tramiteId)}
           >
@@ -285,8 +285,8 @@ export default function Tramites() {
                 }}
                 className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-all ${
                   estadoKey === estado
-                    ? "bg-white/10 text-gray-500 cursor-default"
-                    : "text-white hover:bg-white/10"
+                    ? "bg-[#edf4ff] text-[#a2bbe0] cursor-default"
+                    : "text-[#2a4d7a] hover:bg-[#f7faff]"
                 }`}
               >
                 {estadoLabel}
