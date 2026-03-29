@@ -949,6 +949,126 @@ export default function Equipos() {
         </div>
       </div>
 
+      <div className="px-4 sm:px-6 mb-6">
+        <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="px-4 py-3 border-b border-[#dbe4f3] bg-gradient-to-r from-[#f7faff] to-[#edf4ff]">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-lg font-bold text-[#284a76]">Trámites Activos</h2>
+                <p className="text-xs text-[#6f87a8] mt-0.5">Seguimiento de mantenimientos y abonos pendientes o en proceso.</p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#e8eff9] text-[#355985]">
+                {tramites.filter((t) => t.estado === "pendiente" || t.estado === "en_proceso").length} activos
+              </span>
+            </div>
+          </div>
+          <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {tramites.filter((t) => t.estado === "pendiente" || t.estado === "en_proceso").length === 0 ? (
+              <p className="text-sm text-[#6d84a5] lg:col-span-2">No hay trámites pendientes o en proceso.</p>
+            ) : (
+              tramites
+                .filter((t) => t.estado === "pendiente" || t.estado === "en_proceso")
+                .sort((a, b) => new Date(a.fecha_programada || a.created_at || 0) - new Date(b.fecha_programada || b.created_at || 0))
+                .slice(0, 6)
+                .map((tramite) => {
+                  const equipo = equiposEnriquecidos.find((e) => String(e.id) === String(tramite.equipo_id))
+                  const badge = getMovimientoBadge({ tipo: "tramite", estadoTramite: tramite.estado })
+
+                  return (
+                    <article key={tramite.id} className="rounded-xl border border-[#d4e0f1] bg-white p-3 shadow-[0_4px_12px_rgba(36,84,145,.08)]">
+                      {/* Header con tipo y estado */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#e8eff9] text-[#2f69b0]">
+                              {tramite.tipo === "mantenimiento" ? "Mantenimiento" : "Abono"}
+                            </span>
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${badge.cls}`}>
+                              {badge.label}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-[#294f7d] mt-2 truncate">
+                            {equipo ? `${equipo.marca || "Equipo"} ${equipo.modelo || ""}` : "Equipo no encontrado"}
+                          </p>
+                          <p className="text-xs text-[#6d84a5] mt-0.5 truncate">
+                            {equipo?.ubicacion || "Sin ubicación"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Descripción */}
+                      {tramite.descripcion && (
+                        <p className="text-xs text-[#5f7ea4] bg-[#f8fbff] px-2.5 py-2 rounded-md mb-3">
+                          {tramite.descripcion}
+                        </p>
+                      )}
+
+                      {/* Información de fecha y monto */}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="rounded-md border border-[#dbe6f4] bg-[#f8fbff] px-2.5 py-2 flex flex-col">
+                          <p className="text-[11px] text-[#5f7ea4]">Fecha programada</p>
+                          <span className="text-xs text-[#355985] font-bold mt-1">
+                            {formatDate(tramite.fecha_programada || tramite.created_at)}
+                          </span>
+                        </div>
+                        {tramite.monto && (
+                          <div className="rounded-md border border-[#dbe6f4] bg-[#f8fbff] px-2.5 py-2 flex flex-col">
+                            <p className="text-[11px] text-[#5f7ea4]">Monto</p>
+                            <span className="text-xs text-[#355985] font-bold mt-1">
+                              {tramite.monto} {tramite.moneda || "USD"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/tramites/${tramite.id}`}
+                          className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                        >
+                          Ver detalles
+                        </Link>
+
+                        {equipo && (
+                          <Link
+                            href={`/equipos/${equipo.id}`}
+                            className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                          >
+                            Ver equipo
+                          </Link>
+                        )}
+
+                        {tramite.estado !== "en_proceso" && (
+                          <button
+                            type="button"
+                            disabled={updatingTramiteId === String(tramite.id)}
+                            onClick={() => updateTramiteEstado(tramite.id, "en_proceso")}
+                            className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#e9f1ff] text-[#2f69b0] text-[11px] font-semibold hover:bg-[#dce8ff] disabled:opacity-60"
+                          >
+                            Iniciar
+                          </button>
+                        )}
+
+                        {tramite.estado !== "completado" && (
+                          <button
+                            type="button"
+                            disabled={updatingTramiteId === String(tramite.id)}
+                            onClick={() => updateTramiteEstado(tramite.id, "completado")}
+                            className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#eaf7ef] text-[#2f7d4a] text-[11px] font-semibold hover:bg-[#dff2e6] disabled:opacity-60"
+                          >
+                            Completar
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  )
+                })
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="px-4 sm:px-6">
         <div className="mb-3 rounded-xl border border-[#d1dcec] bg-[#f7faff] p-3 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
           <h2 className="text-lg font-bold text-[#2a4d7a] mb-2">Vista de Inventario</h2>
