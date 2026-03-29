@@ -387,8 +387,8 @@ export default function Clientes() {
     <div className="px-2 sm:px-3 py-4 sm:py-6 text-[#314d72]">
       <div className="border-b border-[#d4dfec] pb-4 mb-4">
         <div>
-          <h1 className="text-5xl font-bold text-[#1f4371] tracking-tight">Clientes</h1>
-          <p className="text-3xl font-semibold text-[#607b9f] mt-1">Listado de clientes y detalles de sus instalaciones.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#1f4371] tracking-tight">Clientes</h1>
+          <p className="text-sm sm:text-base font-medium text-[#4f6f95] mt-1">Listado de clientes y detalles de sus instalaciones.</p>
           {demoMode && (
             <p className="mt-1 text-xs text-[#4c6d99]">Modo Demo activo</p>
           )}

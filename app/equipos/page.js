@@ -113,6 +113,8 @@ export default function Equipos() {
   const [repuestosSchemaAvailable, setRepuestosSchemaAvailable] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
   const [inventoryView, setInventoryView] = useState("equipos")
+  const [inventoryEquiposFilter, setInventoryEquiposFilter] = useState("todos")
+  const [inventoryRepuestosFilter, setInventoryRepuestosFilter] = useState("todos")
   const [updatingTramiteId, setUpdatingTramiteId] = useState(null)
 
   useEffect(() => {
@@ -476,6 +478,35 @@ export default function Equipos() {
     })
   }, [equiposEnriquecidos, search, tipoFilter, ubicacionFilter, capacidadFilter, estadoFilter, prioridadFilter])
 
+  const inventarioEquiposFiltrados = useMemo(() => {
+    if (inventoryEquiposFilter === "critico") {
+      return filtrados.filter((e) => e.estadoOperativo === "critico" || e.prioridad === "critico")
+    }
+    if (inventoryEquiposFilter === "mantenimiento") {
+      return filtrados.filter((e) => e.estadoOperativo === "mantenimiento")
+    }
+    if (inventoryEquiposFilter === "atencion") {
+      return filtrados.filter((e) => e.estadoOperativo === "atencion")
+    }
+    if (inventoryEquiposFilter === "operativo") {
+      return filtrados.filter((e) => e.estadoOperativo === "operativo")
+    }
+    return filtrados
+  }, [filtrados, inventoryEquiposFilter])
+
+  const inventarioRepuestosFiltrados = useMemo(() => {
+    if (inventoryRepuestosFilter === "critico") {
+      return repuestosInventario.filter((r) => r.status === "critico")
+    }
+    if (inventoryRepuestosFilter === "bajo") {
+      return repuestosInventario.filter((r) => r.status === "bajo")
+    }
+    if (inventoryRepuestosFilter === "ok") {
+      return repuestosInventario.filter((r) => r.status === "ok")
+    }
+    return repuestosInventario
+  }, [repuestosInventario, inventoryRepuestosFilter])
+
   const exportFilteredAsCsv = () => {
     const headers = [
       "ID",
@@ -605,8 +636,8 @@ export default function Equipos() {
     <div className="py-4 sm:py-6">
       <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Inventario</h1>
-          <p className="text-xs text-gray-400">Gestión y control de equipos de climatización</p>
+          <h1 className="text-2xl font-bold text-[#1f4371] mb-1">Inventario</h1>
+          <p className="text-xs text-[#607b9f]">Gestión y control de equipos de climatización</p>
         </div>
 
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -1089,13 +1120,95 @@ export default function Equipos() {
               Repuestos
             </button>
           </div>
+
+          <div className="mt-3 rounded-lg border border-[#dbe4f3] bg-white px-2 py-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+              <p className="text-[11px] font-semibold text-[#5e7da3]">
+                Filtros rápidos de {inventoryView === "equipos" ? "equipos" : "repuestos"}
+              </p>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#edf4ff] text-[#2f69b0] font-semibold">
+                {inventoryView === "equipos" ? inventarioEquiposFiltrados.length : inventarioRepuestosFiltrados.length} resultados
+              </span>
+            </div>
+
+            {inventoryView === "equipos" ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInventoryEquiposFilter("todos")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryEquiposFilter === "todos" ? "bg-[#1f6bc1] text-white" : "bg-[#edf4ff] text-[#2f69b0] hover:bg-[#dfebff]"}`}
+                >
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInventoryEquiposFilter("critico")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryEquiposFilter === "critico" ? "bg-[#b44a4a] text-white" : "bg-[#fdeeee] text-[#b44a4a] hover:brightness-95"}`}
+                >
+                  Críticos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInventoryEquiposFilter("mantenimiento")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryEquiposFilter === "mantenimiento" ? "bg-[#a97717] text-white" : "bg-[#fff8e8] text-[#a97717] hover:brightness-95"}`}
+                >
+                  Mantenimiento
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInventoryEquiposFilter("atencion")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryEquiposFilter === "atencion" ? "bg-[#2f69b0] text-white" : "bg-[#e9f1ff] text-[#2f69b0] hover:brightness-95"}`}
+                >
+                  Atención
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInventoryEquiposFilter("operativo")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryEquiposFilter === "operativo" ? "bg-[#2f7d4a] text-white" : "bg-[#eaf7ef] text-[#2f7d4a] hover:brightness-95"}`}
+                >
+                  Operativos
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInventoryRepuestosFilter("todos")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryRepuestosFilter === "todos" ? "bg-[#1f6bc1] text-white" : "bg-[#edf4ff] text-[#2f69b0] hover:bg-[#dfebff]"}`}
+                >
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInventoryRepuestosFilter("critico")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryRepuestosFilter === "critico" ? "bg-[#b44a4a] text-white" : "bg-[#fdeeee] text-[#b44a4a] hover:brightness-95"}`}
+                >
+                  Críticos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInventoryRepuestosFilter("bajo")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryRepuestosFilter === "bajo" ? "bg-[#a97717] text-white" : "bg-[#fff8e8] text-[#a97717] hover:brightness-95"}`}
+                >
+                  Bajo stock
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInventoryRepuestosFilter("ok")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${inventoryRepuestosFilter === "ok" ? "bg-[#2f7d4a] text-white" : "bg-[#eaf7ef] text-[#2f7d4a] hover:brightness-95"}`}
+                >
+                  Stock OK
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#d8e4f3] border-b-[#2d72c4]" />
           </div>
-        ) : inventoryView === "equipos" && filtrados.length === 0 ? (
+        ) : inventoryView === "equipos" && inventarioEquiposFiltrados.length === 0 ? (
           <div className="text-center py-8 bg-[#f7faff] rounded-xl border border-[#d1dcec]">
             <h3 className="mt-2 text-sm font-semibold text-[#1f4371]">No se encontraron equipos</h3>
             <p className="mt-1 text-xs text-[#6f87a8]">
@@ -1109,7 +1222,9 @@ export default function Equipos() {
               <p className="text-xs text-[#6f87a8] mt-1">Estimación operativa basada en consumo detectado en trámites.</p>
             </div>
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-              {repuestosInventario.map((rep) => (
+              {inventarioRepuestosFiltrados.length === 0 ? (
+                <p className="text-sm text-[#6d84a5] md:col-span-2 xl:col-span-4">No hay repuestos para el filtro seleccionado.</p>
+              ) : inventarioRepuestosFiltrados.map((rep) => (
                 <article key={rep.key} className="rounded-md border border-[#dbe6f4] bg-white p-3">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <h4 className="text-sm font-semibold text-[#2a4d7a]">{rep.nombre}</h4>
@@ -1134,7 +1249,7 @@ export default function Equipos() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filtrados.map((equipo) => (
+            {inventarioEquiposFiltrados.map((equipo) => (
               <article
                 key={equipo.id}
                 className="h-full bg-[#f9fbff] rounded-xl border border-[#d1dcec] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]"
