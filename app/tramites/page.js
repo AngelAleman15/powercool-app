@@ -710,6 +710,9 @@ export default function Tramites() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
       {/* Modal Crear Equipo Rápido */}
       {showEquipoModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
