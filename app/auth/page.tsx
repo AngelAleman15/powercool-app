@@ -19,7 +19,11 @@ export default function AuthPage() {
     setSending(true)
 
     try {
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined
+      const configuredAppUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim()
+      const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : ""
+      const baseUrl = configuredAppUrl || runtimeOrigin
+      const redirectTo = baseUrl ? `${baseUrl.replace(/\/$/, "")}/auth` : undefined
+
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: redirectTo },
