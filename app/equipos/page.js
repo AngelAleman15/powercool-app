@@ -21,6 +21,13 @@ function formatDate(value) {
   return d.toLocaleDateString("es-UY")
 }
 
+function formatDateTime(value) {
+  if (!value) return "Sin fecha"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return "Sin fecha"
+  return d.toLocaleString("es-UY")
+}
+
 function formatMonthLabel(date) {
   return date.toLocaleDateString("es-UY", { month: "short" })
 }
@@ -116,6 +123,17 @@ export default function Equipos() {
   const [inventoryEquiposFilter, setInventoryEquiposFilter] = useState("todos")
   const [inventoryRepuestosFilter, setInventoryRepuestosFilter] = useState("todos")
   const [updatingTramiteId, setUpdatingTramiteId] = useState(null)
+  const [kardexFilter, setKardexFilter] = useState("todos")
+  const [movementFeedback, setMovementFeedback] = useState("")
+  const [movementError, setMovementError] = useState("")
+  const [savingMovement, setSavingMovement] = useState(false)
+  const [movementForm, setMovementForm] = useState({
+    repuesto_id: "",
+    tipo: "salida",
+    cantidad: 1,
+    motivo: "",
+    tramite_id: "",
+  })
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -507,6 +525,47 @@ export default function Equipos() {
     return repuestosInventario
   }, [repuestosInventario, inventoryRepuestosFilter])
 
+  const tramitesParaConsumo = useMemo(() => {
+    return tramites
+      .filter((t) => t.estado === "pendiente" || t.estado === "en_proceso")
+      .sort((a, b) => new Date(b.created_at || b.fecha_programada || 0) - new Date(a.created_at || a.fecha_programada || 0))
+  }, [tramites])
+
+  const kardexRows = useMemo(() => {
+    const repuestosById = repuestosDb.reduce((acc, repuesto) => {
+      acc[String(repuesto.id)] = repuesto
+      return acc
+    }, {})
+
+    const tramitesById = tramites.reduce((acc, t) => {
+      acc[String(t.id)] = t
+      return acc
+    }, {})
+
+    return movimientosRepuestosDb
+      .filter((mov) => {
+        if (kardexFilter === "todos") return true
+        return String(mov.tipo || "").toLowerCase() === kardexFilter
+      })
+      .map((mov) => {
+        const repuesto = repuestosById[String(mov.repuesto_id)]
+        const tramite = mov.referencia_id ? tramitesById[String(mov.referencia_id)] : null
+        return {
+          id: String(mov.id),
+          tipo: String(mov.tipo || "ajuste").toLowerCase(),
+          cantidad: Number(mov.cantidad || 0),
+          repuestoNombre: repuesto?.nombre || "Repuesto",
+          repuestoCodigo: repuesto?.codigo || "",
+          motivo: mov.motivo || "Sin detalle",
+          referencia: mov.referencia_id ? `TR-${mov.referencia_id}` : String(mov.referencia_tipo || "manual").toUpperCase(),
+          tramiteEstado: tramite?.estado || "",
+          fecha: mov.fecha_movimiento || mov.created_at,
+          usuario: mov.usuario || "Sistema",
+        }
+      })
+      .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0))
+  }, [movimientosRepuestosDb, repuestosDb, tramites, kardexFilter])
+
   const exportFilteredAsCsv = () => {
     const headers = [
       "ID",
@@ -630,6 +689,76 @@ export default function Equipos() {
     }
 
     console.error("No se pudo actualizar estado del trámite", error)
+  }
+
+  const registerInventoryMovement = async (event) => {
+    event.preventDefault()
+    setMovementError("")
+    setMovementFeedback("")
+
+    const cantidad = Number(movementForm.cantidad)
+    const repuestoId = String(movementForm.repuesto_id || "")
+    const tipo = String(movementForm.tipo || "salida")
+    const motivo = String(movementForm.motivo || "").trim()
+    const tramiteId = movementForm.tramite_id ? String(movementForm.tramite_id) : null
+
+    if (!repuestoId) {
+      setMovementError("Selecciona un repuesto para registrar el movimiento.")
+      return
+    }
+
+    if (!Number.isFinite(cantidad) || cantidad <= 0) {
+      setMovementError("La cantidad debe ser mayor a 0.")
+      return
+    }
+
+    if (tipo === "salida" && !tramiteId) {
+      setMovementError("Para salidas por consumo debes asociar un trámite (OT).")
+      return
+    }
+
+    const repuesto = repuestosDb.find((r) => String(r.id) === repuestoId)
+    const stockActual = Number(repuesto?.stock_actual || 0)
+    if (tipo === "salida" && stockActual < cantidad) {
+      setMovementError(`Stock insuficiente. Disponible: ${stockActual}.`)
+      return
+    }
+
+    setSavingMovement(true)
+
+    const referenciaTipo = tipo === "salida" ? "tramite" : tipo === "ingreso" ? "compra" : "ajuste"
+    const tramite = tramiteId ? tramites.find((t) => String(t.id) === String(tramiteId)) : null
+
+    const payload = {
+      p_repuesto_id: repuestoId,
+      p_tipo: tipo,
+      p_cantidad: cantidad,
+      p_motivo: motivo || (tipo === "salida" ? "Consumo de repuesto en OT" : "Ajuste de inventario"),
+      p_referencia_tipo: referenciaTipo,
+      p_referencia_id: tramiteId,
+      p_equipo_id: tramite?.equipo_id || null,
+      p_cliente_id: tramite?.cliente_id || null,
+      p_usuario: "Operador",
+    }
+
+    const rpcRes = await supabase.rpc("registrar_movimiento_repuesto", payload)
+
+    if (rpcRes.error) {
+      setSavingMovement(false)
+      setMovementError(rpcRes.error.message || "No se pudo registrar el movimiento.")
+      return
+    }
+
+    setMovementFeedback("Movimiento registrado y stock actualizado correctamente.")
+    setMovementForm({
+      repuesto_id: repuestoId,
+      tipo: "salida",
+      cantidad: 1,
+      motivo: "",
+      tramite_id: "",
+    })
+    await cargarEquipos()
+    setSavingMovement(false)
   }
 
   return (
@@ -1218,35 +1347,172 @@ export default function Equipos() {
             </p>
           </div>
         ) : inventoryView === "repuestos" ? (
-          <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-4 py-3 border-b border-[#dbe4f3]">
-              <h3 className="text-base font-bold text-[#284a76]">Inventario de Repuestos</h3>
-              <p className="text-xs text-[#6f87a8] mt-1">Estimación operativa basada en consumo detectado en trámites.</p>
+          <div className="space-y-4">
+            <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+              <div className="px-4 py-3 border-b border-[#dbe4f3]">
+                <h3 className="text-base font-bold text-[#284a76]">Movimiento transaccional de repuestos</h3>
+                <p className="text-xs text-[#6f87a8] mt-1">Registra compras, consumos por OT y ajustes con validación de stock.</p>
+              </div>
+              <form onSubmit={registerInventoryMovement} className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
+                <div className="xl:col-span-2">
+                  <label className="text-[11px] font-semibold text-[#5e7da3]">Repuesto</label>
+                  <select
+                    value={movementForm.repuesto_id}
+                    onChange={(e) => setMovementForm((prev) => ({ ...prev, repuesto_id: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+                  >
+                    <option value="">Seleccionar repuesto</option>
+                    {repuestosDb.map((rep) => (
+                      <option key={rep.id} value={rep.id}>
+                        {rep.nombre} ({rep.stock_actual || 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5e7da3]">Tipo</label>
+                  <select
+                    value={movementForm.tipo}
+                    onChange={(e) => setMovementForm((prev) => ({ ...prev, tipo: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+                  >
+                    <option value="salida">Salida (consumo OT)</option>
+                    <option value="ingreso">Ingreso (compra)</option>
+                    <option value="ajuste">Ajuste</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-[#5e7da3]">Cantidad</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={movementForm.cantidad}
+                    onChange={(e) => setMovementForm((prev) => ({ ...prev, cantidad: Number(e.target.value || 1) }))}
+                    className="mt-1 w-full px-3 py-2 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+                  />
+                </div>
+
+                <div className="xl:col-span-2">
+                  <label className="text-[11px] font-semibold text-[#5e7da3]">OT / Trámite asociado</label>
+                  <select
+                    value={movementForm.tramite_id}
+                    onChange={(e) => setMovementForm((prev) => ({ ...prev, tramite_id: e.target.value }))}
+                    disabled={movementForm.tipo !== "salida"}
+                    className="mt-1 w-full px-3 py-2 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm disabled:opacity-60"
+                  >
+                    <option value="">{movementForm.tipo === "salida" ? "Seleccionar OT" : "No aplica"}</option>
+                    {tramitesParaConsumo.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        OT-{t.id} | {t.tipo} | {t.estado}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-2 xl:col-span-4">
+                  <label className="text-[11px] font-semibold text-[#5e7da3]">Motivo</label>
+                  <input
+                    type="text"
+                    value={movementForm.motivo}
+                    onChange={(e) => setMovementForm((prev) => ({ ...prev, motivo: e.target.value }))}
+                    placeholder={movementForm.tipo === "salida" ? "Consumo en mantenimiento preventivo" : "Compra o ajuste de inventario"}
+                    className="mt-1 w-full px-3 py-2 border border-[#cad8ea] rounded-lg bg-white text-[#1f4371] text-sm"
+                  />
+                </div>
+
+                <div className="xl:col-span-2 flex items-end">
+                  <button
+                    type="submit"
+                    disabled={savingMovement}
+                    className="w-full px-3 py-2 rounded-lg bg-[#1f6bc1] text-white text-sm font-semibold hover:bg-[#19599f] disabled:opacity-60"
+                  >
+                    {savingMovement ? "Guardando..." : "Registrar movimiento"}
+                  </button>
+                </div>
+
+                {(movementFeedback || movementError) && (
+                  <div className="md:col-span-2 xl:col-span-6">
+                    {movementFeedback && <p className="text-sm text-[#2f7d4a]">{movementFeedback}</p>}
+                    {movementError && <p className="text-sm text-[#b44a4a]">{movementError}</p>}
+                  </div>
+                )}
+              </form>
             </div>
-            <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-              {inventarioRepuestosFiltrados.length === 0 ? (
-                <p className="text-sm text-[#6d84a5] md:col-span-2 xl:col-span-4">No hay repuestos para el filtro seleccionado.</p>
-              ) : inventarioRepuestosFiltrados.map((rep) => (
-                <article key={rep.key} className="rounded-md border border-[#dbe6f4] bg-white p-3">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <h4 className="text-sm font-semibold text-[#2a4d7a]">{rep.nombre}</h4>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${getRepuestoBadgeClass(rep.status)}`}>
-                      {rep.status}
-                    </span>
+
+            <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+              <div className="px-4 py-3 border-b border-[#dbe4f3] flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h3 className="text-base font-bold text-[#284a76]">Inventario de Repuestos</h3>
+                  <p className="text-xs text-[#6f87a8] mt-1">Stock operativo en tiempo real según movimientos registrados.</p>
+                </div>
+                <Link
+                  href="/tramites"
+                  className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
+                >
+                  Ver trámites
+                </Link>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                {inventarioRepuestosFiltrados.length === 0 ? (
+                  <p className="text-sm text-[#6d84a5] md:col-span-2 xl:col-span-4">No hay repuestos para el filtro seleccionado.</p>
+                ) : inventarioRepuestosFiltrados.map((rep) => (
+                  <article key={rep.key} className="rounded-md border border-[#dbe6f4] bg-white p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h4 className="text-sm font-semibold text-[#2a4d7a]">{rep.nombre}</h4>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${getRepuestoBadgeClass(rep.status)}`}>
+                        {rep.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#607b9f]">Stock actual: <span className="font-semibold">{rep.estimatedStock}</span></p>
+                    <p className="text-xs text-[#607b9f] mt-1">Demanda: <span className="font-semibold">{rep.demand} usos</span></p>
+                    <p className="text-xs text-[#607b9f] mt-1">Último uso: <span className="font-semibold">{formatDate(rep.ultimoUso)}</span></p>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+              <div className="px-4 py-3 border-b border-[#dbe4f3] flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h3 className="text-base font-bold text-[#284a76]">Kardex de movimientos</h3>
+                  <p className="text-xs text-[#6f87a8] mt-1">Trazabilidad por tipo de movimiento, referencia y usuario.</p>
+                </div>
+                <select
+                  value={kardexFilter}
+                  onChange={(e) => setKardexFilter(e.target.value)}
+                  className="px-2.5 py-1.5 border border-[#cad8ea] rounded-md bg-white text-[#1f4371] text-xs"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="ingreso">Ingresos</option>
+                  <option value="salida">Salidas</option>
+                  <option value="ajuste">Ajustes</option>
+                </select>
+              </div>
+
+              <div className="p-4 space-y-2">
+                {kardexRows.length === 0 ? (
+                  <p className="text-sm text-[#6d84a5]">No hay movimientos para el filtro seleccionado.</p>
+                ) : kardexRows.slice(0, 20).map((row) => (
+                  <div key={row.id} className="rounded-md border border-[#dbe6f4] bg-white px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-[#2a4d7a] truncate">
+                        {row.repuestoNombre} {row.repuestoCodigo ? `(${row.repuestoCodigo})` : ""}
+                      </p>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${getMovimientoBadge({ tipo: row.tipo }).cls}`}>
+                        {row.tipo}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#607b9f] mt-1">
+                      Cantidad: <span className="font-semibold">{row.cantidad}</span> | Ref: <span className="font-semibold">{row.referencia}</span>
+                      {row.tramiteEstado ? ` | OT estado: ${row.tramiteEstado}` : ""}
+                    </p>
+                    <p className="text-xs text-[#607b9f] mt-1">Motivo: {row.motivo}</p>
+                    <p className="text-xs text-[#6d84a5] mt-1">{formatDateTime(row.fecha)} | Usuario: {row.usuario}</p>
                   </div>
-                  <p className="text-xs text-[#607b9f]">Stock estimado: <span className="font-semibold">{rep.estimatedStock}</span></p>
-                  <p className="text-xs text-[#607b9f] mt-1">Demanda: <span className="font-semibold">{rep.demand} usos</span></p>
-                  <p className="text-xs text-[#607b9f] mt-1">Último uso: <span className="font-semibold">{formatDate(rep.ultimoUso)}</span></p>
-                  <div className="mt-2">
-                    <Link
-                      href="/tramites"
-                      className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[#edf4ff] text-[#1f6bc1] text-[11px] font-semibold hover:bg-[#dfebff]"
-                    >
-                      Ver movimientos
-                    </Link>
-                  </div>
-                </article>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         ) : (

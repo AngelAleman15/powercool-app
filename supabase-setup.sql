@@ -276,6 +276,128 @@ CREATE TABLE IF NOT EXISTS movimientos_repuestos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
+-- Tabla de auditoría de inventario (kardex extendido)
+CREATE TABLE IF NOT EXISTS inventario_auditoria (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  movimiento_id UUID REFERENCES movimientos_repuestos(id) ON DELETE SET NULL,
+  repuesto_id UUID NOT NULL REFERENCES repuestos(id) ON DELETE CASCADE,
+  accion TEXT NOT NULL CHECK (accion IN ('ingreso', 'salida', 'ajuste')),
+  detalle TEXT,
+  stock_anterior INTEGER NOT NULL,
+  stock_nuevo INTEGER NOT NULL,
+  user_id UUID,
+  usuario TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Función transaccional para registrar movimientos de repuestos con validación de stock
+CREATE OR REPLACE FUNCTION public.registrar_movimiento_repuesto(
+  p_repuesto_id UUID,
+  p_tipo TEXT,
+  p_cantidad INTEGER,
+  p_motivo TEXT DEFAULT NULL,
+  p_referencia_tipo TEXT DEFAULT 'manual',
+  p_referencia_id UUID DEFAULT NULL,
+  p_equipo_id UUID DEFAULT NULL,
+  p_cliente_id UUID DEFAULT NULL,
+  p_usuario TEXT DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_stock_actual INTEGER;
+  v_stock_nuevo INTEGER;
+  v_movimiento_id UUID;
+BEGIN
+  IF p_cantidad IS NULL OR p_cantidad <= 0 THEN
+    RAISE EXCEPTION 'La cantidad debe ser mayor a cero';
+  END IF;
+
+  IF p_tipo NOT IN ('ingreso', 'salida', 'ajuste') THEN
+    RAISE EXCEPTION 'Tipo de movimiento no valido';
+  END IF;
+
+  SELECT stock_actual
+    INTO v_stock_actual
+  FROM repuestos
+  WHERE id = p_repuesto_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Repuesto no encontrado';
+  END IF;
+
+  IF p_tipo = 'ingreso' THEN
+    v_stock_nuevo := v_stock_actual + p_cantidad;
+  ELSIF p_tipo = 'salida' THEN
+    IF v_stock_actual < p_cantidad THEN
+      RAISE EXCEPTION 'Stock insuficiente para salida. Disponible: %', v_stock_actual;
+    END IF;
+    v_stock_nuevo := v_stock_actual - p_cantidad;
+  ELSE
+    -- En ajuste se interpreta cantidad como ajuste positivo.
+    v_stock_nuevo := v_stock_actual + p_cantidad;
+  END IF;
+
+  UPDATE repuestos
+  SET stock_actual = v_stock_nuevo,
+      updated_at = TIMEZONE('utc', NOW())
+  WHERE id = p_repuesto_id;
+
+  INSERT INTO movimientos_repuestos (
+    repuesto_id,
+    tipo,
+    cantidad,
+    motivo,
+    referencia_tipo,
+    referencia_id,
+    equipo_id,
+    cliente_id,
+    usuario,
+    fecha_movimiento
+  )
+  VALUES (
+    p_repuesto_id,
+    p_tipo,
+    p_cantidad,
+    p_motivo,
+    COALESCE(p_referencia_tipo, 'manual'),
+    p_referencia_id,
+    p_equipo_id,
+    p_cliente_id,
+    COALESCE(p_usuario, current_setting('request.jwt.claim.email', true), 'Sistema'),
+    TIMEZONE('utc', NOW())
+  )
+  RETURNING id INTO v_movimiento_id;
+
+  INSERT INTO inventario_auditoria (
+    movimiento_id,
+    repuesto_id,
+    accion,
+    detalle,
+    stock_anterior,
+    stock_nuevo,
+    user_id,
+    usuario
+  )
+  VALUES (
+    v_movimiento_id,
+    p_repuesto_id,
+    p_tipo,
+    COALESCE(p_motivo, 'Movimiento inventario'),
+    v_stock_actual,
+    v_stock_nuevo,
+    auth.uid(),
+    COALESCE(p_usuario, current_setting('request.jwt.claim.email', true), 'Sistema')
+  );
+
+  RETURN v_movimiento_id;
+END;
+$$;
+
 -- Índices para repuestos y movimientos
 CREATE INDEX IF NOT EXISTS idx_repuestos_nombre ON repuestos(nombre);
 CREATE INDEX IF NOT EXISTS idx_repuestos_codigo ON repuestos(codigo);
@@ -287,10 +409,14 @@ CREATE INDEX IF NOT EXISTS idx_mov_repuestos_tipo ON movimientos_repuestos(tipo)
 CREATE INDEX IF NOT EXISTS idx_mov_repuestos_fecha ON movimientos_repuestos(fecha_movimiento);
 CREATE INDEX IF NOT EXISTS idx_mov_repuestos_equipo_id ON movimientos_repuestos(equipo_id);
 CREATE INDEX IF NOT EXISTS idx_mov_repuestos_cliente_id ON movimientos_repuestos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_inv_auditoria_repuesto_id ON inventario_auditoria(repuesto_id);
+CREATE INDEX IF NOT EXISTS idx_inv_auditoria_movimiento_id ON inventario_auditoria(movimiento_id);
+CREATE INDEX IF NOT EXISTS idx_inv_auditoria_fecha ON inventario_auditoria(created_at);
 
 -- Habilitar Row Level Security (RLS) para repuestos y movimientos
 ALTER TABLE repuestos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movimientos_repuestos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventario_auditoria ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Enable all access for repuestos" ON repuestos;
 DROP POLICY IF EXISTS "repuestos_select_authenticated" ON repuestos;
@@ -316,7 +442,20 @@ CREATE POLICY "movimientos_write_staff" ON movimientos_repuestos
   USING (public.can_manage_data())
   WITH CHECK (public.can_manage_data());
 
+DROP POLICY IF EXISTS "inv_auditoria_select_authenticated" ON inventario_auditoria;
+DROP POLICY IF EXISTS "inv_auditoria_write_staff" ON inventario_auditoria;
+CREATE POLICY "inv_auditoria_select_authenticated" ON inventario_auditoria
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "inv_auditoria_write_staff" ON inventario_auditoria
+  FOR ALL TO authenticated
+  USING (public.can_manage_data())
+  WITH CHECK (public.can_manage_data());
+
 -- Comentarios para repuestos y movimientos
 COMMENT ON TABLE repuestos IS 'Inventario de repuestos consumibles y de mantenimiento';
 COMMENT ON TABLE movimientos_repuestos IS 'Constancia histórica de ingresos, salidas y ajustes de repuestos';
 COMMENT ON COLUMN movimientos_repuestos.referencia_tipo IS 'Origen del movimiento: manual, tramite, mantenimiento, compra o ajuste';
+COMMENT ON TABLE inventario_auditoria IS 'Auditoría de movimientos y stock de inventario de repuestos';
+COMMENT ON FUNCTION public.registrar_movimiento_repuesto(UUID, TEXT, INTEGER, TEXT, TEXT, UUID, UUID, UUID, TEXT) IS 'Registra movimiento de inventario en forma transaccional y valida stock para salidas';
