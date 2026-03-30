@@ -61,7 +61,7 @@ export default function Tramites() {
     }
   }, [])
 
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     if (demoMode) {
       setTramites(DEMO_TRAMITES)
       setEquipos(DEMO_EQUIPOS.map((e) => ({ id: e.id, marca: e.marca, modelo: e.modelo, cliente_id: e.cliente_id })))

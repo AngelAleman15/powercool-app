@@ -31,7 +31,7 @@ export default function NuevoEquipo() {
     cargarClientes()
   }, [])
 
-  const cargarClientes = async () => {
+  async function cargarClientes() {
     const { data } = await supabase
       .from("clientes")
       .select("*")

@@ -33,7 +33,7 @@ export default function EquipoPage({ params }) {
     cargarEquipo()
   }, [demoMode])
 
-  const cargarEquipo = async () => {
+  async function cargarEquipo() {
     setLoading(true)
     const { id } = await params
 
