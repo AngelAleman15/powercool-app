@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react'
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -30,15 +30,15 @@ export default function CalendarioPage() {
   const [hoverMenu, setHoverMenu] = useState(null)
   const calendarShellRef = useRef(null)
 
-  const parseLocalDate = (dateValue) => {
+  const parseLocalDate = useCallback((dateValue) => {
     if (!dateValue) return null
     const dateStr = String(dateValue).slice(0, 10)
     const [year, month, day] = dateStr.split('-').map(Number)
     if (!year || !month || !day) return null
     return new Date(year, month - 1, day, 0, 0, 0, 0)
-  }
+  }, [])
 
-  const toDayKey = (date) => format(date, 'yyyy-MM-dd')
+  const toDayKey = useCallback((date) => format(date, 'yyyy-MM-dd'), [])
 
   const hiddenEventsByDay = useMemo(() => {
     const grouped = {}
@@ -56,7 +56,7 @@ export default function CalendarioPage() {
     return hiddenMap
   }, [events])
 
-  async function cargarTramites() {
+  const cargarTramites = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
       .from('tramites')
@@ -105,7 +105,7 @@ export default function CalendarioPage() {
       setEvents(eventosConOrden)
     }
     setLoading(false)
-  }
+  }, [parseLocalDate, toDayKey])
 
   useEffect(() => {
     const initTimer = setTimeout(() => {
@@ -113,7 +113,7 @@ export default function CalendarioPage() {
     }, 0)
 
     return () => clearTimeout(initTimer)
-  }, [])
+  }, [cargarTramites])
 
   const eventStyleGetter = (event) => {
     let backgroundColor = '#3b82f6' // azul default

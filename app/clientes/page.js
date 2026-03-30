@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
@@ -101,6 +101,14 @@ const CIUDADES_URUGUAY = [
   "Bañado de Medina"
 ]
 
+const DEMO_STATUS_BY_ID = {
+  "demo-c-1": "activo",
+  "demo-c-2": "activo",
+  "demo-c-3": "inactivo",
+  "demo-c-4": "activo",
+  "demo-c-5": "activo",
+}
+
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
   const [equiposByCliente, setEquiposByCliente] = useState({})
@@ -127,14 +135,6 @@ export default function Clientes() {
   const { demoMode } = useDemoMode()
   const rowsPerPage = 5
 
-  const demoStatusById = {
-    "demo-c-1": "activo",
-    "demo-c-2": "activo",
-    "demo-c-3": "inactivo",
-    "demo-c-4": "activo",
-    "demo-c-5": "activo",
-  }
-
   const getInitials = (name) => {
     if (!name) return "CL"
     const parts = name.trim().split(" ").filter(Boolean)
@@ -148,13 +148,13 @@ export default function Clientes() {
     return avatarPalette[key % avatarPalette.length]
   }
 
-  const normalizeClient = (client, idx = 0) => ({
+  const normalizeClient = useCallback((client, idx = 0) => ({
     ...client,
     contacto: client.contacto || client.responsable || client.referente || client.nombre,
-    status: client.estado || demoStatusById[client.id] || (idx % 7 === 3 ? "inactivo" : "activo"),
-  })
+    status: client.estado || DEMO_STATUS_BY_ID[client.id] || (idx % 7 === 3 ? "inactivo" : "activo"),
+  }), [])
 
-  const cargarClientes = async () => {
+  const cargarClientes = useCallback(async () => {
     try {
       if (demoMode) {
         const equiposMapDemo = DEMO_EQUIPOS.reduce((acc, equipo) => {
@@ -196,11 +196,11 @@ export default function Clientes() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [demoMode, normalizeClient])
 
   useEffect(() => {
     cargarClientes()
-  }, [demoMode])
+  }, [cargarClientes])
 
   useEffect(() => {
     setCurrentPage(1)

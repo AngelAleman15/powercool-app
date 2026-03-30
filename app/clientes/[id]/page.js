@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useCallback, useMemo, useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
@@ -115,7 +115,10 @@ export default function ClienteDetallePage() {
     [tramites]
   )
 
-  const matchText = (value) => String(value || "").toLowerCase().includes(searchText.trim().toLowerCase())
+  const matchText = useCallback(
+    (value) => String(value || "").toLowerCase().includes(searchText.trim().toLowerCase()),
+    [searchText]
+  )
 
   const equiposFiltrados = useMemo(() => {
     return equipos.filter((equipo) => {
@@ -127,7 +130,7 @@ export default function ClienteDetallePage() {
 
       return byTipo && bySearch
     })
-  }, [equipos, equipoTipoFilter, searchText])
+  }, [equipos, equipoTipoFilter, searchText, matchText])
 
   const tramitesActivosFiltrados = useMemo(() => {
     return tramitesActivos.filter((tramite) => {
@@ -140,7 +143,7 @@ export default function ClienteDetallePage() {
 
       return byTipo && byEstado && bySearch
     })
-  }, [tramitesActivos, tramiteTipoFilter, estadoActivoFilter, searchText])
+  }, [tramitesActivos, tramiteTipoFilter, estadoActivoFilter, searchText, matchText])
 
   const tramitesHistorialFiltrados = useMemo(() => {
     return tramitesHistorial.filter((tramite) => {
@@ -153,7 +156,7 @@ export default function ClienteDetallePage() {
 
       return byTipo && byEstado && bySearch
     })
-  }, [tramitesHistorial, tramiteTipoFilter, estadoHistorialFilter, searchText])
+  }, [tramitesHistorial, tramiteTipoFilter, estadoHistorialFilter, searchText, matchText])
 
   const ciudadesFiltradas = useMemo(() => {
     return CIUDADES_URUGUAY
@@ -162,12 +165,7 @@ export default function ClienteDetallePage() {
       .slice(0, 8)
   }, [formData.ciudad])
 
-  useEffect(() => {
-    if (!clienteId) return
-    cargarDatos()
-  }, [clienteId, demoMode])
-
-  async function cargarDatos() {
+  const cargarDatos = useCallback(async () => {
     setLoading(true)
 
     try {
@@ -240,7 +238,12 @@ export default function ClienteDetallePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [clienteId, demoMode, router])
+
+  useEffect(() => {
+    if (!clienteId) return
+    cargarDatos()
+  }, [clienteId, cargarDatos])
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))

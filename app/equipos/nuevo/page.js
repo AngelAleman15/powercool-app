@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 
@@ -27,13 +27,13 @@ export default function NuevoEquipo() {
     ciudad: ""
   })
 
-  async function cargarClientes() {
+  const cargarClientes = useCallback(async () => {
     const { data } = await supabase
       .from("clientes")
       .select("*")
       .order("nombre")
     setClientes(data || [])
-  }
+  }, [])
 
   useEffect(() => {
     const initTimer = setTimeout(() => {
@@ -41,7 +41,7 @@ export default function NuevoEquipo() {
     }, 0)
 
     return () => clearTimeout(initTimer)
-  }, [])
+  }, [cargarClientes])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })

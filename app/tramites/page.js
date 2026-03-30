@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useCallback, useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
@@ -57,7 +57,7 @@ export default function Tramites() {
     }
   }, [])
 
-  async function cargarDatos() {
+  const cargarDatos = useCallback(async () => {
     if (demoMode) {
       setTramites(DEMO_TRAMITES)
       setEquipos(DEMO_EQUIPOS.map((e) => ({ id: e.id, marca: e.marca, modelo: e.modelo, cliente_id: e.cliente_id })))
@@ -78,7 +78,7 @@ export default function Tramites() {
     setEquipos(equiposData || [])
     setClientes(clientesData || [])
     setLoading(false)
-  }
+  }, [demoMode])
 
   useEffect(() => {
     const initTimer = setTimeout(() => {
@@ -86,7 +86,7 @@ export default function Tramites() {
     }, 0)
 
     return () => clearTimeout(initTimer)
-  }, [demoMode])
+  }, [cargarDatos])
 
   const handleChange = (e) => {
     const { name, value } = e.target

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import Image from "next/image"
+import { useCallback, useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
@@ -48,12 +49,6 @@ type UpcomingMaintenance = {
   dateLabel: string
 }
 
-type MachineStatus = {
-  ok: number
-  warning: number
-  critical: number
-}
-
 type MapPoint = {
   id: string
   label: string
@@ -97,11 +92,9 @@ const UNIFIED_LOGO_SIZE = 20
 export default function Home() {
   const [stats, setStats] = useState({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
   const [clientRows, setClientRows] = useState<ClientSummary[]>([])
-  const [tramites, setTramites] = useState<Tramite[]>([])
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
   const [upcomingMaintenances, setUpcomingMaintenances] = useState<UpcomingMaintenance[]>([])
   const [mapPoints, setMapPoints] = useState<MapPoint[]>([])
-  const [machineStatus, setMachineStatus] = useState<MachineStatus>({ ok: 0, warning: 0, critical: 0 })
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
@@ -117,18 +110,14 @@ export default function Home() {
     setMounted(true)
   }, [])
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [demoMode])
-
-  const normalizeCityKey = (city: string) =>
+  const normalizeCityKey = useCallback((city: string) =>
     String(city || "")
       .trim()
       .toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[\u0300-\u036f]/g, ""), [])
 
-  const resolveClientCoords = async (cliente: ClienteGeoInput): Promise<{ lat: number; lng: number } | null> => {
+  const resolveClientCoords = useCallback(async (cliente: ClienteGeoInput): Promise<{ lat: number; lng: number } | null> => {
     const lat = Number(cliente?.latitud ?? cliente?.latitude)
     const lng = Number(cliente?.longitud ?? cliente?.longitude)
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
@@ -174,9 +163,75 @@ export default function Home() {
     const cityKey = normalizeCityKey(cliente?.ciudad || "")
     const coords = CITY_COORDS_UY[cityKey]
     return coords ? { lat: coords.lat, lng: coords.lng } : null
-  }
+  }, [normalizeCityKey])
 
-  async function loadDashboardData() {
+  const loadDemoDashboard = useCallback(() => {
+    const equiposByCliente = DEMO_EQUIPOS.reduce<Record<string, number>>((acc, e) => {
+      acc[e.cliente_id] = (acc[e.cliente_id] || 0) + 1
+      return acc
+    }, {})
+
+    const statusByCliente = DEMO_TRAMITES.reduce<Record<string, Tramite>>((acc, t) => {
+      if (!acc[t.cliente_id]) acc[t.cliente_id] = t
+      return acc
+    }, {})
+
+    setClientRows(
+      DEMO_CLIENTES.slice(0, 6).map((c) => {
+        const estado: ClientSummary["estado"] = ["pendiente", "en_proceso"].includes(statusByCliente[c.id]?.estado)
+          ? "mantenimiento"
+          : "activo"
+        return {
+          id: c.id,
+          cliente: c.nombre,
+          ubicacion: c.ciudad,
+          equipos: equiposByCliente[c.id] || 0,
+          estado,
+        }
+      })
+    )
+
+    setStats({
+      clientesActivos: DEMO_STATS.clientesActivos,
+      maquinasInstaladas: DEMO_STATS.maquinasInstaladas,
+      unidadesStock: DEMO_STATS.unidadesStock,
+      mantenimientosPendientes: DEMO_STATS.mantenimientosPendientes,
+    })
+
+    setMapPoints(
+      DEMO_CLIENTES.slice(0, 6).flatMap((c) => {
+        const cityKey = normalizeCityKey(c.ciudad)
+        const coords = CITY_COORDS_UY[cityKey]
+        if (!coords) return []
+        return {
+          id: String(c.id),
+          label: `${c.nombre} (${c.ciudad})`,
+          lat: coords.lat,
+          lng: coords.lng,
+          color: "#1e6bc1",
+        }
+      }).filter(Boolean) as MapPoint[]
+    )
+
+    setInventoryMovements(
+      DEMO_EQUIPOS.slice(0, 5).map((e) => ({
+        id: String(e.id),
+        tipo: "ingreso" as const,
+        detalle: `Alta de equipo: ${e.marca} ${e.modelo}`,
+        whenLabel: new Date(e.created_at).toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
+      }))
+    )
+
+    setUpcomingMaintenances([
+      { id: 1, title: "Mantenimiento - Hotel Oasis", dateLabel: "25 Sep" },
+      { id: 2, title: "Revision - Clinica Medica", dateLabel: "28 Sep" },
+      { id: 3, title: "Servicio - Oficinas TechCorp", dateLabel: "30 Sep" },
+    ])
+
+    setLoading(false)
+  }, [normalizeCityKey])
+
+  const loadDashboardData = useCallback(async () => {
     try {
       if (demoMode) {
         loadDemoDashboard()
@@ -208,7 +263,6 @@ export default function Home() {
       const tramitesRaw = [...(tramitesData || [])].sort(
         (a, b) => new Date(b.created_at || b.fecha_programada || 0).getTime() - new Date(a.created_at || a.fecha_programada || 0).getTime()
       )
-      setTramites(tramitesRaw)
 
       const points = (
         await Promise.all(
@@ -267,12 +321,6 @@ export default function Home() {
         mantenimientosPendientes,
       })
 
-      setMachineStatus({
-        ok: tramitesRaw.filter((t) => t.estado === "completado").length,
-        warning: tramitesRaw.filter((t) => ["pendiente", "en_proceso"].includes(t.estado)).length,
-        critical: tramitesRaw.filter((t) => t.estado === "cancelado").length,
-      })
-
       const movements = [...equipos]
         .filter((e) => !!e.created_at)
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -309,84 +357,14 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [demoMode, loadDemoDashboard, resolveClientCoords])
 
-  const loadDemoDashboard = () => {
-    setTramites(DEMO_TRAMITES)
-
-    const equiposByCliente = DEMO_EQUIPOS.reduce<Record<string, number>>((acc, e) => {
-      acc[e.cliente_id] = (acc[e.cliente_id] || 0) + 1
-      return acc
-    }, {})
-
-    const statusByCliente = DEMO_TRAMITES.reduce<Record<string, Tramite>>((acc, t) => {
-      if (!acc[t.cliente_id]) acc[t.cliente_id] = t
-      return acc
-    }, {})
-
-    setClientRows(
-      DEMO_CLIENTES.slice(0, 6).map((c) => {
-        const estado: ClientSummary["estado"] = ["pendiente", "en_proceso"].includes(statusByCliente[c.id]?.estado)
-          ? "mantenimiento"
-          : "activo"
-        return {
-          id: c.id,
-          cliente: c.nombre,
-          ubicacion: c.ciudad,
-          equipos: equiposByCliente[c.id] || 0,
-          estado,
-        }
-      })
-    )
-
-    setStats({
-      clientesActivos: DEMO_STATS.clientes,
-      maquinasInstaladas: DEMO_STATS.equipos,
-      unidadesStock: 45,
-      mantenimientosPendientes: DEMO_STATS.pendientes,
-    })
-
-    setMapPoints(
-      DEMO_CLIENTES.map((c) => {
-        const cityKey = normalizeCityKey(c.ciudad || "")
-        const coords = CITY_COORDS_UY[cityKey]
-        if (!coords) return null
-
-        return {
-          id: String(c.id),
-          label: `${c.nombre} (${c.ciudad})`,
-          lat: coords.lat,
-          lng: coords.lng,
-          color: "#1e6bc1",
-        }
-      }).filter(Boolean) as MapPoint[]
-    )
-
-    setMachineStatus({ ok: 95, warning: 18, critical: 5 })
-
-    setInventoryMovements(
-      DEMO_EQUIPOS.slice(0, 5).map((e) => ({
-        id: String(e.id),
-        tipo: "ingreso" as const,
-        detalle: `Alta de equipo: ${e.marca} ${e.modelo}`,
-        whenLabel: new Date(e.created_at).toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
-      }))
-    )
-
-    setUpcomingMaintenances([
-      { id: 1, title: "Mantenimiento - Hotel Oasis", dateLabel: "25 Sep" },
-      { id: 2, title: "Revision - Clinica Medica", dateLabel: "28 Sep" },
-      { id: 3, title: "Servicio - Oficinas TechCorp", dateLabel: "30 Sep" },
-    ])
-
-    setLoading(false)
-  }
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
 
   const visibleStats = stats
   const filteredClients = clientRows.filter((c) => c.cliente.toLowerCase().includes(search.toLowerCase()))
-
-  const totalMachine = Math.max(1, machineStatus.ok + machineStatus.warning + machineStatus.critical)
-  const percent = (value: number) => Math.round((value / totalMachine) * 100)
 
   return (
     <div className="px-6 sm:px-10 lg:px-12 py-6 sm:py-8 text-[#223f66]">
@@ -409,7 +387,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#2459a8] flex items-center justify-center p-1">
-                <img src="/logos/clientes.png" alt="Clientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
+                <Image src="/logos/clientes.png" alt="Clientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Clientes Activos</p>
@@ -420,7 +398,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#3f79d6] flex items-center justify-center p-1">
-                <img src="/logos/equipos.png" alt="Máquinas instaladas" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
+                <Image src="/logos/equipos.png" alt="Máquinas instaladas" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Máquinas Instaladas</p>
@@ -431,7 +409,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#35a66b] flex items-center justify-center p-1">
-                <img src="/logos/unidadesstock.png" alt="Unidades en stock" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
+                <Image src="/logos/unidadesstock.png" alt="Unidades en stock" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight">
                 <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Unidades en Stock</p>
@@ -442,7 +420,7 @@ export default function Home() {
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
             <div className="flex items-center gap-2.5 w-full">
               <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] flex items-center justify-center p-1">
-                <img src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
+                <Image src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
               </div>
               <div className="leading-tight min-w-0">
                 <p className="text-[13px] font-bold text-[#2b578d] leading-[1.05]">Mantenimientos Pendientes</p>
@@ -532,7 +510,7 @@ export default function Home() {
                 inventoryMovements.map((m) => (
                   <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <img
+                      <Image
                         src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
                         alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
                         width={UNIFIED_LOGO_SIZE}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
@@ -20,13 +20,7 @@ export default function TramiteDetalle() {
   })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (params.id) {
-      cargarTramite()
-    }
-  }, [params.id])
-
-  async function cargarTramite() {
+  const cargarTramite = useCallback(async () => {
     setLoading(true)
     try {
       const { data: tramiteData } = await supabase
@@ -53,7 +47,13 @@ export default function TramiteDetalle() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, router])
+
+  useEffect(() => {
+    if (params.id) {
+      cargarTramite()
+    }
+  }, [params.id, cargarTramite])
 
   const handleEdit = async (e) => {
     e.preventDefault()

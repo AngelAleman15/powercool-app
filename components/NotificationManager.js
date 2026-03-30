@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useNotifications } from '@/lib/useNotifications'
 import { supabase } from '@/lib/supabase'
 
@@ -8,7 +8,7 @@ export default function NotificationManager() {
   const { permission, requestPermission, registerServiceWorker, scheduleNotification } = useNotifications()
   const NOTIFICATION_COOLDOWN_MS = 12 * 60 * 60 * 1000
 
-  const canNotifyNow = (key) => {
+  const canNotifyNow = useCallback((key) => {
     try {
       const raw = localStorage.getItem('powercool_notification_history')
       const history = raw ? JSON.parse(raw) : {}
@@ -18,9 +18,9 @@ export default function NotificationManager() {
     } catch {
       return true
     }
-  }
+  }, [NOTIFICATION_COOLDOWN_MS])
 
-  const markNotified = (key) => {
+  const markNotified = useCallback((key) => {
     try {
       const raw = localStorage.getItem('powercool_notification_history')
       const history = raw ? JSON.parse(raw) : {}
@@ -29,12 +29,12 @@ export default function NotificationManager() {
     } catch {
       // Sin acción: si falla localStorage, no bloqueamos el flujo
     }
-  }
+  }, [])
 
   useEffect(() => {
     // Registrar service worker al cargar
     registerServiceWorker()
-  }, [])
+  }, [registerServiceWorker])
 
   useEffect(() => {
     // Pedir permisos de notificación después de 3 segundos
@@ -45,7 +45,7 @@ export default function NotificationManager() {
     }, 3000)
 
     return () => clearTimeout(timer)
-  }, [permission])
+  }, [permission, requestPermission])
 
   useEffect(() => {
     if (permission !== 'granted') return
@@ -93,7 +93,7 @@ export default function NotificationManager() {
     const interval = setInterval(checkMaintenances, 60 * 60 * 1000) // 1 hora
 
     return () => clearInterval(interval)
-  }, [permission, scheduleNotification])
+  }, [permission, scheduleNotification, canNotifyNow, markNotified])
 
   return null // Este componente no renderiza nada
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import QRCode from "qrcode"
 
 export default function QRCodeComponent({ id }) {
@@ -32,7 +33,7 @@ export default function QRCodeComponent({ id }) {
       {qr ? (
         <>
           <div className="bg-white p-3 rounded-lg border-2 border-white/10">
-            <img src={qr} alt="QR Code" className="w-full max-w-[200px]"/>
+            <Image src={qr} alt="QR Code" width={200} height={200} className="w-full max-w-[200px] h-auto" unoptimized />
           </div>
 
           <a

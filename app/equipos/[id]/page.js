@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
@@ -29,7 +29,7 @@ export default function EquipoPage({ params }) {
   const backHref = fromCliente && clienteIdBack ? `/clientes/${clienteIdBack}` : "/equipos"
   const backLabel = fromCliente && clienteIdBack ? "Volver al cliente" : "Volver a equipos"
 
-  async function cargarEquipo() {
+  const cargarEquipo = useCallback(async () => {
     setLoading(true)
     const { id } = await params
 
@@ -73,7 +73,7 @@ export default function EquipoPage({ params }) {
     }
 
     setLoading(false)
-  }
+  }, [demoMode, params])
 
   useEffect(() => {
     const initTimer = setTimeout(() => {
@@ -81,7 +81,7 @@ export default function EquipoPage({ params }) {
     }, 0)
 
     return () => clearTimeout(initTimer)
-  }, [demoMode])
+  }, [cargarEquipo])
 
   const exportarPDF = async (conHistorial) => {
     const elementosACapturar = [fichaRef.current]
