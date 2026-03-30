@@ -1,166 +1,113 @@
-# 🌡️ PowerCool - Sistema de Gestión de Aires Acondicionados
+# PowerCool - Sistema de Gestion de Aires Acondicionados
 
-Sistema completo de gestión y mantenimiento para PowerCool - empresa especializada en aires acondicionados.
+Aplicacion web para la gestion operativa de clientes, equipos, tramites de mantenimiento y control de inventario para PowerCool.
 
-## ✨ Características
+## Estado Actual
 
-### 📱 PWA (Progressive Web App)
-- ✅ Instalable en cualquier dispositivo (móvil, tablet, desktop)
-- ✅ Notificaciones push para recordatorios de mantenimiento
-- ✅ Funciona con HTTPS en producción
-- ✅ Icono en pantalla de inicio
+- Stack actualizado a Next.js 16 + React 19 + TypeScript.
+- Lint en estado limpio (sin errores ni warnings al momento de esta actualizacion).
+- UI unificada en estilo claro para modulos principales.
+- Soporte PWA activo (manifest + service worker).
 
-### 🔧 Gestión Completa
-- **Clientes**: CRUD completo con búsqueda, edición y vista detallada
-- **Equipos**: Registro detallado de aires acondicionados (marca, modelo, capacidad, ubicación)
-- **Trámites**: Mantenimientos y abonos con estados (pendiente, en proceso, completado, cancelado)
-- **Dashboard**: Estadísticas en tiempo real, actividad reciente, trámites próximos
+## Funcionalidades Principales
 
-### 🎨 Interfaz Moderna
-- Diseño oscuro y minimalista
-- Totalmente responsivo (mobile-first)
-- Animaciones y transiciones fluidas
-- Gestión completa desde la vista de cliente (agregar/editar equipos y trámites sin salir)
+- Dashboard con metricas, actividad reciente, mapa y proximos mantenimientos.
+- Gestion de clientes con CRUD y vista detalle.
+- Gestion de equipos por cliente.
+- Gestion de tramites con estados (pendiente, en_proceso, completado, cancelado).
+- Inventario con repuestos y movimientos de stock.
+- Notificaciones locales para mantenimientos.
 
-### 🔐 Seguridad
-- Base de datos Supabase (PostgreSQL)
-- HTTPS automático en producción
-- Variables de entorno protegidas
+## Stack Tecnologico Real
 
-## 🚀 Deploy en Vercel (GRATIS)
+- Framework: Next.js 16.1.6 (App Router)
+- UI: React 19.2.3 + React DOM 19.2.3
+- Lenguaje: TypeScript (con soporte de archivos JS heredados)
+- Estilos: Tailwind CSS v4
+- Graficos: Recharts
+- Calendario: react-big-calendar + date-fns
+- Base de datos: Supabase (PostgreSQL)
+- Hosting: Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/AngelAleman15/powercool-app)
+## Requisitos
 
-### Pasos para deployar:
+- Node.js 20+
+- npm 10+
 
-1. **Crear cuenta en Vercel** (gratis): https://vercel.com/signup
-2. **Conectar con GitHub**: 
-   - Click en "Add New Project"
-   - Autoriza Vercel a acceder a tu GitHub
-   - Selecciona el repositorio `powercool-app`
-3. **Configurar variables de entorno**:
-   - Click en "Environment Variables"
-   - Agrega:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=tu-proyecto.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-key-aqui
-   ```
-4. **Deploy** → ¡Listo en 2 minutos! 
-   - Tu app estará en: `https://powercool-app.vercel.app`
-   - Con HTTPS automático
-   - Notificaciones PWA funcionando
+## Variables de Entorno
 
-## 💻 Desarrollo Local
-
-### Requisitos
-- Node.js 18+
-- npm
-
-### Instalación
+Crea un archivo `.env.local` con:
 
 ```bash
-# Clonar repositorio
+NEXT_PUBLIC_SUPABASE_URL=tu-url-de-supabase
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
+```
+
+## Desarrollo Local
+
+```bash
 git clone https://github.com/AngelAleman15/powercool-app.git
 cd powercool-app
-
-# Instalar dependencias
 npm install
-
-# Copiar variables de entorno
-cp .env.example .env.local
-# Editar .env.local con tus credenciales de Supabase
-
-# Ejecutar en desarrollo
 npm run dev
 ```
 
-Abre http://localhost:3000 en tu navegador.
+Abre http://localhost:3000.
 
-## 🗄️ Base de Datos
+## Scripts
 
-Este proyecto usa **Supabase** (PostgreSQL gratis). 
+```bash
+npm run dev    # entorno de desarrollo
+npm run build  # build de produccion
+npm run start  # ejecutar build
+npm run lint   # ESLint
+```
 
-### Configuración inicial:
-1. Crea cuenta en https://supabase.com
-2. Crea un nuevo proyecto
-3. Ve a "SQL Editor"
-4. Ejecuta el contenido de `supabase-setup.sql`
-5. Copia tu URL y ANON_KEY desde "Project Settings" → "API"
+## Base de Datos
 
-### Tablas principales:
-- `clientes`: Información de clientes (nombre, email, teléfono, dirección)
-- `equipos`: Aires acondicionados (marca, modelo, tipo, capacidad, ubicación)
-- `tramites`: Mantenimientos y abonos (descripción, monto, fecha, estado)
+Este proyecto usa Supabase.
 
-## 📦 Stack Tecnológico
+1. Crear proyecto en Supabase.
+2. Ir a SQL Editor.
+3. Ejecutar el contenido de `supabase-setup.sql`.
+4. Configurar credenciales en `.env.local`.
 
-- **Framework**: Next.js 15 (App Router)
-- **Base de datos**: Supabase (PostgreSQL)
-- **Estilos**: Tailwind CSS
-- **PWA**: Service Worker + Web Manifest
-- **Hosting**: Vercel (gratis)
-- **Lenguaje**: JavaScript + JSX
+Tablas de negocio principales:
 
-## 📱 Instalación como App
+- `clientes`
+- `equipos`
+- `tramites`
+- `repuestos`
+- `movimientos_repuestos`
 
-### Android / Windows
-1. Abre la app en Chrome
-2. Click en el menú (⋮)
-3. "Instalar aplicación" o "Add to Home Screen"
+## Seguridad y Produccion
 
-### iOS / macOS
-1. Abre en Safari
-2. Click en compartir (⬆️)
-3. "Agregar a pantalla de inicio"
+- RLS esta habilitado en la base de datos.
+- Para entorno productivo multiusuario, se recomienda endurecer politicas RLS por rol/tenant (evitar politicas permisivas globales).
+- Integrar autenticacion y permisos de UI end-to-end (evitar identidad hardcodeada).
 
-## 📝 Documentación Adicional
+## Arquitectura (Resumen)
 
-- [INSTALAR-PWA.md](./INSTALAR-PWA.md) - Guía completa de instalación de la PWA
-- [HTTPS-DEVELOPMENT.md](./HTTPS-DEVELOPMENT.md) - Configurar HTTPS localmente (ngrok/cloudflared)
-- [NUEVAS-FUNCIONALIDADES.md](./NUEVAS-FUNCIONALIDADES.md) - Changelog detallado del proyecto
+- Frontend: App Router en carpeta `app/`.
+- Componentes reutilizables en `components/`.
+- Integraciones y hooks de negocio en `lib/`.
+- Configuracion PWA en `public/manifest.json` y `public/sw.js`.
 
-## 🎯 Funcionalidades Principales
+## Documentacion Relacionada
 
-### Dashboard
-- 4 cards con estadísticas (equipos, mantenimientos, clientes, pendientes)
-- Feed de actividad reciente (últimos 5 trámites)
-- Vista de próximos trámites (próximos 7 días)
-- Configuración de notificaciones PWA
+- [INSTALAR-PWA.md](./INSTALAR-PWA.md)
+- [HTTPS-DEVELOPMENT.md](./HTTPS-DEVELOPMENT.md)
+- [DEPLOY-VERCEL.md](./DEPLOY-VERCEL.md)
+- [SOLUCION-NOTIFICACIONES.md](./SOLUCION-NOTIFICACIONES.md)
+- [VERCEL-TROUBLESHOOTING.md](./VERCEL-TROUBLESHOOTING.md)
 
-### Clientes
-- Lista con búsqueda por nombre, email, teléfono o ciudad
-- Crear, editar y ver detalle de clientes
-- Vista detallada muestra:
-  - Todos los equipos del cliente (con edición inline)
-  - Trámites activos (pendientes/en proceso)
-  - Historial de trámites (completados/cancelados)
-  - Agregar equipos y trámites sin salir de la vista
+## Siguiente Sprint Recomendado
 
-### Equipos
-- Lista con búsqueda por modelo, marca, ubicación o ID
-- Tipos: Split, Cassette, Piso-Techo, Multi-Split
-- Información: marca, modelo, capacidad, ubicación
+1. Auth real (login/sesion) + roles en UI.
+2. Politicas RLS por usuario/rol/tenant.
+3. Inventario transaccional unido a tramites (consumo por OT, kardex, auditoria).
+4. Auditoria de cambios en entidades criticas.
 
-### Trámites
-- Separados por tabs: Mantenimientos / Abonos
-- Estados: Pendiente, En Proceso, Completado, Cancelado
-- Campos: cliente, equipo, descripción, monto (USD/UYU), fecha programada
-- Cambio rápido de estado desde la lista
-- Vista detallada con toda la información del trámite, cliente y equipo
-
-## 🐛 Limitaciones Conocidas
-
-- Las notificaciones PWA solo funcionan con HTTPS (funciona en localhost o en Vercel)
-- Requiere conexión a internet (offline mode en desarrollo futuro)
-
-## 📄 Licencia
+## Licencia
 
 MIT
-
-## 👨‍💻 Autor
-
-Desarrollado para **PowerCool** - Gestión profesional de aires acondicionados
-
----
-
-⭐ Si te gusta el proyecto, deja una estrella en GitHub!

@@ -2,9 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useAuthSession } from "@/lib/useAuthSession"
 
 export default function Navbar() {
   const pathname = usePathname()
+  const { loading, user, displayName, role, signOut } = useAuthSession()
 
   const isActive = (path) => {
     if (path === "/") return pathname === "/"
@@ -77,11 +79,31 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2 text-[#eaf3ff]">
-              <span className="text-sm font-semibold">Hola, Carlos Perez</span>
+              <span className="text-sm font-semibold">{loading ? "Cargando..." : `Hola, ${displayName}`}</span>
+              {!loading && user && (
+                <span className="text-[11px] uppercase tracking-wide px-2 py-1 rounded-full bg-white/15 border border-white/30">
+                  {role}
+                </span>
+              )}
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#f3cf9b] to-[#c98953] border-2 border-[#dce9fa]" />
-              <svg className="w-4 h-4 text-[#dce9fa]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
-              </svg>
+              {!loading && user ? (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="ml-1 text-xs font-semibold px-2 py-1 rounded-md border border-white/40 text-white hover:bg-white/10 transition-colors"
+                >
+                  Salir
+                </button>
+              ) : (
+                !loading && (
+                  <Link
+                    href="/auth"
+                    className="ml-1 text-xs font-semibold px-2 py-1 rounded-md border border-white/40 text-white hover:bg-white/10 transition-colors"
+                  >
+                    Entrar
+                  </Link>
+                )
+              )}
             </div>
           </div>
         </div>

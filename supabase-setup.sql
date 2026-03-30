@@ -65,13 +65,125 @@ CREATE INDEX IF NOT EXISTS idx_equipos_prioridad ON equipos(prioridad);
 CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON clientes(nombre);
 CREATE INDEX IF NOT EXISTS idx_clientes_email ON clientes(email);
 
+-- Tabla de perfiles para autenticación y roles
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  full_name TEXT,
+  role TEXT NOT NULL DEFAULT 'visor' CHECK (role IN ('admin', 'tecnico', 'visor')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
+
+-- Trigger de actualización de timestamps
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = TIMEZONE('utc', NOW());
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_profiles_updated_at ON profiles;
+CREATE TRIGGER trg_profiles_updated_at
+BEFORE UPDATE ON profiles
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- Auto-creación de perfil cuando se registra un usuario nuevo
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
+    'visor'
+  )
+  ON CONFLICT (id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Helpers de rol para políticas RLS
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_manage_data()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(public.current_user_role() IN ('admin', 'tecnico'), false);
+$$;
+
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Política para permitir todas las operaciones (ajustar según tus necesidades de seguridad)
 DROP POLICY IF EXISTS "Enable all access for clientes" ON clientes;
-CREATE POLICY "Enable all access for clientes" ON clientes
-  FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "clientes_select_authenticated" ON clientes;
+DROP POLICY IF EXISTS "clientes_write_staff" ON clientes;
+CREATE POLICY "clientes_select_authenticated" ON clientes
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "clientes_write_staff" ON clientes
+  FOR ALL TO authenticated
+  USING (public.can_manage_data())
+  WITH CHECK (public.can_manage_data());
+
+DROP POLICY IF EXISTS "equipos_select_authenticated" ON equipos;
+DROP POLICY IF EXISTS "equipos_write_staff" ON equipos;
+CREATE POLICY "equipos_select_authenticated" ON equipos
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "equipos_write_staff" ON equipos
+  FOR ALL TO authenticated
+  USING (public.can_manage_data())
+  WITH CHECK (public.can_manage_data());
+
+DROP POLICY IF EXISTS "profiles_select_own_or_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_own_or_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_insert_own_or_admin" ON profiles;
+CREATE POLICY "profiles_select_own_or_admin" ON profiles
+  FOR SELECT TO authenticated
+  USING (id = auth.uid() OR public.current_user_role() = 'admin');
+
+CREATE POLICY "profiles_update_own_or_admin" ON profiles
+  FOR UPDATE TO authenticated
+  USING (id = auth.uid() OR public.current_user_role() = 'admin')
+  WITH CHECK (id = auth.uid() OR public.current_user_role() = 'admin');
+
+CREATE POLICY "profiles_insert_own_or_admin" ON profiles
+  FOR INSERT TO authenticated
+  WITH CHECK (id = auth.uid() OR public.current_user_role() = 'admin');
 
 -- Comentarios informativos
 COMMENT ON TABLE clientes IS 'Tabla de clientes para el sistema PowerCool';
@@ -114,10 +226,17 @@ CREATE INDEX IF NOT EXISTS idx_tramites_fecha ON tramites(fecha_programada);
 -- Habilitar Row Level Security (RLS) para trámites
 ALTER TABLE tramites ENABLE ROW LEVEL SECURITY;
 
--- Política para permitir todas las operaciones en trámites
 DROP POLICY IF EXISTS "Enable all access for tramites" ON tramites;
-CREATE POLICY "Enable all access for tramites" ON tramites
-  FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "tramites_select_authenticated" ON tramites;
+DROP POLICY IF EXISTS "tramites_write_staff" ON tramites;
+CREATE POLICY "tramites_select_authenticated" ON tramites
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "tramites_write_staff" ON tramites
+  FOR ALL TO authenticated
+  USING (public.can_manage_data())
+  WITH CHECK (public.can_manage_data());
 
 -- Comentarios para la tabla de trámites
 COMMENT ON TABLE tramites IS 'Tabla de trámites (mantenimientos y abonos) para equipos';
@@ -173,14 +292,29 @@ CREATE INDEX IF NOT EXISTS idx_mov_repuestos_cliente_id ON movimientos_repuestos
 ALTER TABLE repuestos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movimientos_repuestos ENABLE ROW LEVEL SECURITY;
 
--- Políticas para permitir todas las operaciones (ajustar según tus necesidades de seguridad)
 DROP POLICY IF EXISTS "Enable all access for repuestos" ON repuestos;
-CREATE POLICY "Enable all access for repuestos" ON repuestos
-  FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "repuestos_select_authenticated" ON repuestos;
+DROP POLICY IF EXISTS "repuestos_write_staff" ON repuestos;
+CREATE POLICY "repuestos_select_authenticated" ON repuestos
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "repuestos_write_staff" ON repuestos
+  FOR ALL TO authenticated
+  USING (public.can_manage_data())
+  WITH CHECK (public.can_manage_data());
 
 DROP POLICY IF EXISTS "Enable all access for movimientos_repuestos" ON movimientos_repuestos;
-CREATE POLICY "Enable all access for movimientos_repuestos" ON movimientos_repuestos
-  FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "movimientos_select_authenticated" ON movimientos_repuestos;
+DROP POLICY IF EXISTS "movimientos_write_staff" ON movimientos_repuestos;
+CREATE POLICY "movimientos_select_authenticated" ON movimientos_repuestos
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "movimientos_write_staff" ON movimientos_repuestos
+  FOR ALL TO authenticated
+  USING (public.can_manage_data())
+  WITH CHECK (public.can_manage_data());
 
 -- Comentarios para repuestos y movimientos
 COMMENT ON TABLE repuestos IS 'Inventario de repuestos consumibles y de mantenimiento';
