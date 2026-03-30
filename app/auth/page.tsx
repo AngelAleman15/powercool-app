@@ -6,6 +6,12 @@ import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
 
 const PENDING_NAME_KEY = "powercool.auth.pendingName"
+const MAGIC_LINK_COOLDOWN_SECONDS = 60
+
+function getCooldownStorageKey(email: string) {
+  const normalizedEmail = String(email || "").trim().toLowerCase()
+  return `powercool.auth.lastMagicLinkAt:${normalizedEmail || "anon"}`
+}
 
 export default function AuthPage() {
   const { loading, user, displayName, signOut } = useAuthSession()
@@ -13,12 +19,35 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState("")
   const [sending, setSending] = useState(false)
   const [processingLink, setProcessingLink] = useState(false)
+  const [cooldownLeft, setCooldownLeft] = useState(0)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
 
   const pendingNameStorageKey = useMemo(() => {
     const normalizedEmail = String(email || "").trim().toLowerCase()
     return normalizedEmail ? `${PENDING_NAME_KEY}:${normalizedEmail}` : PENDING_NAME_KEY
+  }, [email])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const syncCooldown = () => {
+      const key = getCooldownStorageKey(email)
+      const raw = window.localStorage.getItem(key)
+      const lastSentAt = Number(raw || 0)
+      if (!Number.isFinite(lastSentAt) || lastSentAt <= 0) {
+        setCooldownLeft(0)
+        return
+      }
+
+      const elapsed = Math.floor((Date.now() - lastSentAt) / 1000)
+      const left = Math.max(0, MAGIC_LINK_COOLDOWN_SECONDS - elapsed)
+      setCooldownLeft(left)
+    }
+
+    syncCooldown()
+    const timer = window.setInterval(syncCooldown, 1000)
+    return () => window.clearInterval(timer)
   }, [email])
 
   useEffect(() => {
@@ -75,6 +104,12 @@ export default function AuthPage() {
 
   const handleMagicLink = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (cooldownLeft > 0) {
+      setError(`Espera ${cooldownLeft}s antes de pedir otro enlace.`)
+      return
+    }
+
     setError("")
     setMessage("")
     setSending(true)
@@ -94,6 +129,11 @@ export default function AuthPage() {
       })
 
       if (authError) {
+        const rawMessage = String(authError.message || "")
+        if (/rate limit/i.test(rawMessage)) {
+          setError("Superaste el límite de emails. Espera 60 segundos e inténtalo de nuevo.")
+          return
+        }
         setError(authError.message)
         return
       }
@@ -103,6 +143,10 @@ export default function AuthPage() {
         if (normalizedName) {
           window.localStorage.setItem(pendingNameStorageKey, normalizedName)
         }
+
+        const cooldownKey = getCooldownStorageKey(email)
+        window.localStorage.setItem(cooldownKey, String(Date.now()))
+        setCooldownLeft(MAGIC_LINK_COOLDOWN_SECONDS)
       }
 
       setMessage("Te enviamos un enlace de acceso por email. Si ya iniciaste sesión antes, quedará persistida hasta que cierres sesión.")
@@ -174,10 +218,14 @@ export default function AuthPage() {
 
             <button
               type="submit"
-              disabled={sending}
+              disabled={sending || cooldownLeft > 0}
               className="w-full rounded-lg bg-[#1f67bf] text-white py-2.5 text-sm font-semibold hover:bg-[#1756a4] transition-colors disabled:opacity-70"
             >
-              {sending ? "Enviando..." : "Enviar enlace de acceso"}
+              {sending
+                ? "Enviando..."
+                : cooldownLeft > 0
+                  ? `Reenviar en ${cooldownLeft}s`
+                  : "Enviar enlace de acceso"}
             </button>
           </form>
         )}
