@@ -63,7 +63,10 @@ export default function UruguayMap({ points = [] }: UruguayMapProps) {
       const L = await import("leaflet")
       if (!mounted || !mapRef.current || !markersLayerRef.current) return
 
-      markersLayerRef.current.clearLayers()
+      const markersLayer = markersLayerRef.current
+      const map = mapRef.current
+
+      markersLayer.clearLayers()
 
       points.forEach((point) => {
         L.circleMarker([point.lat, point.lng], {
@@ -73,16 +76,16 @@ export default function UruguayMap({ points = [] }: UruguayMapProps) {
           fillColor: point.color,
           fillOpacity: 1,
         })
-          .addTo(markersLayerRef.current)
+          .addTo(markersLayer)
           .bindPopup(`<strong>${point.label}</strong>`)
           .bindTooltip(point.label, { direction: "top", offset: [0, -8] })
       })
 
       if (points.length > 0) {
         const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]))
-        mapRef.current.fitBounds(bounds.pad(0.25))
+        map.fitBounds(bounds.pad(0.25))
       } else {
-        mapRef.current.setView([-32.85, -56.0], 7)
+        map.setView([-32.85, -56.0], 7)
       }
     }
 

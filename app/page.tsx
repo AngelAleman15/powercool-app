@@ -192,10 +192,10 @@ export default function Home() {
     )
 
     setStats({
-      clientesActivos: DEMO_STATS.clientesActivos,
-      maquinasInstaladas: DEMO_STATS.maquinasInstaladas,
-      unidadesStock: DEMO_STATS.unidadesStock,
-      mantenimientosPendientes: DEMO_STATS.mantenimientosPendientes,
+      clientesActivos: DEMO_STATS.clientes,
+      maquinasInstaladas: DEMO_STATS.equipos,
+      unidadesStock: Math.max(8, Math.round(DEMO_STATS.equipos * 0.35)),
+      mantenimientosPendientes: DEMO_STATS.pendientes,
     })
 
     setMapPoints(
