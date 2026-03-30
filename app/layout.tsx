@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import NotificationManager from "@/components/NotificationManager";
 import LocalNotifications from "@/components/LocalNotifications";
+import AuthGate from "@/components/AuthGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,7 +45,7 @@ export default function RootLayout({
         <LocalNotifications />
         <Navbar />
         <div className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 pb-20 md:pb-0">
-          {children}
+          <AuthGate>{children}</AuthGate>
         </div>
       </body>
     </html>

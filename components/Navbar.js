@@ -3,10 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuthSession } from "@/lib/useAuthSession"
+import { isPublicPath } from "@/lib/roleAccess"
 
 export default function Navbar() {
   const pathname = usePathname()
   const { loading, user, displayName, role, signOut } = useAuthSession()
+  const shouldShowNav = !isPublicPath(pathname || "/")
+
+  if (!shouldShowNav) return null
 
   const isActive = (path) => {
     if (path === "/") return pathname === "/"
@@ -89,7 +93,9 @@ export default function Navbar() {
               {!loading && user ? (
                 <button
                   type="button"
-                  onClick={signOut}
+                  onClick={() => {
+                    signOut()
+                  }}
                   className="ml-1 text-xs font-semibold px-2 py-1 rounded-md border border-white/40 text-white hover:bg-white/10 transition-colors"
                 >
                   Salir
