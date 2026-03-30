@@ -8,6 +8,7 @@ import { useAuthSession } from "@/lib/useAuthSession"
 export default function AuthPage() {
   const { loading, user, displayName, signOut } = useAuthSession()
   const [email, setEmail] = useState("")
+  const [fullName, setFullName] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
@@ -26,7 +27,10 @@ export default function AuthPage() {
 
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: redirectTo,
+          data: fullName.trim() ? { full_name: fullName.trim() } : undefined,
+        },
       })
 
       if (authError) {
@@ -34,7 +38,7 @@ export default function AuthPage() {
         return
       }
 
-      setMessage("Te enviamos un enlace de acceso por email.")
+      setMessage("Te enviamos un enlace de acceso por email. Si ya iniciaste sesión antes, quedará persistida hasta que cierres sesión.")
     } finally {
       setSending(false)
     }
@@ -73,6 +77,18 @@ export default function AuthPage() {
           </div>
         ) : (
           <form onSubmit={handleMagicLink} className="mt-5 space-y-4">
+            <div>
+              <label htmlFor="fullName" className="text-sm font-semibold text-[#3a5f8f]">Nombre (opcional)</label>
+              <input
+                id="fullName"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Ej: Angela Aleman"
+                className="mt-1 w-full rounded-lg border border-[#cddcf0] px-3 py-2 text-sm text-[#234876] outline-none focus:ring-2 focus:ring-[#77a6e0]"
+              />
+            </div>
+
             <div>
               <label htmlFor="email" className="text-sm font-semibold text-[#3a5f8f]">Email</label>
               <input
