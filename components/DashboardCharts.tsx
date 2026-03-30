@@ -10,7 +10,7 @@ type Tramite = {
   fecha_programada?: string
   equipos?: { marca?: string; modelo?: string }
   clientes?: { nombre?: string }
-  [key: string]: any
+  [key: string]: unknown
 }
 
 type DashboardChartsProps = {
@@ -26,8 +26,6 @@ export default function DashboardCharts({ tramites = [] }: DashboardChartsProps)
     for (let i = 5; i >= 0; i--) {
       const fecha = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const mesNombre = fecha.toLocaleDateString('es-UY', { month: 'short' })
-      const mesAno = `${mesNombre} ${fecha.getFullYear()}`
-      
       const tramitesMes = tramites.filter(t => {
         const tramiteFecha = new Date(t.created_at)
         return tramiteFecha.getMonth() === fecha.getMonth() && 

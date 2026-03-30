@@ -29,10 +29,6 @@ export default function EquipoPage({ params }) {
   const backHref = fromCliente && clienteIdBack ? `/clientes/${clienteIdBack}` : "/equipos"
   const backLabel = fromCliente && clienteIdBack ? "Volver al cliente" : "Volver a equipos"
 
-  useEffect(() => {
-    cargarEquipo()
-  }, [demoMode])
-
   async function cargarEquipo() {
     setLoading(true)
     const { id } = await params
@@ -78,6 +74,14 @@ export default function EquipoPage({ params }) {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    const initTimer = setTimeout(() => {
+      cargarEquipo()
+    }, 0)
+
+    return () => clearTimeout(initTimer)
+  }, [demoMode])
 
   const exportarPDF = async (conHistorial) => {
     const elementosACapturar = [fichaRef.current]

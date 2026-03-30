@@ -39,10 +39,6 @@ export default function Tramites() {
   })
 
   useEffect(() => {
-    cargarDatos()
-  }, [demoMode])
-
-  useEffect(() => {
     const cerrarMenuEstado = (event) => {
       if (!event.target.closest(".estado-menu-wrapper")) {
         setEstadoMenuAbierto(null)
@@ -83,6 +79,14 @@ export default function Tramites() {
     setClientes(clientesData || [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    const initTimer = setTimeout(() => {
+      cargarDatos()
+    }, 0)
+
+    return () => clearTimeout(initTimer)
+  }, [demoMode])
 
   const handleChange = (e) => {
     const { name, value } = e.target

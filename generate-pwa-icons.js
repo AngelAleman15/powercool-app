@@ -1,8 +1,8 @@
-const sharp = require('sharp');
-
 // Necesitarás instalar sharp: npm install sharp
 
 async function createIcons() {
+  const sharpModule = await import('sharp')
+  const sharp = sharpModule.default
   const svgBuffer = Buffer.from(`
     <svg width="192" height="192" xmlns="http://www.w3.org/2000/svg">
       <rect width="192" height="192" fill="#0a0a0a"/>

@@ -1,6 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-
 // Crear un SVG simple que Chrome pueda usar
 const icon192SVG = `<svg width="192" height="192" xmlns="http://www.w3.org/2000/svg">
   <rect width="192" height="192" fill="#0a0a0a"/>
@@ -18,7 +15,7 @@ const icon192SVG = `<svg width="192" height="192" xmlns="http://www.w3.org/2000/
   </g>
 </svg>`;
 
-const icon512SVG = icon192SVG.replace(/192/g, '512').replace(/48/g, '128').replace(/96/g, '256')
+icon192SVG.replace(/192/g, '512').replace(/48/g, '128').replace(/96/g, '256')
   .replace(/72/g, '192').replace(/120/g, '320').replace(/60/g, '160').replace(/68/g, '180')
   .replace(/124/g, '332').replace(/132/g, '352').replace(/52/g, '140').replace(/140/g, '372')
   .replace(/80/g, '192').replace(/84/g, '192').replace(/32/g, '128').replace(/24/g, '96');

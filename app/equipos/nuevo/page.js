@@ -27,10 +27,6 @@ export default function NuevoEquipo() {
     ciudad: ""
   })
 
-  useEffect(() => {
-    cargarClientes()
-  }, [])
-
   async function cargarClientes() {
     const { data } = await supabase
       .from("clientes")
@@ -38,6 +34,14 @@ export default function NuevoEquipo() {
       .order("nombre")
     setClientes(data || [])
   }
+
+  useEffect(() => {
+    const initTimer = setTimeout(() => {
+      cargarClientes()
+    }, 0)
+
+    return () => clearTimeout(initTimer)
+  }, [])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })

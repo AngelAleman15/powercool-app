@@ -6,13 +6,6 @@ export default function LocalNotifications() {
   const [pendingReminders, setPendingReminders] = useState([])
   const [showBanner, setShowBanner] = useState(false)
 
-  useEffect(() => {
-    checkPendingReminders()
-    // Revisar cada minuto
-    const interval = setInterval(checkPendingReminders, 60000)
-    return () => clearInterval(interval)
-  }, [])
-
   function checkPendingReminders() {
     try {
       const reminders = JSON.parse(localStorage.getItem('powercool_reminders') || '[]')
@@ -65,6 +58,19 @@ export default function LocalNotifications() {
       setShowBanner(false)
     }
   }
+
+  useEffect(() => {
+    const initTimer = setTimeout(() => {
+      checkPendingReminders()
+    }, 0)
+
+    // Revisar cada minuto
+    const interval = setInterval(checkPendingReminders, 60000)
+    return () => {
+      clearTimeout(initTimer)
+      clearInterval(interval)
+    }
+  }, [])
 
   if (!showBanner || pendingReminders.length === 0) return null
 

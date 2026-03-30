@@ -1,17 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-
 export default function DebugEnv() {
-  const [env, setEnv] = useState({ url: '', key: '' })
-
-  useEffect(() => {
-    // Estas variables deberían estar disponibles en el cliente porque son NEXT_PUBLIC_
-    setEnv({
-      url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    })
-  }, [])
+  const env = {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+  }
 
   return (
     <div className="p-8">
@@ -33,7 +26,7 @@ export default function DebugEnv() {
       </div>
 
       <div className="bg-yellow-900 border border-yellow-600 p-4 rounded">
-        <h2 className="font-bold mb-2">⚠️ Si ves valores "placeholder":</h2>
+        <h2 className="font-bold mb-2">⚠️ Si ves valores &quot;placeholder&quot;:</h2>
         <ol className="list-decimal list-inside space-y-1 text-sm">
           <li>Ve a tu proyecto en Vercel → Settings → Environment Variables</li>
           <li>Asegúrate que las variables estén marcadas en Production, Preview Y Development</li>

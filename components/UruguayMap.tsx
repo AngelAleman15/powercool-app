@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import type { Map as LeafletMap } from "leaflet"
+import type { LayerGroup, Map as LeafletMap } from "leaflet"
 
 type MapPoint = {
   id: string
@@ -18,7 +18,7 @@ type UruguayMapProps = {
 export default function UruguayMap({ points = [] }: UruguayMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
-  const markersLayerRef = useRef<any>(null)
+  const markersLayerRef = useRef<LayerGroup | null>(null)
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return

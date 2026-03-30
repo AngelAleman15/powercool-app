@@ -1,23 +1,17 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNotifications } from '@/lib/useNotifications'
 
 export default function NotificationSettings() {
   const { permission, requestPermission, scheduleNotification, isSupported } = useNotifications()
   const [sending, setSending] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const [isInsecureContext, setIsInsecureContext] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-    // Detectar si estamos en HTTP no-localhost
-    if (typeof window !== 'undefined') {
-      const isHTTP = window.location.protocol === 'http:'
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      setIsInsecureContext(isHTTP && !isLocalhost)
-    }
-  }, [])
+  const [isInsecureContext] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const isHTTP = window.location.protocol === 'http:'
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    return isHTTP && !isLocalhost
+  })
 
   const handleTestNotification = async () => {
     setSending(true)
@@ -28,20 +22,6 @@ export default function NotificationSettings() {
       '/'
     )
     setTimeout(() => setSending(false), 1000)
-  }
-
-  // Durante SSR y primer render del cliente, mostrar estado de carga consistente
-  if (!mounted) {
-    return (
-      <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10">
-        <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          <h3 className="text-sm font-bold text-white">Notificaciones PWA</h3>
-        </div>
-      </div>
-    )
   }
 
   if (!isSupported) {

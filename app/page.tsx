@@ -23,7 +23,16 @@ type Tramite = {
   fecha_programada?: string
   cliente_id?: string
   clientes?: { nombre?: string } | Array<{ nombre?: string }>
-  [key: string]: any
+  [key: string]: unknown
+}
+
+type ClienteGeoInput = {
+  latitud?: number | string | null
+  latitude?: number | string | null
+  longitud?: number | string | null
+  longitude?: number | string | null
+  direccion?: string | null
+  ciudad?: string | null
 }
 
 type InventoryMovement = {
@@ -119,7 +128,7 @@ export default function Home() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
 
-  const resolveClientCoords = async (cliente: any): Promise<{ lat: number; lng: number } | null> => {
+  const resolveClientCoords = async (cliente: ClienteGeoInput): Promise<{ lat: number; lng: number } | null> => {
     const lat = Number(cliente?.latitud ?? cliente?.latitude)
     const lng = Number(cliente?.longitud ?? cliente?.longitude)
     if (Number.isFinite(lat) && Number.isFinite(lng)) {

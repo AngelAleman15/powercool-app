@@ -56,10 +56,6 @@ export default function CalendarioPage() {
     return hiddenMap
   }, [events])
 
-  useEffect(() => {
-    cargarTramites()
-  }, [])
-
   async function cargarTramites() {
     setLoading(true)
     const { data } = await supabase
@@ -110,6 +106,14 @@ export default function CalendarioPage() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    const initTimer = setTimeout(() => {
+      cargarTramites()
+    }, 0)
+
+    return () => clearTimeout(initTimer)
+  }, [])
 
   const eventStyleGetter = (event) => {
     let backgroundColor = '#3b82f6' // azul default
