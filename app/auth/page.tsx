@@ -1,17 +1,77 @@
 "use client"
 
 import Link from "next/link"
-import { FormEvent, useState } from "react"
+import { FormEvent, useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
+
+const PENDING_NAME_KEY = "powercool.auth.pendingName"
 
 export default function AuthPage() {
   const { loading, user, displayName, signOut } = useAuthSession()
   const [email, setEmail] = useState("")
   const [fullName, setFullName] = useState("")
   const [sending, setSending] = useState(false)
+  const [processingLink, setProcessingLink] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
+
+  const pendingNameStorageKey = useMemo(() => {
+    const normalizedEmail = String(email || "").trim().toLowerCase()
+    return normalizedEmail ? `${PENDING_NAME_KEY}:${normalizedEmail}` : PENDING_NAME_KEY
+  }, [email])
+
+  useEffect(() => {
+    const hydrateSessionFromHash = async () => {
+      if (typeof window === "undefined") return
+      const hash = window.location.hash || ""
+      if (!hash.includes("access_token=") || !hash.includes("refresh_token=")) return
+
+      const params = new URLSearchParams(hash.replace(/^#/, ""))
+      const access_token = params.get("access_token")
+      const refresh_token = params.get("refresh_token")
+      if (!access_token || !refresh_token) return
+
+      setProcessingLink(true)
+      const { error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token })
+      if (setSessionError) {
+        setError(setSessionError.message || "No se pudo validar el enlace de acceso.")
+      } else {
+        setMessage("Acceso confirmado. Tu sesión quedó guardada en este navegador.")
+        window.history.replaceState({}, document.title, "/auth")
+      }
+      setProcessingLink(false)
+    }
+
+    hydrateSessionFromHash()
+  }, [])
+
+  useEffect(() => {
+    const syncPreferredName = async () => {
+      if (!user?.id || !user?.email) return
+      if (typeof window === "undefined") return
+
+      const key = `${PENDING_NAME_KEY}:${String(user.email).toLowerCase()}`
+      const preferredName = window.localStorage.getItem(key)
+      if (!preferredName) return
+
+      const normalizedName = preferredName.trim()
+      if (!normalizedName) {
+        window.localStorage.removeItem(key)
+        return
+      }
+
+      await supabase.auth.updateUser({ data: { full_name: normalizedName } })
+      await supabase
+        .from("profiles")
+        .update({ full_name: normalizedName })
+        .eq("id", user.id)
+
+      window.localStorage.removeItem(key)
+    }
+
+    syncPreferredName()
+  }, [user])
 
   const handleMagicLink = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -38,6 +98,13 @@ export default function AuthPage() {
         return
       }
 
+      if (typeof window !== "undefined") {
+        const normalizedName = fullName.trim()
+        if (normalizedName) {
+          window.localStorage.setItem(pendingNameStorageKey, normalizedName)
+        }
+      }
+
       setMessage("Te enviamos un enlace de acceso por email. Si ya iniciaste sesión antes, quedará persistida hasta que cierres sesión.")
     } finally {
       setSending(false)
@@ -50,7 +117,7 @@ export default function AuthPage() {
         <h1 className="text-2xl font-bold text-[#214a79]">Acceso</h1>
         <p className="text-sm text-[#5c7699] mt-1">Ingresar con enlace magico de Supabase Auth.</p>
 
-        {loading ? (
+        {loading || processingLink ? (
           <p className="mt-4 text-sm text-[#5c7699]">Cargando sesion...</p>
         ) : user ? (
           <div className="mt-5 space-y-4">
