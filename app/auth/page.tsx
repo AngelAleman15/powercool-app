@@ -1,32 +1,76 @@
 "use client"
 
 import Link from "next/link"
-import { FormEvent, useEffect, useMemo, useState } from "react"
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
 
 const PENDING_NAME_KEY = "powercool.auth.pendingName"
+const PENDING_ACCESS_CODE_KEY = "powercool.auth.pendingAccessCode"
+const LAST_EMAIL_KEY = "powercool.auth.lastEmail"
 const MAGIC_LINK_COOLDOWN_SECONDS = 60
+const MIN_ACCESS_CODE_LENGTH = 6
 
 function getCooldownStorageKey(email: string) {
   const normalizedEmail = String(email || "").trim().toLowerCase()
   return `powercool.auth.lastMagicLinkAt:${normalizedEmail || "anon"}`
 }
 
+function getEmailScopedKey(baseKey: string, email: string) {
+  const normalizedEmail = String(email || "").trim().toLowerCase()
+  return normalizedEmail ? `${baseKey}:${normalizedEmail}` : baseKey
+}
+
 export default function AuthPage() {
   const { loading, user, displayName, signOut } = useAuthSession()
   const [email, setEmail] = useState("")
   const [fullName, setFullName] = useState("")
+  const [accessCode, setAccessCode] = useState("")
   const [sending, setSending] = useState(false)
+  const [signingInWithCode, setSigningInWithCode] = useState(false)
   const [processingLink, setProcessingLink] = useState(false)
   const [cooldownLeft, setCooldownLeft] = useState(0)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
 
-  const pendingNameStorageKey = useMemo(() => {
-    const normalizedEmail = String(email || "").trim().toLowerCase()
-    return normalizedEmail ? `${PENDING_NAME_KEY}:${normalizedEmail}` : PENDING_NAME_KEY
-  }, [email])
+  const pendingNameStorageKey = useMemo(() => getEmailScopedKey(PENDING_NAME_KEY, email), [email])
+  const pendingAccessCodeStorageKey = useMemo(() => getEmailScopedKey(PENDING_ACCESS_CODE_KEY, email), [email])
+
+  const syncPendingIdentity = useCallback(async (activeUser: { id: string; email?: string } | null | undefined) => {
+    if (!activeUser?.id || !activeUser?.email) return
+    if (typeof window === "undefined") return
+
+    const normalizedEmail = String(activeUser.email).trim().toLowerCase()
+    const nameKey = getEmailScopedKey(PENDING_NAME_KEY, normalizedEmail)
+    const codeKey = getEmailScopedKey(PENDING_ACCESS_CODE_KEY, normalizedEmail)
+    const preferredName = window.localStorage.getItem(nameKey)?.trim() || ""
+    const pendingCode = window.localStorage.getItem(codeKey) || ""
+
+    const authUpdate: { data?: { full_name: string }; password?: string } = {}
+    if (preferredName) authUpdate.data = { full_name: preferredName }
+    if (pendingCode.length >= MIN_ACCESS_CODE_LENGTH) authUpdate.password = pendingCode
+
+    if (authUpdate.data || authUpdate.password) {
+      await supabase.auth.updateUser(authUpdate)
+    }
+
+    if (preferredName) {
+      await supabase
+        .from("profiles")
+        .update({ full_name: preferredName })
+        .eq("id", activeUser.id)
+    }
+
+    window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
+    window.localStorage.removeItem(nameKey)
+    window.localStorage.removeItem(codeKey)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const savedEmail = window.localStorage.getItem(LAST_EMAIL_KEY)
+    if (savedEmail) setEmail(savedEmail)
+  }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -62,48 +106,43 @@ export default function AuthPage() {
       if (!access_token || !refresh_token) return
 
       setProcessingLink(true)
-      const { error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token })
-      if (setSessionError) {
-        setError(setSessionError.message || "No se pudo validar el enlace de acceso.")
-      } else {
-        setMessage("Acceso confirmado. Tu sesión quedó guardada en este navegador.")
-        window.history.replaceState({}, document.title, "/auth")
+      try {
+        const { data, error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token })
+        if (setSessionError) {
+          setError(setSessionError.message || "No se pudo validar el enlace de acceso.")
+        } else {
+          await syncPendingIdentity(data.session?.user)
+          setMessage("Acceso confirmado. Tu codigo ya puede usarse para entrar sin enlace.")
+          window.history.replaceState({}, document.title, "/auth")
+        }
+      } finally {
+        setProcessingLink(false)
       }
-      setProcessingLink(false)
     }
 
     hydrateSessionFromHash()
-  }, [])
+  }, [syncPendingIdentity])
 
   useEffect(() => {
-    const syncPreferredName = async () => {
-      if (!user?.id || !user?.email) return
-      if (typeof window === "undefined") return
-
-      const key = `${PENDING_NAME_KEY}:${String(user.email).toLowerCase()}`
-      const preferredName = window.localStorage.getItem(key)
-      if (!preferredName) return
-
-      const normalizedName = preferredName.trim()
-      if (!normalizedName) {
-        window.localStorage.removeItem(key)
-        return
-      }
-
-      await supabase.auth.updateUser({ data: { full_name: normalizedName } })
-      await supabase
-        .from("profiles")
-        .update({ full_name: normalizedName })
-        .eq("id", user.id)
-
-      window.localStorage.removeItem(key)
-    }
-
-    syncPreferredName()
-  }, [user])
+    void syncPendingIdentity(user)
+  }, [syncPendingIdentity, user])
 
   const handleMagicLink = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedName = fullName.trim()
+    const normalizedCode = accessCode.trim()
+
+    if (!normalizedName) {
+      setError("Ingresa el nombre que queres mostrar antes de pedir el enlace.")
+      return
+    }
+
+    if (normalizedCode.length < MIN_ACCESS_CODE_LENGTH) {
+      setError(`El codigo debe tener al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
+      return
+    }
 
     if (cooldownLeft > 0) {
       setError(`Espera ${cooldownLeft}s antes de pedir otro enlace.`)
@@ -121,17 +160,17 @@ export default function AuthPage() {
       const redirectTo = baseUrl ? `${baseUrl.replace(/\/$/, "")}/auth` : undefined
 
       const { error: authError } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: {
           emailRedirectTo: redirectTo,
-          data: fullName.trim() ? { full_name: fullName.trim() } : undefined,
+          data: { full_name: normalizedName },
         },
       })
 
       if (authError) {
         const rawMessage = String(authError.message || "")
         if (/rate limit/i.test(rawMessage)) {
-          setError("Superaste el límite de emails. Espera 60 segundos e inténtalo de nuevo.")
+          setError("Superaste el limite de emails. Espera 60 segundos e intentalo de nuevo.")
           return
         }
         setError(authError.message)
@@ -139,19 +178,51 @@ export default function AuthPage() {
       }
 
       if (typeof window !== "undefined") {
-        const normalizedName = fullName.trim()
-        if (normalizedName) {
-          window.localStorage.setItem(pendingNameStorageKey, normalizedName)
-        }
+        window.localStorage.setItem(pendingNameStorageKey, normalizedName)
+        window.localStorage.setItem(pendingAccessCodeStorageKey, normalizedCode)
+        window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
 
-        const cooldownKey = getCooldownStorageKey(email)
+        const cooldownKey = getCooldownStorageKey(normalizedEmail)
         window.localStorage.setItem(cooldownKey, String(Date.now()))
         setCooldownLeft(MAGIC_LINK_COOLDOWN_SECONDS)
       }
 
-      setMessage("Te enviamos un enlace de acceso por email. Si ya iniciaste sesión antes, quedará persistida hasta que cierres sesión.")
+      setMessage("Te enviamos un enlace por email. Al abrirlo una vez, queda activado este codigo para futuros ingresos.")
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleCodeSignIn = async () => {
+    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedCode = accessCode.trim()
+
+    if (!normalizedEmail || normalizedCode.length < MIN_ACCESS_CODE_LENGTH) {
+      setError(`Ingresa tu email y un codigo de al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
+      return
+    }
+
+    setError("")
+    setMessage("")
+    setSigningInWithCode(true)
+
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: normalizedCode,
+      })
+
+      if (authError) {
+        setError("No se pudo entrar con ese codigo. Si todavia no lo activaste, pedi un enlace primero.")
+        return
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
+      }
+      setMessage("Acceso confirmado con codigo.")
+    } finally {
+      setSigningInWithCode(false)
     }
   }
 
@@ -159,7 +230,7 @@ export default function AuthPage() {
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md rounded-2xl border border-[#d8e4f4] bg-white shadow-[0_8px_30px_rgba(25,79,145,.12)] p-6 sm:p-7">
         <h1 className="text-2xl font-bold text-[#214a79]">Acceso</h1>
-        <p className="text-sm text-[#5c7699] mt-1">Ingresar con enlace magico de Supabase Auth.</p>
+        <p className="text-sm text-[#5c7699] mt-1">Ingresa con enlace una vez y despues usa tu codigo.</p>
 
         {loading || processingLink ? (
           <p className="mt-4 text-sm text-[#5c7699]">Cargando sesion...</p>
@@ -189,13 +260,13 @@ export default function AuthPage() {
         ) : (
           <form onSubmit={handleMagicLink} className="mt-5 space-y-4">
             <div>
-              <label htmlFor="fullName" className="text-sm font-semibold text-[#3a5f8f]">Nombre (opcional)</label>
+              <label htmlFor="fullName" className="text-sm font-semibold text-[#3a5f8f]">Nombre para mostrar</label>
               <input
                 id="fullName"
                 type="text"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Ej: Angela Aleman"
+                onChange={(event) => setFullName(event.target.value)}
+                placeholder="Ej: Angel"
                 className="mt-1 w-full rounded-lg border border-[#cddcf0] px-3 py-2 text-sm text-[#234876] outline-none focus:ring-2 focus:ring-[#77a6e0]"
               />
             </div>
@@ -206,9 +277,23 @@ export default function AuthPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 required
                 placeholder="tu@empresa.com"
+                className="mt-1 w-full rounded-lg border border-[#cddcf0] px-3 py-2 text-sm text-[#234876] outline-none focus:ring-2 focus:ring-[#77a6e0]"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="accessCode" className="text-sm font-semibold text-[#3a5f8f]">Codigo de acceso</label>
+              <input
+                id="accessCode"
+                type="password"
+                value={accessCode}
+                onChange={(event) => setAccessCode(event.target.value)}
+                required
+                minLength={MIN_ACCESS_CODE_LENGTH}
+                placeholder="Minimo 6 caracteres"
                 className="mt-1 w-full rounded-lg border border-[#cddcf0] px-3 py-2 text-sm text-[#234876] outline-none focus:ring-2 focus:ring-[#77a6e0]"
               />
             </div>
@@ -216,17 +301,27 @@ export default function AuthPage() {
             {message && <p className="text-sm text-[#1f7f48]">{message}</p>}
             {error && <p className="text-sm text-[#b84a4a]">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={sending || cooldownLeft > 0}
-              className="w-full rounded-lg bg-[#1f67bf] text-white py-2.5 text-sm font-semibold hover:bg-[#1756a4] transition-colors disabled:opacity-70"
-            >
-              {sending
-                ? "Enviando..."
-                : cooldownLeft > 0
-                  ? `Reenviar en ${cooldownLeft}s`
-                  : "Enviar enlace de acceso"}
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleCodeSignIn}
+                disabled={signingInWithCode}
+                className="w-full rounded-lg bg-[#1f67bf] text-white py-2.5 text-sm font-semibold hover:bg-[#1756a4] transition-colors disabled:opacity-70"
+              >
+                {signingInWithCode ? "Ingresando..." : "Entrar con codigo"}
+              </button>
+              <button
+                type="submit"
+                disabled={sending || cooldownLeft > 0}
+                className="w-full rounded-lg border border-[#b9cbe4] text-[#285887] py-2.5 text-sm font-semibold hover:bg-[#f6f9ff] transition-colors disabled:opacity-70"
+              >
+                {sending
+                  ? "Enviando..."
+                  : cooldownLeft > 0
+                    ? `Reenviar en ${cooldownLeft}s`
+                    : "Activar por email"}
+              </button>
+            </div>
           </form>
         )}
       </div>
