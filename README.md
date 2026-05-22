@@ -83,8 +83,10 @@ Tablas de negocio principales:
 ## Seguridad y Produccion
 
 - RLS esta habilitado en la base de datos.
-- Para entorno productivo multiusuario, se recomienda endurecer politicas RLS por rol/tenant (evitar politicas permisivas globales).
-- Integrar autenticacion y permisos de UI end-to-end (evitar identidad hardcodeada).
+- Auth por magic link esta integrado con perfiles y roles (`admin`, `tecnico`, `visor`).
+- Las escrituras de datos de negocio quedan restringidas a usuarios staff mediante RLS.
+- Los cambios de rol estan bloqueados para usuarios no admin desde la base de datos.
+- Para entorno productivo multiempresa, el siguiente endurecimiento recomendado es agregar tenant/empresa a las politicas RLS.
 
 ## Arquitectura (Resumen)
 
@@ -103,10 +105,10 @@ Tablas de negocio principales:
 
 ## Siguiente Sprint Recomendado
 
-1. Auth real (login/sesion) + roles en UI.
-2. Politicas RLS por usuario/rol/tenant.
-3. Inventario transaccional unido a tramites (consumo por OT, kardex, auditoria).
-4. Auditoria de cambios en entidades criticas.
+1. Tenant/empresa en RLS si el sistema se vende a mas de una organizacion.
+2. Inventario transaccional unido a tramites (consumo por OT, kardex, auditoria).
+3. Auditoria de cambios en entidades criticas.
+4. Refactor de pantallas grandes en componentes reutilizables.
 
 ## Licencia
 

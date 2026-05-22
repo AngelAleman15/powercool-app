@@ -169,7 +169,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NEW.role IS DISTINCT FROM OLD.role AND public.current_user_role() <> 'admin' THEN
+  IF NEW.role IS DISTINCT FROM OLD.role AND COALESCE(public.current_user_role(), 'visor') <> 'admin' THEN
     RAISE EXCEPTION 'No tienes permisos para cambiar el rol.';
   END IF;
 
