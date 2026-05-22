@@ -1,5 +1,5 @@
 // Service Worker para PowerCool PWA
-const CACHE_NAME = 'powercool-v2';
+const CACHE_NAME = 'powercool-v3';
 const urlsToCache = [
   '/',
   '/equipos',
@@ -45,6 +45,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // La autenticacion debe ir siempre directa a red para no interferir con tokens, redirects o hashes.
+  if (url.pathname.startsWith('/auth')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -75,8 +80,10 @@ self.addEventListener('fetch', (event) => {
           }
         }
 
-        // Garantizar que siempre devolvemos un Response válido
-        return Response.error();
+        return new Response('Sin conexion', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
       })
   );
 });

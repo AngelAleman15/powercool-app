@@ -37,7 +37,7 @@ export default function AuthPage() {
   const pendingAccessCodeStorageKey = useMemo(() => getEmailScopedKey(PENDING_ACCESS_CODE_KEY, email), [email])
 
   const syncPendingIdentity = useCallback(async (activeUser: { id: string; email?: string } | null | undefined) => {
-    if (!activeUser?.id || !activeUser?.email) return
+    if (!activeUser?.id || !activeUser?.email) return { codeActivated: false }
     if (typeof window === "undefined") return
 
     const normalizedEmail = String(activeUser.email).trim().toLowerCase()
@@ -51,19 +51,33 @@ export default function AuthPage() {
     if (pendingCode.length >= MIN_ACCESS_CODE_LENGTH) authUpdate.password = pendingCode
 
     if (authUpdate.data || authUpdate.password) {
-      await supabase.auth.updateUser(authUpdate)
+      const { error: updateUserError } = await supabase.auth.updateUser(authUpdate)
+      if (updateUserError) {
+        return {
+          codeActivated: false,
+          error: updateUserError.message || "No se pudo activar el codigo de acceso.",
+        }
+      }
     }
 
     if (preferredName) {
-      await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ full_name: preferredName })
         .eq("id", activeUser.id)
+
+      if (profileError) {
+        return {
+          codeActivated: !!authUpdate.password,
+          error: profileError.message || "El codigo se activo, pero no se pudo guardar el nombre.",
+        }
+      }
     }
 
     window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
     window.localStorage.removeItem(nameKey)
     window.localStorage.removeItem(codeKey)
+    return { codeActivated: !!authUpdate.password }
   }, [])
 
   useEffect(() => {
@@ -111,8 +125,14 @@ export default function AuthPage() {
         if (setSessionError) {
           setError(setSessionError.message || "No se pudo validar el enlace de acceso.")
         } else {
-          await syncPendingIdentity(data.session?.user)
-          setMessage("Acceso confirmado. Tu codigo ya puede usarse para entrar sin enlace.")
+          const syncResult = await syncPendingIdentity(data.session?.user)
+          if (syncResult?.error) {
+            setError(syncResult.error)
+          } else if (syncResult?.codeActivated) {
+            setMessage("Acceso confirmado. Tu codigo ya puede usarse para entrar sin enlace.")
+          } else {
+            setMessage("Acceso confirmado. No habia un codigo pendiente para activar en este dispositivo.")
+          }
           window.history.replaceState({}, document.title, "/auth")
         }
       } finally {
@@ -124,7 +144,12 @@ export default function AuthPage() {
   }, [syncPendingIdentity])
 
   useEffect(() => {
-    void syncPendingIdentity(user)
+    const syncCurrentUser = async () => {
+      const syncResult = await syncPendingIdentity(user)
+      if (syncResult?.error) setError(syncResult.error)
+    }
+
+    void syncCurrentUser()
   }, [syncPendingIdentity, user])
 
   const handleMagicLink = async (event: FormEvent<HTMLFormElement>) => {
