@@ -6,100 +6,7 @@ import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 import QRCodeComponent from "@/components/QRCodeComponent"
-
-const CIUDADES_URUGUAY = [
-  "Montevideo",
-  "Las Piedras",
-  "La Paz",
-  "Pando",
-  "Ciudad de la Costa",
-  "Barros Blancos",
-  "Toledo",
-  "Santa Lucía",
-  "Canelones",
-  "Maldonado",
-  "Punta del Este",
-  "San Carlos",
-  "Pan de Azúcar",
-  "Piriápolis",
-  "Aiguá",
-  "Rocha",
-  "Chuy",
-  "Castillos",
-  "La Paloma",
-  "Lascano",
-  "Velázquez",
-  "Salto",
-  "Bella Unión",
-  "Constitución",
-  "San Antonio",
-  "Paysandú",
-  "Quebracho",
-  "Porvenir",
-  "Mercedes",
-  "Dolores",
-  "Cardona",
-  "Palmitas",
-  "Guichón",
-  "Tacuarembó",
-  "Paso de los Toros",
-  "San Gregorio de Polanco",
-  "Ansina",
-  "Rivera",
-  "Tranqueras",
-  "Vichadero",
-  "Minas de Corrales",
-  "Melo",
-  "Río Branco",
-  "Fraile Muerto",
-  "Tupambaé",
-  "Artigas",
-  "Tomás Gomensoro",
-  "Baltasar Brum",
-  "Bella Unión",
-  "Durazno",
-  "Sarandí del Yí",
-  "Carmen",
-  "Blanquillo",
-  "Florida",
-  "Sarandí Grande",
-  "Fray Marcos",
-  "Casupá",
-  "San José de Mayo",
-  "Ciudad del Plata",
-  "Libertad",
-  "Ecilda Paullier",
-  "Rodríguez",
-  "Young",
-  "Fray Bentos",
-  "Nueva Palmira",
-  "Colonia del Sacramento",
-  "Rosario",
-  "Juan Lacaze",
-  "Carmelo",
-  "Ombúes de Lavalle",
-  "Nueva Helvecia",
-  "Colonia Suiza",
-  "Trinidad",
-  "Ismael Cortinas",
-  "Cardona",
-  "Minas",
-  "José Pedro Varela",
-  "Mariscala",
-  "Solís de Mataojo",
-  "Treinta y Tres",
-  "Vergara",
-  "Santa Clara de Olimar",
-  "Rincón",
-  "Tarariras",
-  "Sauce",
-  "Santa Rosa",
-  "Progreso",
-  "Atenas",
-  "Cebollatí",
-  "Cebollatí",
-  "Bañado de Medina"
-]
+import { CIUDADES_URUGUAY } from "@/lib/uruguayCities"
 
 const DEMO_STATUS_BY_ID = {
   "demo-c-1": "activo",
@@ -127,13 +34,22 @@ export default function Clientes() {
     email: "",
     telefono: "",
     direccion: "",
-    ciudad: ""
+    ciudad: "",
+    latitud: "",
+    longitud: "",
   })
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [showCitySuggestions, setShowCitySuggestions] = useState(false)
   const { demoMode } = useDemoMode()
   const rowsPerPage = 5
+
+  const toNullableNumber = (value) => {
+    const normalized = String(value || "").replace(",", ".").trim()
+    if (!normalized) return null
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : null
+  }
 
   const getInitials = (name) => {
     if (!name) return "CL"
@@ -256,25 +172,31 @@ export default function Clientes() {
     setSaving(true)
 
     let error
+    const payload = {
+      ...formData,
+      latitud: toNullableNumber(formData.latitud),
+      longitud: toNullableNumber(formData.longitud),
+    }
+
     if (editingId) {
       // Update existing cliente
       const result = await supabase
         .from("clientes")
-        .update(formData)
+        .update(payload)
         .eq("id", editingId)
       error = result.error
     } else {
       // Insert new cliente
       const result = await supabase
         .from("clientes")
-        .insert([formData])
+        .insert([payload])
       error = result.error
     }
 
     if (!error) {
       setShowModal(false)
       setEditingId(null)
-      setFormData({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "" })
+      setFormData({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "", latitud: "", longitud: "" })
       cargarClientes()
     }
     setSaving(false)
@@ -302,7 +224,9 @@ export default function Clientes() {
       email: cliente.email || "",
       telefono: cliente.telefono || "",
       direccion: cliente.direccion || "",
-      ciudad: cliente.ciudad || ""
+      ciudad: cliente.ciudad || "",
+      latitud: cliente.latitud ?? "",
+      longitud: cliente.longitud ?? "",
     })
     setShowModal(true)
   }
@@ -310,7 +234,7 @@ export default function Clientes() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingId(null)
-    setFormData({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "" })
+    setFormData({ nombre: "", email: "", telefono: "", direccion: "", ciudad: "", latitud: "", longitud: "" })
   }
 
   const cargarEquipos = async (clienteId) => {
@@ -739,6 +663,36 @@ export default function Clientes() {
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">
+                    Latitud
+                  </label>
+                  <input
+                    type="text"
+                    name="latitud"
+                    value={formData.latitud}
+                    onChange={handleChange}
+                    placeholder="-34.9011"
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">
+                    Longitud
+                  </label>
+                  <input
+                    type="text"
+                    name="longitud"
+                    value={formData.longitud}
+                    onChange={handleChange}
+                    placeholder="-56.1645"
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                  />
                 </div>
               </div>
 

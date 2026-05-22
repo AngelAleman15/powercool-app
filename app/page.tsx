@@ -5,6 +5,7 @@ import { useCallback, useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
+import { useAuthSession } from "@/lib/useAuthSession"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
 import UruguayMap from "@/components/UruguayMap"
 
@@ -38,7 +39,7 @@ type ClienteGeoInput = {
 
 type InventoryMovement = {
   id: string
-  tipo: "ingreso" | "salida"
+  tipo: "ingreso" | "salida" | "ajuste"
   detalle: string
   whenLabel: string
 }
@@ -85,8 +86,6 @@ const CITY_COORDS_UY: Record<string, { lat: number; lng: number }> = {
   trinidad: { lat: -33.5442, lng: -56.8886 },
 }
 
-const geocodeCache = new Map<string, { lat: number; lng: number } | null>()
-
 const UNIFIED_LOGO_SIZE = 20
 
 export default function Home() {
@@ -98,7 +97,9 @@ export default function Home() {
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [dashboardError, setDashboardError] = useState("")
   const { demoMode } = useDemoMode()
+  const { displayName, loading: authLoading } = useAuthSession()
 
   const getClienteNombre = (clientes: Tramite["clientes"]) => {
     if (!clientes) return "Cliente"
@@ -122,42 +123,6 @@ export default function Home() {
     const lng = Number(cliente?.longitud ?? cliente?.longitude)
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       return { lat, lng }
-    }
-
-    const address = [cliente?.direccion, cliente?.ciudad, "Uruguay"].filter(Boolean).join(", ")
-    if (address) {
-      const cacheKey = address.toLowerCase()
-      if (geocodeCache.has(cacheKey)) {
-        return geocodeCache.get(cacheKey) || null
-      }
-
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`,
-          {
-            headers: { "Accept-Language": "es" },
-          }
-        )
-
-        if (response.ok) {
-          const data = await response.json()
-          if (Array.isArray(data) && data.length > 0) {
-            const result = {
-              lat: Number(data[0].lat),
-              lng: Number(data[0].lon),
-            }
-
-            if (Number.isFinite(result.lat) && Number.isFinite(result.lng)) {
-              geocodeCache.set(cacheKey, result)
-              return result
-            }
-          }
-        }
-      } catch {
-        // Si el geocoder no responde, seguimos con fallback por ciudad.
-      }
-
-      geocodeCache.set(cacheKey, null)
     }
 
     const cityKey = normalizeCityKey(cliente?.ciudad || "")
@@ -224,7 +189,7 @@ export default function Home() {
 
     setUpcomingMaintenances([
       { id: 1, title: "Mantenimiento - Hotel Oasis", dateLabel: "25 Sep" },
-      { id: 2, title: "Revision - Clinica Medica", dateLabel: "28 Sep" },
+      { id: 2, title: "Revisión - Clínica Médica", dateLabel: "28 Sep" },
       { id: 3, title: "Servicio - Oficinas TechCorp", dateLabel: "30 Sep" },
     ])
 
@@ -232,29 +197,43 @@ export default function Home() {
   }, [normalizeCityKey])
 
   const loadDashboardData = useCallback(async () => {
+    setDashboardError("")
     try {
       if (demoMode) {
         loadDemoDashboard()
         return
       }
 
-      const [clientesRes, equiposRes, tramitesRes] = await Promise.all([
+      const [clientesRes, equiposRes, tramitesRes, repuestosRes, movimientosRes] = await Promise.all([
         supabase.from("clientes").select("*"),
         supabase.from("equipos").select("*"),
         supabase.from("tramites").select("*, clientes(nombre)"),
+        supabase.from("repuestos").select("id, stock_actual"),
+        supabase
+          .from("movimientos_repuestos")
+          .select("id, tipo, cantidad, motivo, fecha_movimiento, created_at, repuestos(nombre, codigo)")
+          .order("fecha_movimiento", { ascending: false })
+          .limit(5),
       ])
 
       const clientesData = clientesRes.data || []
       const equiposData = equiposRes.data || []
       const tramitesData = tramitesRes.data || []
 
-      if (clientesRes.error || equiposRes.error || tramitesRes.error) {
-        console.warn("Supabase no disponible, usando datos demo", {
+      if (clientesRes.error || equiposRes.error || tramitesRes.error || repuestosRes.error || movimientosRes.error) {
+        console.error("Error obteniendo datos de Supabase", {
           clientesError: clientesRes.error,
           equiposError: equiposRes.error,
           tramitesError: tramitesRes.error,
+          repuestosError: repuestosRes.error,
+          movimientosError: movimientosRes.error,
         })
-        loadDemoDashboard()
+        setMapPoints([])
+        setClientRows([])
+        setInventoryMovements([])
+        setUpcomingMaintenances([])
+        setStats({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
+        setDashboardError("No se pudo sincronizar con Supabase. Verificá la conexión y la configuración del proyecto.")
         return
       }
 
@@ -314,23 +293,26 @@ export default function Home() {
         (t) => t.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(t.estado)
       ).length
 
+      const unidadesStock = (repuestosRes.data || []).reduce((acc, repuesto) => {
+        const stock = Number(repuesto.stock_actual || 0)
+        return acc + (Number.isFinite(stock) ? stock : 0)
+      }, 0)
+
       setStats({
         clientesActivos: clientes.length,
         maquinasInstaladas: equipos.length,
-        unidadesStock: Math.max(8, Math.round(equipos.length * 0.35)),
+        unidadesStock,
         mantenimientosPendientes,
       })
 
-      const movements = [...equipos]
-        .filter((e) => !!e.created_at)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5)
-        .map((e) => {
-          const created = new Date(e.created_at)
+      const movements = (movimientosRes.data || []).map((m) => {
+          const created = new Date(m.fecha_movimiento || m.created_at)
+          const repuestoRef = Array.isArray(m.repuestos) ? m.repuestos[0] : m.repuestos
+          const repuestoNombre = repuestoRef?.nombre || "Repuesto"
           return {
-            id: String(e.id),
-            tipo: "ingreso" as const,
-            detalle: `Alta de equipo: ${e.marca || "Marca"} ${e.modelo || "Modelo"}`,
+            id: String(m.id),
+            tipo: m.tipo || "ajuste",
+            detalle: `${repuestoNombre} x${m.cantidad || 0}${m.motivo ? ` (${m.motivo})` : ""}`,
             whenLabel: created.toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
           }
         })
@@ -352,8 +334,11 @@ export default function Home() {
     } catch (error) {
       console.error("Error cargando dashboard:", error)
       setMapPoints([])
+      setClientRows([])
       setInventoryMovements([])
       setUpcomingMaintenances([])
+      setStats({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
+      setDashboardError("No se pudo cargar el dashboard. Revisá la conexión a Supabase e intentá nuevamente.")
     } finally {
       setLoading(false)
     }
@@ -372,7 +357,7 @@ export default function Home() {
         <section className="pb-3 border-b border-[#cad7e8]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-4xl font-bold text-[#234876] leading-tight">Bienvenido, Carlos</h1>
+              <h1 className="text-4xl font-bold text-[#234876] leading-tight">Bienvenido, {authLoading ? "..." : displayName}</h1>
               <p className="text-2xl font-semibold text-[#5a7194] mt-1">Resumen General de Clientes y Equipos</p>
             </div>
             <div className="flex items-center gap-3">
@@ -382,6 +367,12 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {dashboardError && (
+          <section className="rounded-md border border-[#f0c9c9] bg-[#fff4f4] px-4 py-3 text-sm text-[#8c3f3f]">
+            {dashboardError}
+          </section>
+        )}
 
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-stretch">
           <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">

@@ -9,9 +9,29 @@ CREATE TABLE IF NOT EXISTS clientes (
   telefono TEXT,
   direccion TEXT,
   ciudad TEXT,
+  latitud DOUBLE PRECISION,
+  longitud DOUBLE PRECISION,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
+
+-- Asegura coordenadas en clientes para mapas sin geocoding en cliente.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_name = 'clientes' AND column_name = 'latitud'
+  ) THEN
+    ALTER TABLE clientes ADD COLUMN latitud DOUBLE PRECISION;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_name = 'clientes' AND column_name = 'longitud'
+  ) THEN
+    ALTER TABLE clientes ADD COLUMN longitud DOUBLE PRECISION;
+  END IF;
+END $$;
 
 -- Agregar columna cliente_id a la tabla equipos si no existe
 DO $$ 
@@ -140,6 +160,28 @@ SET search_path = public
 AS $$
   SELECT COALESCE(public.current_user_role() IN ('admin', 'tecnico'), false);
 $$;
+
+-- Bloquea cambios de role para usuarios no admin, incluso sobre su propio perfil.
+CREATE OR REPLACE FUNCTION public.prevent_non_admin_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.role IS DISTINCT FROM OLD.role AND public.current_user_role() <> 'admin' THEN
+    RAISE EXCEPTION 'No tienes permisos para cambiar el rol.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_profiles_prevent_role_change ON profiles;
+CREATE TRIGGER trg_profiles_prevent_role_change
+BEFORE UPDATE ON profiles
+FOR EACH ROW
+EXECUTE FUNCTION public.prevent_non_admin_role_change();
 
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;

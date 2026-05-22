@@ -7,32 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 import QRCodeComponent from "@/components/QRCodeComponent"
-
-const CIUDADES_URUGUAY = [
-  "Montevideo",
-  "Canelones",
-  "Maldonado",
-  "Punta del Este",
-  "Piriápolis",
-  "Rocha",
-  "Chuy",
-  "La Paloma",
-  "Salto",
-  "Paysandú",
-  "Mercedes",
-  "Tacuarembó",
-  "Rivera",
-  "Melo",
-  "Artigas",
-  "Durazno",
-  "Florida",
-  "San José de Mayo",
-  "Colonia del Sacramento",
-  "Fray Bentos",
-  "Minas",
-  "Treinta y Tres",
-  "Trinidad",
-]
+import { CIUDADES_URUGUAY } from "@/lib/uruguayCities"
 
 export default function ClienteDetallePage() {
   const params = useParams()
@@ -63,6 +38,8 @@ export default function ClienteDetallePage() {
     telefono: "",
     direccion: "",
     ciudad: "",
+    latitud: "",
+    longitud: "",
   })
   const [equipoFormData, setEquipoFormData] = useState({
     marca: "",
@@ -104,6 +81,13 @@ export default function ClienteDetallePage() {
     if (!locationText) return ""
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`
   }, [cliente, locationText])
+
+  const toNullableNumber = (value) => {
+    const normalized = String(value || "").replace(",", ".").trim()
+    if (!normalized) return null
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : null
+  }
 
   const tramitesActivos = useMemo(
     () => tramites.filter((t) => t.estado === "pendiente" || t.estado === "en_proceso"),
@@ -184,6 +168,8 @@ export default function ClienteDetallePage() {
           telefono: clienteDemo.telefono || "",
           direccion: clienteDemo.direccion || "",
           ciudad: clienteDemo.ciudad || "",
+          latitud: clienteDemo.latitud ?? "",
+          longitud: clienteDemo.longitud ?? "",
         })
 
         setEquipos(DEMO_EQUIPOS.filter((e) => String(e.cliente_id) === String(clienteId)))
@@ -231,6 +217,8 @@ export default function ClienteDetallePage() {
         telefono: clienteRes.data.telefono || "",
         direccion: clienteRes.data.direccion || "",
         ciudad: clienteRes.data.ciudad || "",
+        latitud: clienteRes.data.latitud ?? "",
+        longitud: clienteRes.data.longitud ?? "",
       })
     } catch (error) {
       console.error("Error cargando detalle del cliente:", error)
@@ -409,6 +397,8 @@ export default function ClienteDetallePage() {
         telefono: formData.telefono,
         direccion: formData.direccion,
         ciudad: formData.ciudad,
+        latitud: toNullableNumber(formData.latitud),
+        longitud: toNullableNumber(formData.longitud),
       })
       .eq("id", clienteId)
 
@@ -466,6 +456,8 @@ export default function ClienteDetallePage() {
             <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Teléfono:</span> {cliente.telefono || "No definido"}</p>
             <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Dirección:</span> {cliente.direccion || "No definida"}</p>
             <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Ciudad:</span> {cliente.ciudad || "No definida"}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Latitud:</span> {cliente.latitud ?? "No definida"}</p>
+            <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Longitud:</span> {cliente.longitud ?? "No definida"}</p>
             <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Equipos:</span> {equipos.length}</p>
             <p className="py-1 border-b border-[#dbe6f4]"><span className="font-semibold">Trámites activos:</span> {tramitesActivos.length}</p>
             <p className="py-1"><span className="font-semibold">Trámites en historial:</span> {tramitesHistorial.length}</p>
@@ -827,6 +819,30 @@ export default function ClienteDetallePage() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">Latitud</label>
+                  <input
+                    type="text"
+                    name="latitud"
+                    value={formData.latitud}
+                    onChange={handleChange}
+                    placeholder="-34.9011"
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#5e7da3] mb-1">Longitud</label>
+                  <input
+                    type="text"
+                    name="longitud"
+                    value={formData.longitud}
+                    onChange={handleChange}
+                    placeholder="-56.1645"
+                    className="w-full px-3 py-2 bg-white border border-[#cad8ea] rounded-md text-[#2a4f7d] text-sm focus:outline-none focus:ring-2 focus:ring-[#8caad0]"
+                  />
                 </div>
               </div>
 

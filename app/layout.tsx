@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PowerCool - Sistema de Gestión",
-  description: "Sistema de gestión de equipos de aire acondicionado",
+  description: "Sistema de gestión de equipos de aire acondicionado en Uruguay",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

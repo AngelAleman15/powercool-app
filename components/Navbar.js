@@ -30,7 +30,7 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 9h14M3 13h18M5 17h14M7 5h10" />
                 </svg>
               </div>
-              <span className="text-lg font-bold text-[#e9f2ff] tracking-wide">GESTION DE AIRES ACONDICIONADOS</span>
+              <span className="text-lg font-bold text-[#e9f2ff] tracking-wide">GESTIÓN DE AIRES ACONDICIONADOS</span>
             </Link>
 
             {/* Navigation Links */}
