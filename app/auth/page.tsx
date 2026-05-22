@@ -9,11 +9,17 @@ const PENDING_NAME_KEY = "powercool.auth.pendingName"
 const PENDING_ACCESS_CODE_KEY = "powercool.auth.pendingAccessCode"
 const LAST_EMAIL_KEY = "powercool.auth.lastEmail"
 const MAGIC_LINK_COOLDOWN_SECONDS = 60
+const SERVER_RATE_LIMIT_COOLDOWN_SECONDS = 60 * 60
 const MIN_ACCESS_CODE_LENGTH = 6
 
 function getCooldownStorageKey(email: string) {
   const normalizedEmail = String(email || "").trim().toLowerCase()
   return `powercool.auth.lastMagicLinkAt:${normalizedEmail || "anon"}`
+}
+
+function getRateLimitUntilStorageKey(email: string) {
+  const normalizedEmail = String(email || "").trim().toLowerCase()
+  return `powercool.auth.rateLimitUntil:${normalizedEmail || "anon"}`
 }
 
 function getEmailScopedKey(baseKey: string, email: string) {
@@ -91,8 +97,17 @@ export default function AuthPage() {
 
     const syncCooldown = () => {
       const key = getCooldownStorageKey(email)
+      const rateLimitKey = getRateLimitUntilStorageKey(email)
       const raw = window.localStorage.getItem(key)
+      const rateLimitUntil = Number(window.localStorage.getItem(rateLimitKey) || 0)
       const lastSentAt = Number(raw || 0)
+      const rateLimitLeft = Math.max(0, Math.ceil((rateLimitUntil - Date.now()) / 1000))
+
+      if (rateLimitLeft > 0) {
+        setCooldownLeft(rateLimitLeft)
+        return
+      }
+
       if (!Number.isFinite(lastSentAt) || lastSentAt <= 0) {
         setCooldownLeft(0)
         return
@@ -170,7 +185,12 @@ export default function AuthPage() {
     }
 
     if (cooldownLeft > 0) {
-      setError(`Espera ${cooldownLeft}s antes de pedir otro enlace.`)
+      const minutesLeft = Math.ceil(cooldownLeft / 60)
+      setError(
+        cooldownLeft > MAGIC_LINK_COOLDOWN_SECONDS
+          ? `Supabase esta limitando los emails. Espera aproximadamente ${minutesLeft} min antes de pedir otro enlace.`
+          : `Espera ${cooldownLeft}s antes de pedir otro enlace.`
+      )
       return
     }
 
@@ -194,8 +214,13 @@ export default function AuthPage() {
 
       if (authError) {
         const rawMessage = String(authError.message || "")
-        if (/rate limit/i.test(rawMessage)) {
-          setError("Superaste el limite de emails. Espera 60 segundos e intentalo de nuevo.")
+        if (authError.status === 429 || /rate limit|too many/i.test(rawMessage)) {
+          if (typeof window !== "undefined") {
+            const rateLimitKey = getRateLimitUntilStorageKey(normalizedEmail)
+            window.localStorage.setItem(rateLimitKey, String(Date.now() + SERVER_RATE_LIMIT_COOLDOWN_SECONDS * 1000))
+            setCooldownLeft(SERVER_RATE_LIMIT_COOLDOWN_SECONDS)
+          }
+          setError("Supabase bloqueo temporalmente el envio de emails por limite del proyecto. Espera cerca de 1 hora o activa SMTP propio en Supabase.")
           return
         }
         setError(authError.message)
