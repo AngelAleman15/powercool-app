@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useRef, useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
@@ -16,7 +16,70 @@ const DEMO_STATUS_BY_ID = {
   "demo-c-5": "activo",
 }
 
+const CSV_HEADERS = ["nombre", "email", "telefono", "direccion", "ciudad", "latitud", "longitud"]
+
+function escapeCsvValue(value) {
+  const text = String(value ?? "")
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+  return text
+}
+
+function parseCsv(text) {
+  const rows = []
+  let row = []
+  let value = ""
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i]
+    const next = text[i + 1]
+
+    if (char === '"' && inQuotes && next === '"') {
+      value += '"'
+      i += 1
+      continue
+    }
+
+    if (char === '"') {
+      inQuotes = !inQuotes
+      continue
+    }
+
+    if (!inQuotes && (char === "," || char === ";")) {
+      row.push(value.trim())
+      value = ""
+      continue
+    }
+
+    if (!inQuotes && (char === "\n" || char === "\r")) {
+      if (char === "\r" && next === "\n") i += 1
+      row.push(value.trim())
+      if (row.some(Boolean)) rows.push(row)
+      row = []
+      value = ""
+      continue
+    }
+
+    value += char
+  }
+
+  row.push(value.trim())
+  if (row.some(Boolean)) rows.push(row)
+  return rows
+}
+
+function normalizeHeader(header) {
+  return String(header || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+}
+
 export default function Clientes() {
+  const fileInputRef = useRef(null)
   const [clientes, setClientes] = useState([])
   const [equiposByCliente, setEquiposByCliente] = useState({})
   const [search, setSearch] = useState("")
@@ -39,6 +102,8 @@ export default function Clientes() {
     longitud: "",
   })
   const [saving, setSaving] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [bulkMessage, setBulkMessage] = useState("")
   const [editingId, setEditingId] = useState(null)
   const [showCitySuggestions, setShowCitySuggestions] = useState(false)
   const { demoMode } = useDemoMode()
@@ -160,6 +225,83 @@ export default function Clientes() {
   }, [filtrados, selectedClientId])
 
   const selectedClient = filtrados.find((c) => String(c.id) === String(selectedClientId)) || null
+
+  const handleExport = () => {
+    const csvRows = [
+      CSV_HEADERS.join(","),
+      ...filtrados.map((cliente) =>
+        CSV_HEADERS.map((key) => escapeCsvValue(cliente[key])).join(",")
+      ),
+    ]
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `clientes-powercool-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    setBulkMessage(`Exportaste ${filtrados.length} cliente${filtrados.length === 1 ? "" : "s"}.`)
+  }
+
+  const handleImportClick = () => {
+    if (demoMode) {
+      setBulkMessage("La importación queda deshabilitada en vista previa para no tocar datos reales.")
+      return
+    }
+    fileInputRef.current?.click()
+  }
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+
+    setBulkMessage("")
+    setImporting(true)
+
+    try {
+      const text = await file.text()
+      const rows = parseCsv(text)
+      if (rows.length < 2) {
+        setBulkMessage("El archivo no tiene filas para importar.")
+        return
+      }
+
+      const headers = rows[0].map(normalizeHeader)
+      const payload = rows.slice(1).map((row) => {
+        const record = {}
+        CSV_HEADERS.forEach((key) => {
+          const index = headers.indexOf(normalizeHeader(key))
+          record[key] = index >= 0 ? row[index] || "" : ""
+        })
+        return {
+          ...record,
+          latitud: toNullableNumber(record.latitud),
+          longitud: toNullableNumber(record.longitud),
+        }
+      }).filter((record) => record.nombre)
+
+      if (payload.length === 0) {
+        setBulkMessage("No encontré clientes válidos. El CSV debe tener al menos la columna nombre.")
+        return
+      }
+
+      const { error } = await supabase.from("clientes").insert(payload)
+      if (error) {
+        setBulkMessage(`No se pudo importar: ${error.message}`)
+        return
+      }
+
+      setBulkMessage(`Importaste ${payload.length} cliente${payload.length === 1 ? "" : "s"} correctamente.`)
+      await cargarClientes()
+    } catch {
+      setBulkMessage("No se pudo leer el archivo CSV.")
+    } finally {
+      setImporting(false)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -320,6 +462,13 @@ export default function Clientes() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={handleImportFile}
+        />
         <button
           onClick={() => !demoMode && setShowModal(true)}
           disabled={demoMode}
@@ -333,22 +482,29 @@ export default function Clientes() {
           Añadir Cliente
         </button>
         <button
-          disabled
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-[#eef3fb] border border-[#cad7e9] text-[#516b90] cursor-not-allowed"
-          title="Work in progress"
+          type="button"
+          onClick={handleImportClick}
+          disabled={importing}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-white border border-[#cad7e9] text-[#2f69b0] hover:bg-[#edf4ff] disabled:opacity-60"
+          title="Importar clientes desde CSV"
         >
-          Importar
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#d8e2f1] text-[#5d769a]">WIP</span>
+          {importing ? "Importando..." : "Importar CSV"}
         </button>
         <button
-          disabled
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-[#eef3fb] border border-[#cad7e9] text-[#516b90] cursor-not-allowed"
-          title="Work in progress"
+          type="button"
+          onClick={handleExport}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-white border border-[#cad7e9] text-[#2f69b0] hover:bg-[#edf4ff]"
+          title="Exportar clientes filtrados a CSV"
         >
-          Exportar
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#d8e2f1] text-[#5d769a]">WIP</span>
+          Exportar CSV
         </button>
       </div>
+
+      {bulkMessage && (
+        <div className="mb-4 rounded-md border border-[#cbd8ea] bg-[#f8fbff] px-3 py-2 text-sm font-medium text-[#3f5f87]">
+          {bulkMessage}
+        </div>
+      )}
 
       <div className="mb-3">
         <div className="relative max-w-xl">
@@ -367,7 +523,7 @@ export default function Clientes() {
         </div>
       </div>
 
-      <div className="mb-3 flex items-center gap-2 text-[28px] font-semibold text-[#4f6990]">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-[#4f6990]">
         <span>Filtro:</span>
         <button
           onClick={() => setStatusFilter("todo")}
@@ -398,13 +554,14 @@ export default function Clientes() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
           <div className="xl:col-span-9 rounded-md border border-[#d3dfef] bg-[#f9fbff] overflow-hidden shadow-[0_6px_16px_rgba(50,89,141,.1)]">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="bg-[#f1f5fb] text-[#3f5f87] border-b border-[#d7e3f1]">
                   <th className="text-left py-3 px-3">Cliente</th>
-                  <th className="text-left py-3 px-3">Contacto</th>
+                  <th className="hidden sm:table-cell text-left py-3 px-3">Contacto</th>
                   <th className="text-left py-3 px-3">Ubicación</th>
-                  <th className="text-left py-3 px-3">Equipos</th>
+                  <th className="hidden sm:table-cell text-left py-3 px-3">Equipos</th>
                   <th className="text-left py-3 px-3">Estado</th>
                   <th className="text-left py-3 px-3">Acciones</th>
                 </tr>
@@ -420,7 +577,7 @@ export default function Clientes() {
                       className={`border-b border-[#e3ebf7] cursor-pointer ${selected ? "bg-[#edf4ff]" : "bg-white hover:bg-[#f7faff]"}`}
                     >
                       <td className="py-3 px-3 font-semibold text-[#2462ad]">{cliente.nombre}</td>
-                      <td className="py-3 px-3">
+                      <td className="hidden sm:table-cell py-3 px-3">
                         <div className="flex items-center gap-2 text-[#3f5f87]">
                           <span
                             className="h-7 w-7 rounded-full inline-flex items-center justify-center text-white text-[11px] font-bold"
@@ -432,7 +589,7 @@ export default function Clientes() {
                         </div>
                       </td>
                       <td className="py-3 px-3 text-[#425f86]">{cliente.ciudad || "Sin ciudad"}</td>
-                      <td className="py-3 px-3 font-semibold text-[#425f86]">{equiposCount}</td>
+                      <td className="hidden sm:table-cell py-3 px-3 font-semibold text-[#425f86]">{equiposCount}</td>
                       <td className="py-3 px-3">
                         <span className={`text-xs px-3 py-1 rounded font-semibold ${cliente.status === "activo" ? "bg-[#2fa04a] text-white" : "bg-[#d94a4a] text-white"}`}>
                           {cliente.status === "activo" ? "Activo" : "Inactivo"}
@@ -466,6 +623,7 @@ export default function Clientes() {
                 })}
               </tbody>
             </table>
+            </div>
 
             {pageRows.length === 0 && (
               <p className="text-center py-10 text-[#b9c7d9]">no se encuentra el cliente</p>

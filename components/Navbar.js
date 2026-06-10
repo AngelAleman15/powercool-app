@@ -79,7 +79,6 @@ export default function Navbar() {
                 Trámites
               </Link>
 
-              <span className="px-3 py-2 text-sm font-semibold text-[#d5e8ff]">Soporte</span>
             </div>
 
             <div className="flex items-center gap-2 text-[#eaf3ff]">
