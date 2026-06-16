@@ -457,7 +457,7 @@ export default function Tramites() {
             </div>
           ) : (
             <div className="px-4 sm:px-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {tramitesActivos.map(tramite => (
                   <article
                     key={tramite.id}

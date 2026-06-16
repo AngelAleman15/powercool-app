@@ -554,7 +554,59 @@ export default function Clientes() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
           <div className="xl:col-span-9 rounded-md border border-[#d3dfef] bg-[#f9fbff] overflow-hidden shadow-[0_6px_16px_rgba(50,89,141,.1)]">
-            <div className="overflow-x-auto">
+            <div className="px-3 py-3 space-y-3 lg:hidden">
+              {pageRows.map((cliente) => {
+                const selected = String(selectedClientId) === String(cliente.id)
+                const equiposCount = equiposByCliente[String(cliente.id)] || 0
+                return (
+                  <article
+                    key={cliente.id}
+                    onClick={() => setSelectedClientId(cliente.id)}
+                    className={`rounded-lg border px-4 py-3 cursor-pointer ${selected ? "border-[#9dc0ea] bg-[#edf4ff]" : "border-[#dfe8f4] bg-white"}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#2462ad] truncate">{cliente.nombre}</p>
+                        <p className="text-xs text-[#425f86] mt-0.5">{cliente.ciudad || "Sin ciudad"}</p>
+                      </div>
+                      <span className={`text-[11px] px-2 py-1 rounded font-semibold ${cliente.status === "activo" ? "bg-[#2fa04a] text-white" : "bg-[#d94a4a] text-white"}`}>
+                        {cliente.status === "activo" ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-md bg-[#f8fbff] px-2 py-2 border border-[#e3ebf7]">
+                        <p className="text-[#6a84a6]">Contacto</p>
+                        <p className="font-medium text-[#3f5f87] mt-1 truncate">{cliente.contacto || cliente.nombre}</p>
+                      </div>
+                      <div className="rounded-md bg-[#f8fbff] px-2 py-2 border border-[#e3ebf7]">
+                        <p className="text-[#6a84a6]">Equipos</p>
+                        <p className="font-semibold text-[#425f86] mt-1">{equiposCount}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <Link
+                        href={`/clientes/${cliente.id}`}
+                        className="inline-flex items-center px-3 py-1.5 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
+                      >
+                        Ver detalles
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEdit(cliente)
+                        }}
+                        disabled={demoMode}
+                        className={`px-3 py-1.5 rounded-md border text-xs font-semibold ${demoMode ? "border-[#d2dbea] text-[#9caec6]" : "border-[#cad7e9] text-[#4272aa] hover:bg-[#edf4ff]"}`}
+                      >
+                        Editar
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            <div className="hidden lg:block overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="bg-[#f1f5fb] text-[#3f5f87] border-b border-[#d7e3f1]">

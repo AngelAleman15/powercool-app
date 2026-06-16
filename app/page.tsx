@@ -351,14 +351,65 @@ export default function Home() {
   const visibleStats = stats
   const filteredClients = clientRows.filter((c) => c.cliente.toLowerCase().includes(search.toLowerCase()))
 
+  const statCards = [
+    {
+      title: "Clientes Activos",
+      value: visibleStats.clientesActivos,
+      helper: "Empresas Registradas",
+      alt: "Clientes",
+      icon: "/logos/clientes.png",
+      color: "bg-[#2459a8]",
+      valueColor: "text-[#1d3f6d]",
+      helperColor: "text-[#6f86a8]",
+      titleSize: "text-[15px]",
+      valueSize: "text-[32px]",
+    },
+    {
+      title: "Máquinas Instaladas",
+      value: visibleStats.maquinasInstaladas,
+      helper: "Equipos en Operación",
+      alt: "Máquinas instaladas",
+      icon: "/logos/equipos.png",
+      color: "bg-[#3f79d6]",
+      valueColor: "text-[#1d3f6d]",
+      helperColor: "text-[#6f86a8]",
+      titleSize: "text-[15px]",
+      valueSize: "text-[32px]",
+    },
+    {
+      title: "Unidades en Stock",
+      value: visibleStats.unidadesStock,
+      helper: "En Almacén",
+      alt: "Unidades en stock",
+      icon: "/logos/unidadesstock.png",
+      color: "bg-[#35a66b]",
+      valueColor: "text-[#1d3f6d]",
+      helperColor: "text-[#6f86a8]",
+      titleSize: "text-[15px]",
+      valueSize: "text-[32px]",
+    },
+    {
+      title: "Mantenimientos Pendientes",
+      value: visibleStats.mantenimientosPendientes,
+      helper: "Servicios Programados",
+      alt: "Mantenimientos pendientes",
+      icon: "/logos/mantenimiento.png",
+      color: "bg-[#e76868]",
+      valueColor: "text-[#c03838]",
+      helperColor: "text-[#6f86a8]",
+      titleSize: "text-[13px] leading-[1.05]",
+      valueSize: "text-[30px]",
+    },
+  ]
+
   return (
-    <div className="px-6 sm:px-10 lg:px-12 py-6 sm:py-8 text-[#223f66]">
+    <div className="px-3 sm:px-6 lg:px-12 py-5 sm:py-8 text-[#223f66]">
       <div className="space-y-6">
         <section className="pb-3 border-b border-[#cad7e8]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-4xl font-bold text-[#234876] leading-tight">Bienvenido, {authLoading ? "..." : displayName}</h1>
-              <p className="text-2xl font-semibold text-[#5a7194] mt-1">Resumen General de Clientes y Equipos</p>
+              <h1 className="text-2xl sm:text-4xl font-bold text-[#234876] leading-tight">Bienvenido, {authLoading ? "..." : displayName}</h1>
+              <p className="text-base sm:text-2xl font-semibold text-[#5a7194] mt-1">Resumen General de Clientes y Equipos</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs sm:text-sm font-semibold text-[#5e7697]">
@@ -374,54 +425,25 @@ export default function Home() {
           </section>
         )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-stretch">
-          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
-            <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#2459a8] flex items-center justify-center p-1">
-                <Image src="/logos/clientes.png" alt="Clientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Clientes Activos</p>
-                <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.clientesActivos} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Empresas Registradas</span></p>
-              </div>
-            </div>
-          </div>
-          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
-            <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#3f79d6] flex items-center justify-center p-1">
-                <Image src="/logos/equipos.png" alt="Máquinas instaladas" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Máquinas Instaladas</p>
-                <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.maquinasInstaladas} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">Equipos en Operación</span></p>
+        <section className="flex gap-3 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-2 xl:grid-cols-4 md:overflow-visible items-stretch">
+          {statCards.map((card) => (
+            <div key={card.title} className="min-w-[17rem] md:min-w-0 snap-start rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
+              <div className="flex items-center gap-2.5 w-full">
+                <div className={`h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full ${card.color} flex items-center justify-center p-1`}>
+                  <Image src={card.icon} alt={card.alt} width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
+                </div>
+                <div className="leading-tight min-w-0">
+                  <p className={`${card.titleSize} font-bold text-[#2b578d] whitespace-normal sm:whitespace-nowrap`}>{card.title}</p>
+                  <p className={`${card.valueSize} leading-none font-extrabold ${card.valueColor} tracking-[-0.01em]`}>
+                    {loading ? "..." : card.value} <span className={`text-[11px] font-semibold ${card.helperColor} ml-1`}>{card.helper}</span>
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
-            <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#35a66b] flex items-center justify-center p-1">
-                <Image src="/logos/unidadesstock.png" alt="Unidades en stock" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[15px] font-bold text-[#2b578d] whitespace-nowrap">Unidades en Stock</p>
-                <p className="text-[32px] leading-none font-extrabold text-[#1d3f6d] tracking-[-0.01em]">{loading ? "..." : visibleStats.unidadesStock} <span className="text-[11px] font-semibold text-[#6f86a8] ml-1">En Almacén</span></p>
-              </div>
-            </div>
-          </div>
-          <div className="h-[84px] rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
-            <div className="flex items-center gap-2.5 w-full">
-              <div className="h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full bg-[#e76868] flex items-center justify-center p-1">
-                <Image src="/logos/mantenimiento.png" alt="Mantenimientos pendientes" width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
-              </div>
-              <div className="leading-tight min-w-0">
-                <p className="text-[13px] font-bold text-[#2b578d] leading-[1.05]">Mantenimientos Pendientes</p>
-                <p className="text-[30px] leading-none font-extrabold text-[#c03838] tracking-[-0.01em]">{loading ? "..." : visibleStats.mantenimientosPendientes} <span className="text-[10px] font-semibold text-[#6f86a8] ml-1">Servicios Programados</span></p>
-              </div>
-            </div>
-          </div>
+          ))}
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
             <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
               <h2 className="text-base font-bold text-[#284a76]">Listado de Clientes</h2>
@@ -435,8 +457,28 @@ export default function Home() {
                 className="w-full px-2.5 py-1.5 rounded-md border border-[#cad8eb] bg-white text-xs text-[#304f76] placeholder:text-[#8fa4c0] focus:outline-none focus:ring-2 focus:ring-[#7fa4d6]"
               />
             </div>
-            <div className="px-4 pb-3 pt-2 overflow-auto">
-              <table className="w-full text-xs">
+            <div className="px-4 pb-3 pt-2 space-y-3 lg:space-y-0">
+              <div className="space-y-2 lg:hidden">
+                {filteredClients.slice(0, 6).map((row) => (
+                  <article key={row.id} className="rounded-md border border-[#e3ebf7] bg-white px-3 py-3 shadow-[0_1px_5px_rgba(36,84,145,.06)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-[#24476f] truncate">{row.cliente}</p>
+                        <p className="text-xs text-[#5d7799] mt-0.5">{row.ubicacion}</p>
+                      </div>
+                      <span className={`shrink-0 text-[10px] px-2 py-1 rounded font-semibold ${row.estado === "activo" ? "bg-[#3ea54f] text-white" : "bg-[#f1a937] text-white"}`}>
+                        {row.estado === "activo" ? "Activo" : "En Mantenimiento"}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <span className="font-medium text-[#5d7799]">Equipos</span>
+                      <span className="font-bold text-[#2d8857]">{row.equipos} activos</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden lg:block overflow-auto">
+                <table className="w-full text-xs">
                 <thead>
                   <tr className="text-[#5f789b] border-y border-[#dbe4f3] bg-[#f1f6fd]">
                     <th className="text-left py-1.5">Cliente</th>
@@ -460,12 +502,18 @@ export default function Home() {
                   ))}
                 </tbody>
               </table>
+              </div>
               {filteredClients.length === 0 && (
                 <p className="text-center py-6 text-sm text-[#bcc8d7]">no se encuentra el cliente</p>
               )}
-              <div className="pt-2 text-center">
+              <div className="pt-2 text-center hidden lg:block">
                 <Link href="/clientes" className="inline-flex items-center px-4 py-1 rounded-md bg-[#2a6dc1] text-white text-xs font-semibold hover:bg-[#245aa5]">
                   Ver Detalles
+                </Link>
+              </div>
+              <div className="pt-2 text-center lg:hidden">
+                <Link href="/clientes" className="inline-flex items-center px-4 py-2 rounded-md bg-[#2a6dc1] text-white text-xs font-semibold hover:bg-[#245aa5]">
+                  Abrir clientes
                 </Link>
               </div>
             </div>
@@ -476,7 +524,7 @@ export default function Home() {
               <h2 className="text-base font-bold text-[#284a76]">Mapa de Clientes</h2>
             </div>
             <div className="p-4">
-              <div className="relative z-0 h-[280px] rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
+              <div className="relative z-0 h-[220px] sm:h-[260px] lg:h-[280px] rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
                 <UruguayMap points={mapPoints} />
                 <div className="absolute left-2 bottom-2 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-[#54749a]">
                   Mapa interactivo: arrastra y haz zoom
@@ -489,18 +537,18 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
+            <div className="px-4 sm:px-6 py-4 border-b border-[#dbe4f3]">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
             </div>
-            <div className="p-5 space-y-3">
+            <div className="p-4 sm:p-5 space-y-3">
               {inventoryMovements.length === 0 ? (
                 <p className="text-sm text-[#6d84a5]">No hay movimientos de inventario reales para mostrar.</p>
               ) : (
                 inventoryMovements.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
-                    <div className="flex items-center gap-2 min-w-0">
+                  <div key={m.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-3 sm:py-2">
+                    <div className="flex items-start gap-2 min-w-0">
                       <Image
                         src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
                         alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
@@ -508,11 +556,11 @@ export default function Home() {
                         height={UNIFIED_LOGO_SIZE}
                         className="shrink-0 object-contain"
                       />
-                      <p className="text-sm text-[#36557b] truncate">
+                      <p className="text-sm text-[#36557b] break-words sm:truncate">
                         <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
                       </p>
                     </div>
-                    <span className="text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
+                    <span className="self-start sm:self-auto text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
                   </div>
                 ))
               )}
@@ -523,17 +571,17 @@ export default function Home() {
           </div>
 
           <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
-            <div className="px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
+            <div className="px-4 sm:px-6 py-4 border-b border-[#dbe4f3]">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
             </div>
-            <div className="p-5 space-y-3">
+            <div className="p-4 sm:p-5 space-y-3">
               {upcomingMaintenances.length === 0 ? (
                 <p className="text-sm text-[#6d84a5]">No hay mantenimientos programados</p>
               ) : (
                 upcomingMaintenances.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-2">
-                    <p className="text-sm font-semibold text-[#36557b]">{item.title}</p>
-                    <span className="text-xs text-[#4f6f95] font-semibold">{item.dateLabel}</span>
+                  <div key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-3 sm:py-2">
+                    <p className="text-sm font-semibold text-[#36557b] break-words">{item.title}</p>
+                    <span className="self-start sm:self-auto text-xs text-[#4f6f95] font-semibold">{item.dateLabel}</span>
                   </div>
                 ))
               )}

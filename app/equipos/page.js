@@ -721,7 +721,7 @@ export default function Equipos() {
       <div className="px-4 sm:px-6 mb-5">
         <div className="rounded-xl border border-[#d1dcec] bg-[#f7faff] p-4 shadow-[0_6px_16px_rgba(36,84,145,.11)]">
           <h2 className="text-lg font-bold text-[#2a4d7a] mb-3">Búsqueda y Filtros Avanzados</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <input
               type="text"
               placeholder="Buscar por modelo, marca, ubicación o ID..."
