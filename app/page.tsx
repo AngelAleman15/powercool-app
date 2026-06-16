@@ -99,7 +99,12 @@ export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [dashboardError, setDashboardError] = useState("")
   const { demoMode } = useDemoMode()
-  const { displayName, loading: authLoading } = useAuthSession()
+  const { displayName, loading: authLoading, permissions } = useAuthSession()
+
+  const canViewClientes = permissions?.clientes !== false
+  const canViewEquipos = permissions?.equipos !== false
+  const canViewTramites = permissions?.tramites !== false
+  const canViewRepuestos = permissions?.repuestos !== false
 
   const getClienteNombre = (clientes: Tramite["clientes"]) => {
     if (!clientes) return "Cliente"
@@ -204,16 +209,25 @@ export default function Home() {
         return
       }
 
+      const emptyResult = { data: [], error: null }
+      const clientesQuery = canViewClientes ? supabase.from("clientes").select("*") : Promise.resolve(emptyResult)
+      const equiposQuery = canViewEquipos ? supabase.from("equipos").select("*") : Promise.resolve(emptyResult)
+      const tramitesQuery = canViewTramites ? supabase.from("tramites").select("*, clientes(nombre)") : Promise.resolve(emptyResult)
+      const repuestosQuery = canViewRepuestos ? supabase.from("repuestos").select("id, stock_actual") : Promise.resolve(emptyResult)
+      const movimientosQuery = canViewRepuestos
+        ? supabase
+            .from("movimientos_repuestos")
+            .select("id, tipo, cantidad, motivo, fecha_movimiento, created_at, repuestos(nombre, codigo)")
+            .order("fecha_movimiento", { ascending: false })
+            .limit(5)
+        : Promise.resolve(emptyResult)
+
       const [clientesRes, equiposRes, tramitesRes, repuestosRes, movimientosRes] = await Promise.all([
-        supabase.from("clientes").select("*"),
-        supabase.from("equipos").select("*"),
-        supabase.from("tramites").select("*, clientes(nombre)"),
-        supabase.from("repuestos").select("id, stock_actual"),
-        supabase
-          .from("movimientos_repuestos")
-          .select("id, tipo, cantidad, motivo, fecha_movimiento, created_at, repuestos(nombre, codigo)")
-          .order("fecha_movimiento", { ascending: false })
-          .limit(5),
+        clientesQuery,
+        equiposQuery,
+        tramitesQuery,
+        repuestosQuery,
+        movimientosQuery,
       ])
 
       const clientesData = clientesRes.data || []
@@ -342,7 +356,7 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }, [demoMode, loadDemoDashboard, resolveClientCoords])
+  }, [canViewClientes, canViewEquipos, canViewRepuestos, canViewTramites, demoMode, loadDemoDashboard, resolveClientCoords])
 
   useEffect(() => {
     loadDashboardData()

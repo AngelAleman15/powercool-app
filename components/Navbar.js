@@ -3,11 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuthSession } from "@/lib/useAuthSession"
-import { isPublicPath } from "@/lib/roleAccess"
+import { canAccessPath, isPublicPath } from "@/lib/roleAccess"
 
 export default function Navbar() {
   const pathname = usePathname()
-  const { loading, user, displayName, role, signOut } = useAuthSession()
+  const { loading, user, displayName, role, permissions, signOut } = useAuthSession()
   const shouldShowNav = !isPublicPath(pathname || "/")
 
   if (!shouldShowNav) return null
@@ -16,6 +16,8 @@ export default function Navbar() {
     if (path === "/") return pathname === "/"
     return pathname.startsWith(path)
   }
+
+  const canOpenAdmin = canAccessPath("/admin", role, permissions)
 
   return (
     <>
@@ -79,6 +81,19 @@ export default function Navbar() {
                 Trámites
               </Link>
 
+              {canOpenAdmin && (
+                <Link
+                  href="/admin"
+                  className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
+                    isActive("/admin")
+                      ? "text-white border-white"
+                      : "text-[#d5e8ff] border-transparent hover:text-white"
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
+
             </div>
 
             <div className="flex items-center gap-2 text-[#eaf3ff]">
@@ -116,7 +131,7 @@ export default function Navbar() {
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[#2e5f9f] bg-[linear-gradient(90deg,#0f4f9f_0%,#1f6cca_56%,#2c7fe0_100%)] safe-area-inset-bottom">
-        <div className="grid grid-cols-4 h-16">
+        <div className={`grid ${canOpenAdmin ? "grid-cols-5" : "grid-cols-4"} h-16`}>
           <Link
             href="/"
             className={`flex flex-col items-center justify-center gap-1 transition-all ${
@@ -172,6 +187,22 @@ export default function Navbar() {
             </svg>
             <span className="text-xs font-medium">Trámites</span>
           </Link>
+
+          {canOpenAdmin && (
+            <Link
+              href="/admin"
+              className={`flex flex-col items-center justify-center gap-1 transition-all ${
+                isActive("/admin")
+                  ? "text-white"
+                  : "text-[#d5e8ff] active:bg-white/10"
+              }`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a2 2 0 012 2v1.09a7.002 7.002 0 014.338 2.67l.773-.773a2 2 0 112.828 2.828l-.773.773A7.002 7.002 0 0120.91 12H22a2 2 0 110 4h-1.09a7.002 7.002 0 01-2.67 4.338l.773.773a2 2 0 11-2.828 2.828l-.773-.773A7.002 7.002 0 0114 21.91V23a2 2 0 11-4 0v-1.09a7.002 7.002 0 01-4.338-2.67l-.773.773a2 2 0 11-2.828-2.828l.773-.773A7.002 7.002 0 013.09 14H2a2 2 0 110-4h1.09a7.002 7.002 0 012.67-4.338l-.773-.773a2 2 0 112.828-2.828l.773.773A7.002 7.002 0 0110 4.09V3a2 2 0 114 0v1.09A7.002 7.002 0 0118.338 6.76l.773-.773A2 2 0 1122 8.815l-.773.773A7.002 7.002 0 0121.91 12H23a2 2 0 110 4h-1.09a7.002 7.002 0 01-2.67 4.338l.773.773a2 2 0 11-2.828 2.828l-.773-.773A7.002 7.002 0 0114 21.91V23a2 2 0 11-4 0v-1.09a7.002 7.002 0 01-4.338-2.67l-.773.773a2 2 0 11-2.828-2.828l.773-.773A7.002 7.002 0 013.09 14H2a2 2 0 110-4h1.09a7.002 7.002 0 012.67-4.338l-.773-.773a2 2 0 112.828-2.828l.773.773A7.002 7.002 0 0110 4.09V3a2 2 0 114 0v1.09" />
+              </svg>
+              <span className="text-xs font-medium">Admin</span>
+            </Link>
+          )}
 
         </div>
       </nav>

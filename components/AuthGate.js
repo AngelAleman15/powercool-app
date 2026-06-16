@@ -8,11 +8,11 @@ import { canAccessPath, isPublicPath } from "@/lib/roleAccess"
 export default function AuthGate({ children }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { loading, user, role } = useAuthSession()
+  const { loading, user, role, permissions } = useAuthSession()
 
   const currentPath = useMemo(() => pathname || "/", [pathname])
   const publicPath = useMemo(() => isPublicPath(currentPath), [currentPath])
-  const hasAccess = useMemo(() => canAccessPath(currentPath, role), [currentPath, role])
+  const hasAccess = useMemo(() => canAccessPath(currentPath, role, permissions), [currentPath, role, permissions])
 
   useEffect(() => {
     if (loading) return

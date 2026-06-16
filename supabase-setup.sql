@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
   full_name TEXT,
-  role TEXT NOT NULL DEFAULT 'visor' CHECK (role IN ('admin', 'tecnico', 'visor')),
+  role TEXT NOT NULL DEFAULT 'visor' CHECK (role IN ('admin', 'owner', 'tecnico', 'visor')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
@@ -158,7 +158,53 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT COALESCE(public.current_user_role() IN ('admin', 'tecnico'), false);
+  SELECT COALESCE(public.current_user_role() IN ('admin', 'owner', 'tecnico'), false);
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_manage_roles()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(public.current_user_role() IN ('admin', 'owner'), false);
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_access_module(p_module TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_role TEXT := COALESCE(public.current_user_role(), 'visor');
+  v_allowed BOOLEAN;
+BEGIN
+  IF v_role = 'admin' THEN
+    RETURN true;
+  END IF;
+
+  SELECT rp.can_access
+    INTO v_allowed
+  FROM public.role_permissions rp
+  WHERE rp.role = v_role
+    AND rp.module = p_module
+  LIMIT 1;
+
+  IF FOUND THEN
+    RETURN COALESCE(v_allowed, false);
+  END IF;
+
+  IF v_role = 'owner' THEN
+    RETURN true;
+  ELSIF v_role = 'tecnico' THEN
+    RETURN p_module IN ('dashboard', 'equipos', 'tramites');
+  END IF;
+
+  RETURN p_module IN ('dashboard', 'equipos');
+END;
 $$;
 
 -- Bloquea cambios de role para usuarios no admin, incluso sobre su propio perfil.
@@ -169,8 +215,12 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NEW.role IS DISTINCT FROM OLD.role AND COALESCE(public.current_user_role(), 'visor') <> 'admin' THEN
+  IF NEW.role IS DISTINCT FROM OLD.role AND NOT public.can_manage_roles() THEN
     RAISE EXCEPTION 'No tienes permisos para cambiar el rol.';
+  END IF;
+
+  IF NEW.role = 'admin' AND COALESCE(public.current_user_role(), 'visor') <> 'admin' THEN
+    RAISE EXCEPTION 'Solo admin puede asignar el rol admin.';
   END IF;
 
   RETURN NEW;
@@ -193,7 +243,7 @@ DROP POLICY IF EXISTS "clientes_select_authenticated" ON clientes;
 DROP POLICY IF EXISTS "clientes_write_staff" ON clientes;
 CREATE POLICY "clientes_select_authenticated" ON clientes
   FOR SELECT TO authenticated
-  USING (true);
+  USING (public.can_access_module('clientes'));
 
 CREATE POLICY "clientes_write_staff" ON clientes
   FOR ALL TO authenticated
@@ -204,7 +254,7 @@ DROP POLICY IF EXISTS "equipos_select_authenticated" ON equipos;
 DROP POLICY IF EXISTS "equipos_write_staff" ON equipos;
 CREATE POLICY "equipos_select_authenticated" ON equipos
   FOR SELECT TO authenticated
-  USING (true);
+  USING (public.can_access_module('equipos'));
 
 CREATE POLICY "equipos_write_staff" ON equipos
   FOR ALL TO authenticated
@@ -216,16 +266,96 @@ DROP POLICY IF EXISTS "profiles_update_own_or_admin" ON profiles;
 DROP POLICY IF EXISTS "profiles_insert_own_or_admin" ON profiles;
 CREATE POLICY "profiles_select_own_or_admin" ON profiles
   FOR SELECT TO authenticated
-  USING (id = auth.uid() OR public.current_user_role() = 'admin');
+  USING (
+    id = auth.uid()
+    OR public.current_user_role() = 'admin'
+    OR (public.current_user_role() = 'owner' AND role <> 'admin')
+  );
 
 CREATE POLICY "profiles_update_own_or_admin" ON profiles
   FOR UPDATE TO authenticated
-  USING (id = auth.uid() OR public.current_user_role() = 'admin')
-  WITH CHECK (id = auth.uid() OR public.current_user_role() = 'admin');
+  USING (
+    id = auth.uid()
+    OR public.current_user_role() = 'admin'
+    OR (public.current_user_role() = 'owner' AND role <> 'admin')
+  )
+  WITH CHECK (
+    id = auth.uid()
+    OR public.current_user_role() = 'admin'
+    OR (public.current_user_role() = 'owner' AND role <> 'admin')
+  );
 
 CREATE POLICY "profiles_insert_own_or_admin" ON profiles
   FOR INSERT TO authenticated
-  WITH CHECK (id = auth.uid() OR public.current_user_role() = 'admin');
+  WITH CHECK (
+    id = auth.uid()
+    OR public.current_user_role() = 'admin'
+    OR public.current_user_role() = 'owner'
+  );
+
+-- Permisos por modulo para roles no privilegiados.
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role TEXT NOT NULL CHECK (role IN ('admin', 'owner', 'tecnico', 'visor')),
+  module TEXT NOT NULL CHECK (module IN ('dashboard', 'clientes', 'equipos', 'tramites', 'repuestos', 'admin')),
+  can_access BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  PRIMARY KEY (role, module)
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_module ON role_permissions(module);
+
+DROP TRIGGER IF EXISTS trg_role_permissions_updated_at ON role_permissions;
+CREATE TRIGGER trg_role_permissions_updated_at
+BEFORE UPDATE ON role_permissions
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DO $$
+BEGIN
+  INSERT INTO public.role_permissions (role, module, can_access)
+  VALUES
+    ('admin', 'dashboard', true),
+    ('admin', 'clientes', true),
+    ('admin', 'equipos', true),
+    ('admin', 'tramites', true),
+    ('admin', 'repuestos', true),
+    ('admin', 'admin', true),
+    ('owner', 'dashboard', true),
+    ('owner', 'clientes', true),
+    ('owner', 'equipos', true),
+    ('owner', 'tramites', true),
+    ('owner', 'repuestos', true),
+    ('owner', 'admin', true),
+    ('tecnico', 'dashboard', true),
+    ('tecnico', 'clientes', false),
+    ('tecnico', 'equipos', true),
+    ('tecnico', 'tramites', true),
+    ('tecnico', 'repuestos', false),
+    ('tecnico', 'admin', false),
+    ('visor', 'dashboard', true),
+    ('visor', 'clientes', false),
+    ('visor', 'equipos', true),
+    ('visor', 'tramites', false),
+    ('visor', 'repuestos', false),
+    ('visor', 'admin', false)
+  ON CONFLICT (role, module)
+  DO UPDATE SET can_access = EXCLUDED.can_access,
+                updated_at = TIMEZONE('utc', NOW());
+END $$;
+
+ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "role_permissions_select_authenticated" ON role_permissions;
+DROP POLICY IF EXISTS "role_permissions_write_privileged" ON role_permissions;
+CREATE POLICY "role_permissions_select_authenticated" ON role_permissions
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "role_permissions_write_privileged" ON role_permissions
+  FOR ALL TO authenticated
+  USING (public.can_manage_roles())
+  WITH CHECK (public.can_manage_roles());
 
 -- Comentarios informativos
 COMMENT ON TABLE clientes IS 'Tabla de clientes para el sistema PowerCool';
@@ -273,7 +403,7 @@ DROP POLICY IF EXISTS "tramites_select_authenticated" ON tramites;
 DROP POLICY IF EXISTS "tramites_write_staff" ON tramites;
 CREATE POLICY "tramites_select_authenticated" ON tramites
   FOR SELECT TO authenticated
-  USING (true);
+  USING (public.can_access_module('tramites'));
 
 CREATE POLICY "tramites_write_staff" ON tramites
   FOR ALL TO authenticated
@@ -465,7 +595,7 @@ DROP POLICY IF EXISTS "repuestos_select_authenticated" ON repuestos;
 DROP POLICY IF EXISTS "repuestos_write_staff" ON repuestos;
 CREATE POLICY "repuestos_select_authenticated" ON repuestos
   FOR SELECT TO authenticated
-  USING (true);
+  USING (public.can_access_module('repuestos'));
 
 CREATE POLICY "repuestos_write_staff" ON repuestos
   FOR ALL TO authenticated
@@ -477,7 +607,7 @@ DROP POLICY IF EXISTS "movimientos_select_authenticated" ON movimientos_repuesto
 DROP POLICY IF EXISTS "movimientos_write_staff" ON movimientos_repuestos;
 CREATE POLICY "movimientos_select_authenticated" ON movimientos_repuestos
   FOR SELECT TO authenticated
-  USING (true);
+  USING (public.can_access_module('repuestos'));
 
 CREATE POLICY "movimientos_write_staff" ON movimientos_repuestos
   FOR ALL TO authenticated
@@ -488,7 +618,7 @@ DROP POLICY IF EXISTS "inv_auditoria_select_authenticated" ON inventario_auditor
 DROP POLICY IF EXISTS "inv_auditoria_write_staff" ON inventario_auditoria;
 CREATE POLICY "inv_auditoria_select_authenticated" ON inventario_auditoria
   FOR SELECT TO authenticated
-  USING (true);
+  USING (public.can_access_module('repuestos'));
 
 CREATE POLICY "inv_auditoria_write_staff" ON inventario_auditoria
   FOR ALL TO authenticated
