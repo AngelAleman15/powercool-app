@@ -417,13 +417,13 @@ export default function Home() {
   ]
 
   return (
-    <div className="px-3 sm:px-6 lg:px-12 py-5 sm:py-8 text-[#223f66]">
-      <div className="space-y-6">
-        <section className="pb-3 border-b border-[#cad7e8]">
+    <div className="mx-auto max-w-[1440px] px-4 py-7 text-[#0f1e38] sm:px-8 sm:py-10 lg:px-10">
+      <div className="space-y-8">
+        <section className="pb-6 border-b border-slate-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-2xl sm:text-4xl font-bold text-[#234876] leading-tight">Bienvenido, {authLoading ? "..." : displayName}</h1>
-              <p className="text-base sm:text-2xl font-semibold text-[#5a7194] mt-1">Resumen General de Clientes y Equipos</p>
+              <h1 className="text-2xl sm:text-[32px] font-bold tracking-[-0.04em] text-slate-900 leading-tight">¡Bienvenido, {authLoading ? "..." : displayName}!</h1>
+              <p className="text-sm sm:text-base font-medium text-slate-500 mt-2">Aquí tienes un resumen actualizado de tu operación.</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs sm:text-sm font-semibold text-[#5e7697]">
@@ -441,7 +441,7 @@ export default function Home() {
 
         <section className="flex gap-3 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-2 xl:grid-cols-4 md:overflow-visible items-stretch">
           {statCards.map((card) => (
-            <div key={card.title} className="min-w-[17rem] md:min-w-0 snap-start rounded-md border border-[#d7e0ed] bg-[#f9fbff] px-4 py-3 shadow-[0_2px_7px_rgba(36,84,145,.08)] flex items-center">
+            <div key={card.title} className="min-w-[17rem] md:min-w-0 snap-start rounded-2xl border border-slate-100 bg-white px-5 py-5 shadow-[0_12px_30px_rgba(15,23,42,.06)] flex items-center">
               <div className="flex items-center gap-2.5 w-full">
                 <div className={`h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full ${card.color} flex items-center justify-center p-1`}>
                   <Image src={card.icon} alt={card.alt} width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
@@ -458,7 +458,7 @@ export default function Home() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
             <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
               <h2 className="text-base font-bold text-[#284a76]">Listado de Clientes</h2>
             </div>
@@ -533,7 +533,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
             <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
               <h2 className="text-base font-bold text-[#284a76]">Mapa de Clientes</h2>
             </div>
@@ -552,7 +552,7 @@ export default function Home() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
             <div className="px-4 sm:px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-xl sm:text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
             </div>
@@ -584,7 +584,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-md border border-[#d1dcec] bg-[#f7faff] overflow-hidden shadow-[0_6px_16px_rgba(36,84,145,.11)]">
+          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
             <div className="px-4 sm:px-6 py-4 border-b border-[#dbe4f3]">
               <h2 className="text-xl sm:text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
             </div>

@@ -5,206 +5,84 @@ import { usePathname } from "next/navigation"
 import { useAuthSession } from "@/lib/useAuthSession"
 import { canAccessPath, isPublicPath } from "@/lib/roleAccess"
 
+const icons = {
+  panel: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" />,
+  clientes: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-10a4 4 0 1 0 0-8m-8 8a4 4 0 1 0 0-8m8 10a4 4 0 0 1 4 4v2" />,
+  equipos: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14v4H5V5Zm2 4v10m10-10v10M9 13h6m-3-4v8" />,
+  tramites: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2m-6 0a3 3 0 0 0 6 0m-6 0a3 3 0 0 1 6 0m-6 7h6m-6 4h4" />,
+  admin: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-3.5a7.4 7.4 0 0 0-.1-1.2l2-1.5-2-3.5-2.3.9a8 8 0 0 0-2-1.2L14.7 3h-4l-.3 2.4a8 8 0 0 0-2 1.2l-2.3-.9-2 3.5 2 1.5A7.4 7.4 0 0 0 6 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.3-.9a8 8 0 0 0 2 1.2l.3 2.4h4l.3-2.4a8 8 0 0 0 2-1.2l2.3.9 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z" />,
+}
+
+function NavIcon({ name }) {
+  return <svg aria-hidden="true" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icons[name]}</svg>
+}
+
+function Brand({ compact = false }) {
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] shadow-[0_10px_22px_rgba(8,94,205,.32)]">
+        <svg aria-hidden="true" className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg>
+      </div>
+      <div>
+        <p className={`text-lg font-bold tracking-[-0.03em] ${compact ? "text-slate-900" : "text-white"}`}>ClimaControl</p>
+        <p className={`text-sm ${compact ? "text-slate-500" : "text-slate-400"}`}>Gestión técnica</p>
+      </div>
+    </div>
+  )
+}
+
 export default function Navbar() {
   const pathname = usePathname()
   const { loading, user, displayName, role, permissions, signOut } = useAuthSession()
   const shouldShowNav = !isPublicPath(pathname || "/")
+  const canOpenAdmin = canAccessPath("/admin", role, permissions)
 
   if (!shouldShowNav) return null
 
-  const isActive = (path) => {
-    if (path === "/") return pathname === "/"
-    return pathname.startsWith(path)
-  }
-
-  const canOpenAdmin = canAccessPath("/admin", role, permissions)
+  const isActive = (path) => path === "/" ? pathname === "/" : pathname.startsWith(path)
+  const navItems = [
+    { href: "/", label: "Panel", icon: "panel" },
+    { href: "/clientes", label: "Clientes", icon: "clientes" },
+    { href: "/equipos", label: "Equipos", icon: "equipos" },
+    { href: "/tramites", label: "Trámites", icon: "tramites" },
+    ...(canOpenAdmin ? [{ href: "/admin", label: "Configuración", icon: "admin" }] : []),
+  ]
 
   return (
     <>
-      {/* Desktop Top Navigation */}
-      <nav className="hidden md:block sticky top-0 z-[1000] border-b border-[#2e5f9f] bg-[linear-gradient(90deg,#0f4f9f_0%,#1f6cca_56%,#2c7fe0_100%)] shadow-[0_4px_14px_rgba(17,70,130,.35)]">
-        <div className="max-w-6xl mx-auto px-7 lg:px-10">
-          <div className="flex items-center justify-between h-16 gap-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-              <div className="p-1.5 bg-[#f2f5fa] rounded-md group-hover:scale-105 transition-transform shadow-inner border border-[#cad8eb]">
-                <svg className="w-5 h-5 text-[#0f4f9f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 9h14M3 13h18M5 17h14M7 5h10" />
-                </svg>
-              </div>
-              <span className="text-lg font-bold text-[#e9f2ff] tracking-wide">GESTIÓN DE AIRES ACONDICIONADOS</span>
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[280px] flex-col border-r border-white/10 bg-[radial-gradient(circle_at_10%_100%,#173a66_0,transparent_34%),linear-gradient(145deg,#061426_0%,#071c35_58%,#03111f_100%)] px-4 py-7 md:flex">
+        <Link href="/" aria-label="Ir al panel" className="mb-9"><Brand /></Link>
+        <nav aria-label="Navegación principal" className="space-y-2">
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className={`flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-semibold transition-all ${isActive(item.href) ? "bg-gradient-to-r from-[#1976e9] to-[#1758aa] text-white shadow-[0_10px_24px_rgba(18,106,220,.3)]" : "text-slate-300 hover:bg-white/8 hover:text-white"}`}>
+              <NavIcon name={item.icon} />
+              {item.label}
             </Link>
-
-            {/* Navigation Links */}
-            <div className="flex items-center gap-3">
-              <Link
-                href="/"
-                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
-                  isActive("/") && pathname === "/"
-                    ? "text-white border-white"
-                    : "text-[#d5e8ff] border-transparent hover:text-white"
-                }`}
-              >
-                Inicio
-              </Link>
-
-              <Link
-                href="/clientes"
-                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
-                  isActive("/clientes")
-                    ? "text-white border-white"
-                    : "text-[#d5e8ff] border-transparent hover:text-white"
-                }`}
-              >
-                Clientes
-              </Link>
-
-              <Link
-                href="/equipos"
-                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
-                  isActive("/equipos")
-                    ? "text-white border-white"
-                    : "text-[#d5e8ff] border-transparent hover:text-white"
-                }`}
-              >
-                Inventario
-              </Link>
-
-              <Link
-                href="/tramites"
-                className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
-                  isActive("/tramites")
-                    ? "text-white border-white"
-                    : "text-[#d5e8ff] border-transparent hover:text-white"
-                }`}
-              >
-                Trámites
-              </Link>
-
-              {canOpenAdmin && (
-                <Link
-                  href="/admin"
-                  className={`px-3 py-2 text-sm font-semibold transition-all border-b-2 ${
-                    isActive("/admin")
-                      ? "text-white border-white"
-                      : "text-[#d5e8ff] border-transparent hover:text-white"
-                  }`}
-                >
-                  Admin
-                </Link>
-              )}
-
+          ))}
+        </nav>
+        <div className="mt-auto border-t border-white/10 px-3 pt-6">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-[#738bdc] to-[#293d71] text-sm font-bold text-white">{(displayName || "U").slice(0, 2).toUpperCase()}</div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">{loading ? "Cargando..." : displayName}</p>
+              <p className="truncate text-xs capitalize text-slate-400">{role || "Usuario"}</p>
             </div>
-
-            <div className="flex items-center gap-2 text-[#eaf3ff]">
-              <span className="text-sm font-semibold">{loading ? "Cargando..." : `Hola, ${displayName}`}</span>
-              {!loading && user && (
-                <span className="text-[11px] uppercase tracking-wide px-2 py-1 rounded-full bg-white/15 border border-white/30">
-                  {role}
-                </span>
-              )}
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#f3cf9b] to-[#c98953] border-2 border-[#dce9fa]" />
-              {!loading && user ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    signOut()
-                  }}
-                  className="ml-1 text-xs font-semibold px-2 py-1 rounded-md border border-white/40 text-white hover:bg-white/10 transition-colors"
-                >
-                  Salir
-                </button>
-              ) : (
-                !loading && (
-                  <Link
-                    href="/auth"
-                    className="ml-1 text-xs font-semibold px-2 py-1 rounded-md border border-white/40 text-white hover:bg-white/10 transition-colors"
-                  >
-                    Entrar
-                  </Link>
-                )
-              )}
-            </div>
+            {!loading && user && <button type="button" onClick={signOut} aria-label="Cerrar sesión" className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4 4-5-4-5m4 5H3" /></svg></button>}
           </div>
         </div>
-      </nav>
+      </aside>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[#2e5f9f] bg-[linear-gradient(90deg,#0f4f9f_0%,#1f6cca_56%,#2c7fe0_100%)] safe-area-inset-bottom">
-        <div className={`grid ${canOpenAdmin ? "grid-cols-5" : "grid-cols-4"} h-16`}>
-          <Link
-            href="/"
-            className={`flex flex-col items-center justify-center gap-1 transition-all ${
-              pathname === "/"
-                ? "text-white"
-                : "text-[#d5e8ff] active:bg-white/10"
-            }`}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="text-xs font-medium">Inicio</span>
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+        <Link href="/" aria-label="Ir al panel"><Brand compact /></Link>
+        {!loading && user && <button type="button" onClick={signOut} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">Salir</button>}
+      </header>
+      <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-50 flex border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] md:hidden">
+        {navItems.map((item) => (
+          <Link key={item.href} href={item.href} className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold ${isActive(item.href) ? "text-[#1264d5]" : "text-slate-500"}`}>
+            <NavIcon name={item.icon} />
+            <span className="truncate">{item.label}</span>
           </Link>
-
-          <Link
-            href="/equipos"
-            className={`flex flex-col items-center justify-center gap-1 transition-all ${
-              isActive("/equipos")
-                ? "text-white"
-                : "text-[#d5e8ff] active:bg-white/10"
-            }`}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-            </svg>
-            <span className="text-xs font-medium">Equipos</span>
-          </Link>
-
-          <Link
-            href="/clientes"
-            className={`flex flex-col items-center justify-center gap-1 transition-all ${
-              isActive("/clientes")
-                ? "text-white"
-                : "text-[#d5e8ff] active:bg-white/10"
-            }`}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span className="text-xs font-medium">Clientes</span>
-          </Link>
-
-          <Link
-            href="/tramites"
-            className={`flex flex-col items-center justify-center gap-1 transition-all ${
-              isActive("/tramites")
-                ? "text-white"
-                : "text-[#d5e8ff] active:bg-white/10"
-            }`}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <span className="text-xs font-medium">Trámites</span>
-          </Link>
-
-          {canOpenAdmin && (
-            <Link
-              href="/admin"
-              className={`flex flex-col items-center justify-center gap-1 transition-all ${
-                isActive("/admin")
-                  ? "text-white"
-                  : "text-[#d5e8ff] active:bg-white/10"
-              }`}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a2 2 0 012 2v1.09a7.002 7.002 0 014.338 2.67l.773-.773a2 2 0 112.828 2.828l-.773.773A7.002 7.002 0 0120.91 12H22a2 2 0 110 4h-1.09a7.002 7.002 0 01-2.67 4.338l.773.773a2 2 0 11-2.828 2.828l-.773-.773A7.002 7.002 0 0114 21.91V23a2 2 0 11-4 0v-1.09a7.002 7.002 0 01-4.338-2.67l-.773.773a2 2 0 11-2.828-2.828l.773-.773A7.002 7.002 0 013.09 14H2a2 2 0 110-4h1.09a7.002 7.002 0 012.67-4.338l-.773-.773a2 2 0 112.828-2.828l.773.773A7.002 7.002 0 0110 4.09V3a2 2 0 114 0v1.09A7.002 7.002 0 0118.338 6.76l.773-.773A2 2 0 1122 8.815l-.773.773A7.002 7.002 0 0121.91 12H23a2 2 0 110 4h-1.09a7.002 7.002 0 01-2.67 4.338l.773.773a2 2 0 11-2.828 2.828l-.773-.773A7.002 7.002 0 0114 21.91V23a2 2 0 11-4 0v-1.09a7.002 7.002 0 01-4.338-2.67l-.773.773a2 2 0 11-2.828-2.828l.773-.773A7.002 7.002 0 013.09 14H2a2 2 0 110-4h1.09a7.002 7.002 0 012.67-4.338l-.773-.773a2 2 0 112.828-2.828l.773.773A7.002 7.002 0 0110 4.09V3a2 2 0 114 0v1.09" />
-              </svg>
-              <span className="text-xs font-medium">Admin</span>
-            </Link>
-          )}
-
-        </div>
+        ))}
       </nav>
     </>
   )
