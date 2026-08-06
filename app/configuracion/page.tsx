@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import NotificationSettings from "@/components/NotificationSettings"
+import PageHeader from "@/components/PageHeader"
 
 type Setting = {
   title: string
@@ -34,16 +35,11 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="mx-auto max-w-[1180px] px-5 py-8 text-slate-900 sm:px-8 lg:px-9 lg:py-10">
-      <header className="mb-10 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[30px] font-bold tracking-[-0.045em]">Configuración</h1>
-          <p className="mt-1 text-[15px] font-medium text-slate-500">Administra los ajustes generales del sistema y de tu empresa.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button type="button" aria-label="Notificaciones en preparación" onClick={() => setSelected("Notificaciones")} className="grid h-12 w-12 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:bg-slate-50">♧</button>
-          <Link href="/escanear-qr" className="hidden h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold shadow-sm transition hover:bg-slate-50 sm:flex">⌗ Escanear QR</Link>
-        </div>
-      </header>
+      <PageHeader
+        title="Configuración"
+        description="Administra los ajustes generales del sistema y de tu empresa."
+        actions={<><button type="button" aria-label="Notificaciones en preparación" onClick={() => setSelected("Notificaciones")} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:bg-slate-50">♧</button><Link href="/escanear-qr" className="hidden h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold shadow-sm transition hover:bg-slate-50 sm:flex">⌗ Escanear QR</Link></>}
+      />
 
       {selected === "Notificaciones" && (
         <section className="mb-6 rounded-2xl border border-blue-100 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,.06)]">

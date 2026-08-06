@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
 import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
+import PageHeader from "@/components/PageHeader"
 
 type Service = {
   id: string | number
@@ -188,16 +189,11 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-[1380px] px-5 py-6 text-slate-900 sm:px-7 lg:px-8 lg:py-8">
-      <header className="mb-7 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-bold tracking-[-0.045em] sm:text-[30px]">¡Bienvenido, {displayName || "usuario"}!</h1>
-          <p className="mt-1 text-[15px] font-medium text-slate-500">Aquí tienes un resumen actualizado de tu operación.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button type="button" aria-label="Notificaciones en preparación" onClick={() => setNotificationsOpen(true)} className="grid h-12 w-12 place-items-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50"><Icon name="bell" className="h-5 w-5" /></button>
-          <Link href="/escanear-qr" className="hidden h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold shadow-sm transition hover:bg-slate-50 sm:flex"><Icon name="qr" className="h-5 w-5" />Escanear QR</Link>
-        </div>
-      </header>
+      <PageHeader
+        title={<>¡Bienvenido, {displayName || "usuario"}!</>}
+        description="Aquí tienes un resumen actualizado de tu operación."
+        actions={<><button type="button" aria-label="Notificaciones en preparación" onClick={() => setNotificationsOpen(true)} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50"><Icon name="bell" className="h-5 w-5" /></button><Link href="/escanear-qr" className="hidden h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold shadow-sm transition hover:bg-slate-50 sm:flex"><Icon name="qr" className="h-5 w-5" />Escanear QR</Link></>}
+      />
 
       {notificationsOpen && <div className="mb-7 flex items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm text-blue-900"><div><p className="font-bold">Centro de notificaciones <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">WIP</span></p><p className="mt-1 text-blue-700">Preparado para alertas de equipos fuera de servicio, mantenimientos próximos y falta de stock.</p></div><button type="button" onClick={() => setNotificationsOpen(false)} className="font-semibold text-blue-700">Cerrar</button></div>}
 
