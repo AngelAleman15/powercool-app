@@ -1,611 +1,216 @@
 "use client"
 
-import Image from "next/image"
-import { useCallback, useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import { useDemoMode } from "@/lib/useDemoMode"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
+import { useDemoMode } from "@/lib/useDemoMode"
 import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
-import UruguayMap from "@/components/UruguayMap"
 
-type ClientSummary = {
+type Service = {
   id: string | number
-  cliente: string
-  ubicacion: string
-  equipos: number
-  estado: "activo" | "mantenimiento"
-}
-
-type Tramite = {
-  id: number
-  tipo: string
-  estado: string
-  created_at: string
+  tipo?: string
+  estado?: string
+  created_at?: string
   fecha_programada?: string
   cliente_id?: string
+  equipo_id?: string
   clientes?: { nombre?: string } | Array<{ nombre?: string }>
-  [key: string]: unknown
+  equipos?: { marca?: string; modelo?: string } | Array<{ marca?: string; modelo?: string }>
 }
 
-type ClienteGeoInput = {
-  latitud?: number | string | null
-  latitude?: number | string | null
-  longitud?: number | string | null
-  longitude?: number | string | null
-  direccion?: string | null
-  ciudad?: string | null
+type Equipment = { id: string | number; marca?: string; modelo?: string; cliente_id?: string; created_at?: string }
+type Client = { id: string | number; nombre?: string }
+
+const iconPaths = {
+  equipment: <><path d="M5 5h14v4H5z" /><path d="M7 9v10m10-10v10M9 13h6m-3-4v8" /></>,
+  users: <><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20" /><circle cx="9.5" cy="7" r="3" /><path d="M16 4.5a3 3 0 0 1 0 5.8m2 10V19a4 4 0 0 0-2.4-3.7" /></>,
+  alert: <><path d="m12 3 9 17H3L12 3Z" /><path d="M12 9v4m0 3h.01" /></>,
+  boxes: <><path d="m12 2 7 4v8l-7 4-7-4V6l7-4Z" /><path d="m5 6 7 4 7-4M12 10v8" /><path d="m19 11 3 1.7v5.6L17 21l-3-1.7" /></>,
+  bell: <><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
+  qr: <><path d="M4 4h5v5H4zM15 4h5v5h-5zM4 15h5v5H4zM15 15h2m3 0v2m-5 3h2m1-3h2v3" /></>,
+  wrench: <><path d="M14.7 6.3a4 4 0 0 0-5 5L3 18l3 3 6.7-6.7a4 4 0 0 0 5-5l-2.7 2.1-2.1-2.1 1.8-3Z" /></>,
+  chart: <><path d="M4 19h16" /><path d="M7 16v-4m5 4V7m5 9v-7" /></>,
+  chevron: <path d="m9 18 6-6-6-6" />,
 }
 
-type InventoryMovement = {
-  id: string
-  tipo: "ingreso" | "salida" | "ajuste"
-  detalle: string
-  whenLabel: string
+function Icon({ name, className = "" }: { name: keyof typeof iconPaths; className?: string }) {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className}>{iconPaths[name]}</svg>
 }
 
-type UpcomingMaintenance = {
-  id: number
-  title: string
-  dateLabel: string
+function clientName(service: Service, clients: Client[]) {
+  const joined = Array.isArray(service.clientes) ? service.clientes[0] : service.clientes
+  return joined?.nombre || clients.find((client) => String(client.id) === String(service.cliente_id))?.nombre || "Cliente sin asignar"
 }
 
-type MapPoint = {
-  id: string
-  label: string
-  lat: number
-  lng: number
-  color: string
+function equipmentName(service: Service, equipment: Equipment[]) {
+  const joined = Array.isArray(service.equipos) ? service.equipos[0] : service.equipos
+  if (joined?.marca || joined?.modelo) return `${joined.marca || "Equipo"} ${joined.modelo || ""}`.trim()
+  const found = equipment.find((item) => String(item.id) === String(service.equipo_id))
+  return found ? `${found.marca || "Equipo"} ${found.modelo || ""}`.trim() : "Equipo sin identificar"
 }
 
-const CITY_COORDS_UY: Record<string, { lat: number; lng: number }> = {
-  montevideo: { lat: -34.9011, lng: -56.1645 },
-  canelones: { lat: -34.5228, lng: -56.2778 },
-  maldonado: { lat: -34.9068, lng: -54.958 },
-  "punta del este": { lat: -34.9683, lng: -54.95 },
-  rocha: { lat: -34.4833, lng: -54.3333 },
-  chuy: { lat: -33.6971, lng: -53.4593 },
-  "la paloma": { lat: -34.6639, lng: -54.1645 },
-  salto: { lat: -31.3833, lng: -57.9667 },
-  paysandu: { lat: -32.3214, lng: -58.0756 },
-  "paysandú": { lat: -32.3214, lng: -58.0756 },
-  mercedes: { lat: -33.2524, lng: -58.0305 },
-  tacuarembo: { lat: -31.7333, lng: -55.9833 },
-  "tacuarembó": { lat: -31.7333, lng: -55.9833 },
-  rivera: { lat: -30.9053, lng: -55.5508 },
-  melo: { lat: -32.3667, lng: -54.1833 },
-  artigas: { lat: -30.4, lng: -56.4667 },
-  durazno: { lat: -33.4131, lng: -56.5006 },
-  florida: { lat: -34.0994, lng: -56.2142 },
-  "san jose de mayo": { lat: -34.3375, lng: -56.7136 },
-  "san josé de mayo": { lat: -34.3375, lng: -56.7136 },
-  "colonia del sacramento": { lat: -34.4698, lng: -57.8442 },
-  "fray bentos": { lat: -33.1325, lng: -58.2956 },
-  minas: { lat: -34.3759, lng: -55.2377 },
-  "treinta y tres": { lat: -33.2333, lng: -54.3833 },
-  trinidad: { lat: -33.5442, lng: -56.8886 },
+function relativeDate(value?: string) {
+  if (!value) return "Recientemente"
+  const days = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86400000))
+  if (days === 0) return "Hoy"
+  if (days === 1) return "Ayer"
+  if (days < 7) return `Hace ${days} días`
+  if (days < 14) return "Hace 1 semana"
+  return `Hace ${Math.floor(days / 7)} semanas`
 }
 
-const UNIFIED_LOGO_SIZE = 20
+function statusMeta(status?: string) {
+  if (status === "completado") return { label: "Operativo", dot: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-700" }
+  if (status === "en_proceso") return { label: "Requiere mantenimiento", dot: "bg-orange-500", chip: "bg-orange-100 text-orange-700" }
+  if (status === "cancelado") return { label: "Fuera de servicio", dot: "bg-red-600", chip: "bg-red-100 text-red-700" }
+  return { label: "Requiere mantenimiento", dot: "bg-orange-500", chip: "bg-orange-100 text-orange-700" }
+}
 
 export default function Home() {
-  const [stats, setStats] = useState({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
-  const [clientRows, setClientRows] = useState<ClientSummary[]>([])
-  const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
-  const [upcomingMaintenances, setUpcomingMaintenances] = useState<UpcomingMaintenance[]>([])
-  const [mapPoints, setMapPoints] = useState<MapPoint[]>([])
-  const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const [dashboardError, setDashboardError] = useState("")
+  const [error, setError] = useState("")
+  const [stats, setStats] = useState({ equipment: 0, clients: 0, pending: 0, components: 0 })
+  const [services, setServices] = useState<Service[]>([])
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const { displayName, permissions } = useAuthSession()
   const { demoMode } = useDemoMode()
-  const { displayName, loading: authLoading, permissions } = useAuthSession()
 
-  const canViewClientes = permissions?.clientes !== false
-  const canViewEquipos = permissions?.equipos !== false
-  const canViewTramites = permissions?.tramites !== false
-  const canViewRepuestos = permissions?.repuestos !== false
-
-  const getClienteNombre = (clientes: Tramite["clientes"]) => {
-    if (!clientes) return "Cliente"
-    if (Array.isArray(clientes)) return clientes[0]?.nombre || "Cliente"
-    return clientes.nombre || "Cliente"
-  }
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const normalizeCityKey = useCallback((city: string) =>
-    String(city || "")
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, ""), [])
-
-  const resolveClientCoords = useCallback(async (cliente: ClienteGeoInput): Promise<{ lat: number; lng: number } | null> => {
-    const lat = Number(cliente?.latitud ?? cliente?.latitude)
-    const lng = Number(cliente?.longitud ?? cliente?.longitude)
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      return { lat, lng }
-    }
-
-    const cityKey = normalizeCityKey(cliente?.ciudad || "")
-    const coords = CITY_COORDS_UY[cityKey]
-    return coords ? { lat: coords.lat, lng: coords.lng } : null
-  }, [normalizeCityKey])
-
-  const loadDemoDashboard = useCallback(() => {
-    const equiposByCliente = DEMO_EQUIPOS.reduce<Record<string, number>>((acc, e) => {
-      acc[e.cliente_id] = (acc[e.cliente_id] || 0) + 1
-      return acc
-    }, {})
-
-    const statusByCliente = DEMO_TRAMITES.reduce<Record<string, Tramite>>((acc, t) => {
-      if (!acc[t.cliente_id]) acc[t.cliente_id] = t
-      return acc
-    }, {})
-
-    setClientRows(
-      DEMO_CLIENTES.slice(0, 6).map((c) => {
-        const estado: ClientSummary["estado"] = ["pendiente", "en_proceso"].includes(statusByCliente[c.id]?.estado)
-          ? "mantenimiento"
-          : "activo"
-        return {
-          id: c.id,
-          cliente: c.nombre,
-          ubicacion: c.ciudad,
-          equipos: equiposByCliente[c.id] || 0,
-          estado,
-        }
-      })
-    )
-
-    setStats({
-      clientesActivos: DEMO_STATS.clientes,
-      maquinasInstaladas: DEMO_STATS.equipos,
-      unidadesStock: Math.max(8, Math.round(DEMO_STATS.equipos * 0.35)),
-      mantenimientosPendientes: DEMO_STATS.pendientes,
-    })
-
-    setMapPoints(
-      DEMO_CLIENTES.slice(0, 6).flatMap((c) => {
-        const cityKey = normalizeCityKey(c.ciudad)
-        const coords = CITY_COORDS_UY[cityKey]
-        if (!coords) return []
-        return {
-          id: String(c.id),
-          label: `${c.nombre} (${c.ciudad})`,
-          lat: coords.lat,
-          lng: coords.lng,
-          color: "#1e6bc1",
-        }
-      }).filter(Boolean) as MapPoint[]
-    )
-
-    setInventoryMovements(
-      DEMO_EQUIPOS.slice(0, 5).map((e) => ({
-        id: String(e.id),
-        tipo: "ingreso" as const,
-        detalle: `Alta de equipo: ${e.marca} ${e.modelo}`,
-        whenLabel: new Date(e.created_at).toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
-      }))
-    )
-
-    setUpcomingMaintenances([
-      { id: 1, title: "Mantenimiento - Hotel Oasis", dateLabel: "25 Sep" },
-      { id: 2, title: "Revisión - Clínica Médica", dateLabel: "28 Sep" },
-      { id: 3, title: "Servicio - Oficinas TechCorp", dateLabel: "30 Sep" },
-    ])
-
-    setLoading(false)
-  }, [normalizeCityKey])
-
-  const loadDashboardData = useCallback(async () => {
-    setDashboardError("")
+  const loadDashboard = useCallback(async () => {
+    setLoading(true)
+    setError("")
     try {
       if (demoMode) {
-        loadDemoDashboard()
+        setEquipment(DEMO_EQUIPOS)
+        setClients(DEMO_CLIENTES)
+        setServices(DEMO_TRAMITES)
+        setStats({ equipment: DEMO_STATS.equipos, clients: DEMO_STATS.clientes, pending: DEMO_STATS.pendientes, components: Math.max(3, Math.round(DEMO_STATS.equipos * 0.1)) })
         return
       }
 
-      const emptyResult = { data: [], error: null }
-      const clientesQuery = canViewClientes ? supabase.from("clientes").select("*") : Promise.resolve(emptyResult)
-      const equiposQuery = canViewEquipos ? supabase.from("equipos").select("*") : Promise.resolve(emptyResult)
-      const tramitesQuery = canViewTramites ? supabase.from("tramites").select("*, clientes(nombre)") : Promise.resolve(emptyResult)
-      const repuestosQuery = canViewRepuestos ? supabase.from("repuestos").select("id, stock_actual") : Promise.resolve(emptyResult)
-      const movimientosQuery = canViewRepuestos
-        ? supabase
-            .from("movimientos_repuestos")
-            .select("id, tipo, cantidad, motivo, fecha_movimiento, created_at, repuestos(nombre, codigo)")
-            .order("fecha_movimiento", { ascending: false })
-            .limit(5)
-        : Promise.resolve(emptyResult)
-
-      const [clientesRes, equiposRes, tramitesRes, repuestosRes, movimientosRes] = await Promise.all([
-        clientesQuery,
-        equiposQuery,
-        tramitesQuery,
-        repuestosQuery,
-        movimientosQuery,
+      const empty = { data: [], error: null }
+      const canEquipos = permissions?.equipos !== false
+      const canClientes = permissions?.clientes !== false
+      const canTramites = permissions?.tramites !== false
+      const canRepuestos = permissions?.repuestos !== false
+      const [equipmentRes, clientsRes, servicesRes, partsRes] = await Promise.all([
+        canEquipos ? supabase.from("equipos").select("id, marca, modelo, cliente_id, created_at") : Promise.resolve(empty),
+        canClientes ? supabase.from("clientes").select("id, nombre") : Promise.resolve(empty),
+        canTramites ? supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, equipo_id, clientes(nombre), equipos(marca, modelo)").order("created_at", { ascending: false }) : Promise.resolve(empty),
+        canRepuestos ? supabase.from("repuestos").select("id, stock_actual") : Promise.resolve(empty),
       ])
+      if (equipmentRes.error || clientsRes.error || servicesRes.error || partsRes.error) throw new Error("sync")
 
-      const clientesData = clientesRes.data || []
-      const equiposData = equiposRes.data || []
-      const tramitesData = tramitesRes.data || []
-
-      if (clientesRes.error || equiposRes.error || tramitesRes.error || repuestosRes.error || movimientosRes.error) {
-        console.error("Error obteniendo datos de Supabase", {
-          clientesError: clientesRes.error,
-          equiposError: equiposRes.error,
-          tramitesError: tramitesRes.error,
-          repuestosError: repuestosRes.error,
-          movimientosError: movimientosRes.error,
-        })
-        setMapPoints([])
-        setClientRows([])
-        setInventoryMovements([])
-        setUpcomingMaintenances([])
-        setStats({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
-        setDashboardError("No se pudo sincronizar con Supabase. Verificá la conexión y la configuración del proyecto.")
-        return
-      }
-
-      const clientes = clientesData || []
-      const equipos = equiposData || []
-      const tramitesRaw = [...(tramitesData || [])].sort(
-        (a, b) => new Date(b.created_at || b.fecha_programada || 0).getTime() - new Date(a.created_at || a.fecha_programada || 0).getTime()
-      )
-
-      const points = (
-        await Promise.all(
-          clientes.map(async (c) => {
-            const coords = await resolveClientCoords(c)
-            if (!coords) return null
-
-            return {
-              id: String(c.id),
-              label: `${c.nombre || "Cliente"} (${c.ciudad || "Sin ciudad"})`,
-              lat: coords.lat,
-              lng: coords.lng,
-              color: "#1e6bc1",
-            }
-          })
-        )
-      ).filter(Boolean) as MapPoint[]
-
-      setMapPoints(points)
-
-      const equiposByCliente = equipos.reduce<Record<string, number>>((acc, equipo) => {
-        const key = String(equipo.cliente_id || "")
-        acc[key] = (acc[key] || 0) + 1
-        return acc
-      }, {})
-
-      const latestByCliente: Record<string, Tramite> = {}
-      tramitesRaw.forEach((t) => {
-        const key = String(t.cliente_id || "")
-        if (!key) return
-        if (!latestByCliente[key]) latestByCliente[key] = t
-      })
-
-      const clientSummary = clientes.slice(0, 8).map((c) => {
-        const hasMaintenance = ["pendiente", "en_proceso"].includes(latestByCliente[String(c.id)]?.estado)
-        const estado: ClientSummary["estado"] = hasMaintenance ? "mantenimiento" : "activo"
-        return {
-          id: c.id,
-          cliente: c.nombre || "Sin nombre",
-          ubicacion: c.ciudad || "Sin ciudad",
-          equipos: equiposByCliente[String(c.id)] || 0,
-          estado,
-        }
-      })
-
-      setClientRows(clientSummary)
-
-      const mantenimientosPendientes = tramitesRaw.filter(
-        (t) => t.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(t.estado)
-      ).length
-
-      const unidadesStock = (repuestosRes.data || []).reduce((acc, repuesto) => {
-        const stock = Number(repuesto.stock_actual || 0)
-        return acc + (Number.isFinite(stock) ? stock : 0)
-      }, 0)
-
+      const realEquipment = (equipmentRes.data || []) as Equipment[]
+      const realClients = (clientsRes.data || []) as Client[]
+      const realServices = (servicesRes.data || []) as Service[]
+      const components = (partsRes.data || []).filter((part) => Number(part.stock_actual || 0) <= 3).length
+      setEquipment(realEquipment)
+      setClients(realClients)
+      setServices(realServices)
       setStats({
-        clientesActivos: clientes.length,
-        maquinasInstaladas: equipos.length,
-        unidadesStock,
-        mantenimientosPendientes,
+        equipment: realEquipment.length,
+        clients: realClients.length,
+        pending: realServices.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).length,
+        components,
       })
+    } catch {
+      setError("No se pudo sincronizar el resumen. Revisa la conexión con Supabase.")
+      setEquipment([]); setClients([]); setServices([]); setStats({ equipment: 0, clients: 0, pending: 0, components: 0 })
+    } finally { setLoading(false) }
+  }, [demoMode, permissions])
 
-      const movements = (movimientosRes.data || []).map((m) => {
-          const created = new Date(m.fecha_movimiento || m.created_at)
-          const repuestoRef = Array.isArray(m.repuestos) ? m.repuestos[0] : m.repuestos
-          const repuestoNombre = repuestoRef?.nombre || "Repuesto"
-          return {
-            id: String(m.id),
-            tipo: m.tipo || "ajuste",
-            detalle: `${repuestoNombre} x${m.cantidad || 0}${m.motivo ? ` (${m.motivo})` : ""}`,
-            whenLabel: created.toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
-          }
-        })
+  useEffect(() => { loadDashboard() }, [loadDashboard])
 
-      setInventoryMovements(movements)
+  const maintenance = useMemo(() => services.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).slice(0, 2), [services])
+  const activity = useMemo(() => services.slice(0, 5), [services])
+  const chart = useMemo(() => {
+    const now = new Date()
+    return Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1)
+      const count = services.filter((service) => {
+        const serviceDate = new Date(service.fecha_programada || service.created_at || 0)
+        return serviceDate.getMonth() === date.getMonth() && serviceDate.getFullYear() === date.getFullYear() && service.estado === "completado"
+      }).length
+      return { label: date.toLocaleDateString("es-UY", { month: "short" }).replace(".", ""), count }
+    })
+  }, [services])
+  const maxChart = Math.max(1, ...chart.map((item) => item.count))
 
-      const today = new Date()
-      const upcoming = tramitesRaw
-        .filter((t) => t.tipo === "mantenimiento" && t.fecha_programada && t.estado !== "cancelado")
-        .filter((t) => new Date(t.fecha_programada) >= today)
-        .slice(0, 3)
-        .map((t) => ({
-          id: t.id,
-          title: `${t.estado === "en_proceso" ? "Servicio" : "Mantenimiento"} - ${getClienteNombre(t.clientes)}`,
-          dateLabel: new Date(t.fecha_programada).toLocaleDateString("es-UY", { day: "2-digit", month: "short" }),
-        }))
-
-      setUpcomingMaintenances(upcoming)
-    } catch (error) {
-      console.error("Error cargando dashboard:", error)
-      setMapPoints([])
-      setClientRows([])
-      setInventoryMovements([])
-      setUpcomingMaintenances([])
-      setStats({ clientesActivos: 0, maquinasInstaladas: 0, unidadesStock: 0, mantenimientosPendientes: 0 })
-      setDashboardError("No se pudo cargar el dashboard. Revisá la conexión a Supabase e intentá nuevamente.")
-    } finally {
-      setLoading(false)
-    }
-  }, [canViewClientes, canViewEquipos, canViewRepuestos, canViewTramites, demoMode, loadDemoDashboard, resolveClientCoords])
-
-  useEffect(() => {
-    loadDashboardData()
-  }, [loadDashboardData])
-
-  const visibleStats = stats
-  const filteredClients = clientRows.filter((c) => c.cliente.toLowerCase().includes(search.toLowerCase()))
-
-  const statCards = [
-    {
-      title: "Clientes Activos",
-      value: visibleStats.clientesActivos,
-      helper: "Empresas Registradas",
-      alt: "Clientes",
-      icon: "/logos/clientes.png",
-      color: "bg-[#2459a8]",
-      valueColor: "text-[#1d3f6d]",
-      helperColor: "text-[#6f86a8]",
-      titleSize: "text-[15px]",
-      valueSize: "text-[32px]",
-    },
-    {
-      title: "Máquinas Instaladas",
-      value: visibleStats.maquinasInstaladas,
-      helper: "Equipos en Operación",
-      alt: "Máquinas instaladas",
-      icon: "/logos/equipos.png",
-      color: "bg-[#3f79d6]",
-      valueColor: "text-[#1d3f6d]",
-      helperColor: "text-[#6f86a8]",
-      titleSize: "text-[15px]",
-      valueSize: "text-[32px]",
-    },
-    {
-      title: "Unidades en Stock",
-      value: visibleStats.unidadesStock,
-      helper: "En Almacén",
-      alt: "Unidades en stock",
-      icon: "/logos/unidadesstock.png",
-      color: "bg-[#35a66b]",
-      valueColor: "text-[#1d3f6d]",
-      helperColor: "text-[#6f86a8]",
-      titleSize: "text-[15px]",
-      valueSize: "text-[32px]",
-    },
-    {
-      title: "Mantenimientos Pendientes",
-      value: visibleStats.mantenimientosPendientes,
-      helper: "Servicios Programados",
-      alt: "Mantenimientos pendientes",
-      icon: "/logos/mantenimiento.png",
-      color: "bg-[#e76868]",
-      valueColor: "text-[#c03838]",
-      helperColor: "text-[#6f86a8]",
-      titleSize: "text-[13px] leading-[1.05]",
-      valueSize: "text-[30px]",
-    },
+  const metrics = [
+    { label: "Equipos registrados", value: stats.equipment, icon: "equipment" as const, tone: "text-blue-600 border-blue-600", note: "Equipos en operación", noteTone: "text-blue-600" },
+    { label: "Clientes activos", value: stats.clients, icon: "users" as const, tone: "text-blue-500 border-blue-300", note: "Sin cambios", noteTone: "text-slate-500" },
+    { label: "Mantenimientos pendientes", value: stats.pending, icon: "alert" as const, tone: "text-orange-500 border-orange-300", note: "Requieren atención", noteTone: "text-orange-600" },
+    { label: "Componentes críticos", value: stats.components, icon: "boxes" as const, tone: "text-red-600 border-red-600", note: "Requieren reposición", noteTone: "text-red-600" },
   ]
 
   return (
-    <div className="mx-auto max-w-[1440px] px-4 py-7 text-[#0f1e38] sm:px-8 sm:py-10 lg:px-10">
-      <div className="space-y-8">
-        <section className="pb-6 border-b border-slate-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 className="text-2xl sm:text-[32px] font-bold tracking-[-0.04em] text-slate-900 leading-tight">¡Bienvenido, {authLoading ? "..." : displayName}!</h1>
-              <p className="text-sm sm:text-base font-medium text-slate-500 mt-2">Aquí tienes un resumen actualizado de tu operación.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs sm:text-sm font-semibold text-[#5e7697]">
-                {mounted ? new Date().toLocaleDateString("es-UY", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Cargando..."}
-              </span>
-            </div>
-          </div>
-        </section>
+    <div className="mx-auto max-w-[1450px] px-5 py-8 text-slate-900 sm:px-8 lg:px-9 lg:py-10">
+      <header className="mb-10 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[28px] font-bold tracking-[-0.045em] sm:text-[30px]">¡Bienvenido, {displayName || "usuario"}!</h1>
+          <p className="mt-1 text-[15px] font-medium text-slate-500">Aquí tienes un resumen actualizado de tu operación.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button aria-label="Notificaciones" className="grid h-12 w-12 place-items-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50"><Icon name="bell" className="h-5 w-5" /></button>
+          <Link href="/equipos" className="hidden h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold shadow-sm transition hover:bg-slate-50 sm:flex"><Icon name="qr" className="h-5 w-5" />Escanear QR</Link>
+        </div>
+      </header>
 
-        {dashboardError && (
-          <section className="rounded-md border border-[#f0c9c9] bg-[#fff4f4] px-4 py-3 text-sm text-[#8c3f3f]">
-            {dashboardError}
+      {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
+      <section className="grid gap-6 border-b border-slate-200 pb-10 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <article key={metric.label} className="min-w-0">
+            <div className="flex items-center gap-5">
+              <div className={`grid h-[92px] w-[92px] shrink-0 place-items-center rounded-full border-[4px] bg-white shadow-[inset_0_0_0_8px_rgba(248,250,252,.95),0_8px_22px_rgba(15,23,42,.04)] ${metric.tone}`}><Icon name={metric.icon} className="h-8 w-8" /></div>
+              <div className="min-w-0">
+                <p className="text-[34px] font-bold leading-none tracking-[-.05em]">{loading ? "–" : metric.value}</p>
+                <p className="mt-2 text-sm font-semibold text-slate-600">{metric.label}</p>
+                <p className={`mt-4 text-xs font-semibold ${metric.noteTone}`}>{metric.note}</p>
+              </div>
+            </div>
+            <svg aria-hidden="true" className={`mt-5 ml-auto h-5 w-[150px] ${metric.tone.split(" ")[0]}`} viewBox="0 0 150 20" fill="none"><path d="M1 15 18 9l15 5L48 6l16 8 16-4 15 7 16-5 16 5 13-7 9 3" stroke="currentColor" strokeWidth="1.7" /></svg>
+          </article>
+        ))}
+      </section>
+
+      <div className="grid xl:grid-cols-[1.16fr_.94fr]">
+        <div className="py-8 pr-0 xl:pr-7">
+          <section>
+            <div className="mb-7 flex items-start justify-between gap-3">
+              <div className="flex gap-3"><Icon name="alert" className="mt-0.5 h-5 w-5 text-orange-500" /><div><h2 className="text-xl font-bold tracking-[-.03em]">Mantenimientos pendientes</h2><p className="mt-1 text-sm font-medium text-slate-500">Equipos que superaron su intervalo de servicio.</p></div></div>
+              <Link href="/tramites" className="whitespace-nowrap text-sm font-bold text-blue-600">Ver todos <span className="text-xl leading-none">›</span></Link>
+            </div>
+            <div className="space-y-3">
+              {maintenance.length ? maintenance.map((service) => {
+                const waitingDays = service.fecha_programada ? Math.max(1, Math.floor((Date.now() - new Date(service.fecha_programada).getTime()) / 86400000)) : 0
+                return <Link href={`/tramites/${service.id}`} key={service.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_5px_16px_rgba(15,23,42,.025)] transition hover:border-blue-200">
+                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500"><Icon name="equipment" className="h-7 w-7" /></div>
+                  <div className="min-w-0 flex-1"><p className="truncate font-bold">{equipmentName(service, equipment)}</p><p className="mt-1 truncate text-sm text-slate-500">{clientName(service, clients)} · {service.equipo_id || "Equipo"}</p></div>
+                  <div className="hidden text-right sm:block"><p className="font-bold text-orange-600">{waitingDays} días</p><p className="mt-1 text-xs text-slate-500">sin mantenimiento</p></div>
+                  <span className={`hidden rounded-full px-3 py-1 text-xs font-bold md:inline ${service.estado === "en_proceso" ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`}>{service.estado === "en_proceso" ? "Media" : "Alta"}</span><Icon name="chevron" className="h-5 w-5 text-slate-500" />
+                </Link>
+              }) : <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">No hay mantenimientos pendientes.</div>}
+            </div>
           </section>
-        )}
 
-        <section className="flex gap-3 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-2 xl:grid-cols-4 md:overflow-visible items-stretch">
-          {statCards.map((card) => (
-            <div key={card.title} className="min-w-[17rem] md:min-w-0 snap-start rounded-2xl border border-slate-100 bg-white px-5 py-5 shadow-[0_12px_30px_rgba(15,23,42,.06)] flex items-center">
-              <div className="flex items-center gap-2.5 w-full">
-                <div className={`h-9 w-9 min-h-9 min-w-9 shrink-0 rounded-full ${card.color} flex items-center justify-center p-1`}>
-                  <Image src={card.icon} alt={card.alt} width={UNIFIED_LOGO_SIZE} height={UNIFIED_LOGO_SIZE} className="object-contain" />
-                </div>
-                <div className="leading-tight min-w-0">
-                  <p className={`${card.titleSize} font-bold text-[#2b578d] whitespace-normal sm:whitespace-nowrap`}>{card.title}</p>
-                  <p className={`${card.valueSize} leading-none font-extrabold ${card.valueColor} tracking-[-0.01em]`}>
-                    {loading ? "..." : card.value} <span className={`text-[11px] font-semibold ${card.helperColor} ml-1`}>{card.helper}</span>
-                  </p>
-                </div>
-              </div>
+          <section className="mt-7 border-t border-slate-200 pt-7">
+            <div className="mb-6 flex items-start justify-between gap-3"><div className="flex gap-3"><Icon name="chart" className="mt-0.5 h-5 w-5 text-blue-600" /><div><h2 className="text-xl font-bold tracking-[-.03em]">Servicios este mes</h2><p className="mt-1 text-sm font-medium text-slate-500">Cantidad de servicios realizados.</p></div></div><span className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">Últimos 6 meses⌄</span></div>
+            <div className="flex h-44 items-end gap-4 border-b border-slate-200 px-5 pt-4 sm:gap-8">
+              {chart.map((item) => <div key={item.label} className="flex h-full flex-1 flex-col justify-end gap-2 text-center"><div className="mx-auto w-full max-w-10 rounded-t-md bg-gradient-to-t from-blue-300 to-blue-400" style={{ height: `${Math.max(item.count ? 20 : 6, (item.count / maxChart) * 110)}px` }} title={`${item.count} servicios`} /><span className="pb-2 text-xs text-slate-500">{item.label}</span></div>)}
             </div>
-          ))}
-        </section>
+          </section>
+        </div>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
-            <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
-              <h2 className="text-base font-bold text-[#284a76]">Listado de Clientes</h2>
-            </div>
-            <div className="px-4 pt-2.5">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar cliente..."
-                className="w-full px-2.5 py-1.5 rounded-md border border-[#cad8eb] bg-white text-xs text-[#304f76] placeholder:text-[#8fa4c0] focus:outline-none focus:ring-2 focus:ring-[#7fa4d6]"
-              />
-            </div>
-            <div className="px-4 pb-3 pt-2 space-y-3 lg:space-y-0">
-              <div className="space-y-2 lg:hidden">
-                {filteredClients.slice(0, 6).map((row) => (
-                  <article key={row.id} className="rounded-md border border-[#e3ebf7] bg-white px-3 py-3 shadow-[0_1px_5px_rgba(36,84,145,.06)]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-[#24476f] truncate">{row.cliente}</p>
-                        <p className="text-xs text-[#5d7799] mt-0.5">{row.ubicacion}</p>
-                      </div>
-                      <span className={`shrink-0 text-[10px] px-2 py-1 rounded font-semibold ${row.estado === "activo" ? "bg-[#3ea54f] text-white" : "bg-[#f1a937] text-white"}`}>
-                        {row.estado === "activo" ? "Activo" : "En Mantenimiento"}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-xs">
-                      <span className="font-medium text-[#5d7799]">Equipos</span>
-                      <span className="font-bold text-[#2d8857]">{row.equipos} activos</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              <div className="hidden lg:block overflow-auto">
-                <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-[#5f789b] border-y border-[#dbe4f3] bg-[#f1f6fd]">
-                    <th className="text-left py-1.5">Cliente</th>
-                    <th className="text-left py-1.5">Ubicación</th>
-                    <th className="text-left py-1.5">Equipos</th>
-                    <th className="text-left py-1.5">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClients.slice(0, 6).map((row) => (
-                    <tr key={row.id} className="border-b border-[#e6eef9]">
-                      <td className="py-1.5 text-[#24476f] font-semibold">{row.cliente}</td>
-                      <td className="py-1.5 text-[#5d7799]">{row.ubicacion}</td>
-                      <td className="py-1.5 text-[#2d8857] font-bold">{row.equipos} Activos</td>
-                      <td className="py-1.5">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${row.estado === "activo" ? "bg-[#3ea54f] text-white" : "bg-[#f1a937] text-white"}`}>
-                          {row.estado === "activo" ? "Activo" : "En Mantenimiento"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-              {filteredClients.length === 0 && (
-                <p className="text-center py-6 text-sm text-[#bcc8d7]">no se encuentra el cliente</p>
-              )}
-              <div className="pt-2 text-center hidden lg:block">
-                <Link href="/clientes" className="inline-flex items-center px-4 py-1 rounded-md bg-[#2a6dc1] text-white text-xs font-semibold hover:bg-[#245aa5]">
-                  Ver Detalles
-                </Link>
-              </div>
-              <div className="pt-2 text-center lg:hidden">
-                <Link href="/clientes" className="inline-flex items-center px-4 py-2 rounded-md bg-[#2a6dc1] text-white text-xs font-semibold hover:bg-[#245aa5]">
-                  Abrir clientes
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
-            <div className="px-4 py-2.5 border-b border-[#dbe4f3]">
-              <h2 className="text-base font-bold text-[#284a76]">Mapa de Clientes</h2>
-            </div>
-            <div className="p-4">
-              <div className="relative z-0 h-[220px] sm:h-[260px] lg:h-[280px] rounded-md overflow-hidden border border-[#bfd1e8] bg-[#8ec4e7]">
-                <UruguayMap points={mapPoints} />
-                <div className="absolute left-2 bottom-2 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-[#54749a]">
-                  Mapa interactivo: arrastra y haz zoom
-                </div>
-              </div>
-              {!loading && mapPoints.length === 0 && (
-                <p className="mt-2 text-xs text-[#6f87a8]">No hay clientes con ubicación válida para mostrar en el mapa.</p>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
-            <div className="px-4 sm:px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#284a76]">Últimos Movimientos de Inventario</h2>
-            </div>
-            <div className="p-4 sm:p-5 space-y-3">
-              {inventoryMovements.length === 0 ? (
-                <p className="text-sm text-[#6d84a5]">No hay movimientos de inventario reales para mostrar.</p>
-              ) : (
-                inventoryMovements.map((m) => (
-                  <div key={m.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-3 sm:py-2">
-                    <div className="flex items-start gap-2 min-w-0">
-                      <Image
-                        src={m.tipo === "ingreso" ? "/logos/entrada.png" : "/logos/salida.png"}
-                        alt={m.tipo === "ingreso" ? "Entrada de stock" : "Salida de stock"}
-                        width={UNIFIED_LOGO_SIZE}
-                        height={UNIFIED_LOGO_SIZE}
-                        className="shrink-0 object-contain"
-                      />
-                      <p className="text-sm text-[#36557b] break-words sm:truncate">
-                        <span className={m.tipo === "ingreso" ? "text-[#2b9058] font-bold" : "text-[#c44343] font-bold"}>{m.tipo === "ingreso" ? "Ingreso" : "Salida"}</span>: {m.detalle.replace(/^Ingreso: |^Salida: /, "")}
-                      </p>
-                    </div>
-                    <span className="self-start sm:self-auto text-xs text-[#4f6f95] bg-[#e8eff9] px-2 py-1 rounded">{m.whenLabel}</span>
-                  </div>
-                ))
-              )}
-              <Link href="/equipos" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
-                Ver Inventario
-              </Link>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-[0_12px_30px_rgba(15,23,42,.05)]">
-            <div className="px-4 sm:px-6 py-4 border-b border-[#dbe4f3]">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#284a76]">Próximos Mantenimientos</h2>
-            </div>
-            <div className="p-4 sm:p-5 space-y-3">
-              {upcomingMaintenances.length === 0 ? (
-                <p className="text-sm text-[#6d84a5]">No hay mantenimientos programados</p>
-              ) : (
-                upcomingMaintenances.map((item) => (
-                  <div key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-md border border-[#d7e3f4] bg-white px-3 py-3 sm:py-2">
-                    <p className="text-sm font-semibold text-[#36557b] break-words">{item.title}</p>
-                    <span className="self-start sm:self-auto text-xs text-[#4f6f95] font-semibold">{item.dateLabel}</span>
-                  </div>
-                ))
-              )}
-              <Link href="/tramites" className="inline-flex mt-2 items-center px-5 py-1.5 rounded-md bg-[#2a6dc1] text-white text-sm font-semibold hover:bg-[#245aa5]">
-                Ver Calendario
-              </Link>
-            </div>
+        <section className="border-t border-slate-200 py-8 xl:border-l xl:border-t-0 xl:pl-8">
+          <div className="mb-7 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Icon name="wrench" className="h-6 w-6 text-blue-600" /><h2 className="text-xl font-bold tracking-[-.03em]">Actividad reciente</h2></div><Link href="/tramites" className="text-sm font-bold text-blue-600">Ver todo el historial</Link></div>
+          <div className="relative space-y-0 before:absolute before:bottom-5 before:left-[5px] before:top-5 before:w-px before:bg-slate-200">
+            {activity.length ? activity.map((service) => { const state = statusMeta(service.estado); return <Link href={`/tramites/${service.id}`} key={service.id} className="relative flex gap-4 border-b border-slate-200 py-5 first:pt-2 last:border-0"><span className={`relative z-10 mt-1.5 h-3 w-3 shrink-0 rounded-full ring-4 ring-white ${state.dot}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"><p className="text-sm font-medium text-slate-500">{relativeDate(service.created_at)}</p><span className={`rounded-full px-3 py-1 text-xs font-bold ${state.chip}`}>{state.label}</span></div><p className="mt-2 font-bold text-slate-900">{service.equipo_id || "Servicio"}</p><p className="mt-1 text-sm text-slate-500">{service.tipo === "mantenimiento" ? "Mantenimiento" : "Servicio"} · {clientName(service, clients)}</p></div><Icon name="chevron" className="mt-7 h-5 w-5 shrink-0 text-slate-500" /></Link> }) : <p className="py-10 text-center text-sm text-slate-500">Todavía no hay actividad para mostrar.</p>}
           </div>
         </section>
       </div>
     </div>
-  );
+  )
 }
