@@ -3,12 +3,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuthSession } from "@/lib/useAuthSession"
-import { canAccessPath, isPublicPath } from "@/lib/roleAccess"
+import { isPublicPath } from "@/lib/roleAccess"
 
 const icons = {
   panel: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" />,
   clientes: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-10a4 4 0 1 0 0-8m-8 8a4 4 0 1 0 0-8m8 10a4 4 0 0 1 4 4v2" />,
   equipos: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14v4H5V5Zm2 4v10m10-10v10M9 13h6m-3-4v8" />,
+  inventario: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="m12 3 7 4v8l-7 4-7-4V7l7-4Zm-7 4 7 4 7-4M12 11v8" />,
   tramites: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2m-6 0a3 3 0 0 0 6 0m-6 0a3 3 0 0 1 6 0m-6 7h6m-6 4h4" />,
   admin: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-3.5a7.4 7.4 0 0 0-.1-1.2l2-1.5-2-3.5-2.3.9a8 8 0 0 0-2-1.2L14.7 3h-4l-.3 2.4a8 8 0 0 0-2 1.2l-2.3-.9-2 3.5 2 1.5A7.4 7.4 0 0 0 6 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.3-.9a8 8 0 0 0 2 1.2l.3 2.4h4l.3-2.4a8 8 0 0 0 2-1.2l2.3.9 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z" />,
 }
@@ -33,9 +34,8 @@ function Brand({ compact = false }) {
 
 export default function Navbar() {
   const pathname = usePathname()
-  const { loading, user, displayName, role, permissions, signOut } = useAuthSession()
+  const { loading, user, displayName, role, signOut } = useAuthSession()
   const shouldShowNav = !isPublicPath(pathname || "/")
-  const canOpenAdmin = canAccessPath("/admin", role, permissions)
 
   if (!shouldShowNav) return null
 
@@ -44,8 +44,9 @@ export default function Navbar() {
     { href: "/", label: "Panel", icon: "panel" },
     { href: "/clientes", label: "Clientes", icon: "clientes" },
     { href: "/equipos", label: "Equipos", icon: "equipos" },
-    { href: "/tramites", label: "Trámites", icon: "tramites" },
-    ...(canOpenAdmin ? [{ href: "/admin", label: "Configuración", icon: "admin" }] : []),
+    { href: "/tramites", label: "Mantenimientos", icon: "tramites" },
+    { href: "/inventario", label: "Inventario", icon: "inventario" },
+    { href: "/configuracion", label: "Configuración", icon: "admin" },
   ]
 
   return (

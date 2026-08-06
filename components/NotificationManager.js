@@ -1,99 +1,76 @@
 "use client"
 
-import { useCallback, useEffect } from 'react'
-import { useNotifications } from '@/lib/useNotifications'
-import { supabase } from '@/lib/supabase'
+import { useCallback, useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+import { useNotifications } from "@/lib/useNotifications"
+
+const NOTIFICATION_COOLDOWN_MS = 12 * 60 * 60 * 1000
 
 export default function NotificationManager() {
-  const { permission, requestPermission, registerServiceWorker, scheduleNotification } = useNotifications()
-  const NOTIFICATION_COOLDOWN_MS = 12 * 60 * 60 * 1000
+  const { permission, registerServiceWorker, scheduleNotification } = useNotifications()
 
   const canNotifyNow = useCallback((key) => {
     try {
-      const raw = localStorage.getItem('powercool_notification_history')
-      const history = raw ? JSON.parse(raw) : {}
-      const lastShown = history[key]
-      if (!lastShown) return true
-      return Date.now() - lastShown >= NOTIFICATION_COOLDOWN_MS
+      const history = JSON.parse(localStorage.getItem("powercool_notification_history") || "{}")
+      return !history[key] || Date.now() - history[key] >= NOTIFICATION_COOLDOWN_MS
     } catch {
       return true
     }
-  }, [NOTIFICATION_COOLDOWN_MS])
+  }, [])
 
   const markNotified = useCallback((key) => {
     try {
-      const raw = localStorage.getItem('powercool_notification_history')
-      const history = raw ? JSON.parse(raw) : {}
+      const history = JSON.parse(localStorage.getItem("powercool_notification_history") || "{}")
       history[key] = Date.now()
-      localStorage.setItem('powercool_notification_history', JSON.stringify(history))
+      localStorage.setItem("powercool_notification_history", JSON.stringify(history))
     } catch {
-      // Sin acción: si falla localStorage, no bloqueamos el flujo
+      // Si el almacenamiento local no está disponible, no bloqueamos las alertas.
     }
   }, [])
 
-  useEffect(() => {
-    // Registrar service worker al cargar
-    registerServiceWorker()
-  }, [registerServiceWorker])
+  useEffect(() => { registerServiceWorker() }, [registerServiceWorker])
 
   useEffect(() => {
-    // Pedir permisos de notificación después de 3 segundos
-    const timer = setTimeout(() => {
-      if (permission === 'default') {
-        requestPermission()
-      }
-    }, 3000)
+    if (permission !== "granted") return
 
-    return () => clearTimeout(timer)
-  }, [permission, requestPermission])
+    const sendAlert = (key, title, body, url) => {
+      if (!canNotifyNow(key)) return
+      scheduleNotification(title, body, 0, url)
+      markNotified(key)
+    }
 
-  useEffect(() => {
-    if (permission !== 'granted') return
-
-    // Verificar mantenimientos próximos cada 1 hora
-    const checkMaintenances = async () => {
-      const { data: tramites } = await supabase
-        .from('tramites')
-        .select('*, equipos(marca, modelo), clientes(nombre)')
-        .eq('tipo', 'mantenimiento')
-        .eq('estado', 'pendiente')
-
-      if (!tramites) return
+    const checkAlerts = async () => {
+      const [maintenanceRes, equipmentRes, partsRes] = await Promise.all([
+        supabase.from("tramites").select("id, fecha_programada, equipos(marca, modelo)").eq("tipo", "mantenimiento").eq("estado", "pendiente"),
+        supabase.from("equipos").select("id, marca, modelo, estado_operativo").in("estado_operativo", ["critico", "mantenimiento"]),
+        supabase.from("repuestos").select("id, nombre, stock_actual, stock_minimo").eq("activo", true),
+      ])
 
       const now = new Date()
       const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
-
-      tramites.forEach((tramite) => {
-        if (!tramite.fecha_programada) return
-
-        const fechaProgramada = new Date(tramite.fecha_programada)
-        
-        // Notificar si el mantenimiento es en 2 días
-        if (fechaProgramada <= twoDaysFromNow && fechaProgramada > now) {
-          const diasRestantes = Math.ceil((fechaProgramada - now) / (1000 * 60 * 60 * 24))
-          const equipo = tramite.equipos ? `${tramite.equipos.marca} ${tramite.equipos.modelo}` : 'Equipo'
-          const notifyKey = `${tramite.id}-${tramite.fecha_programada}-${tramite.estado}`
-
-          if (!canNotifyNow(notifyKey)) return
-          
-          scheduleNotification(
-            '⚠️ Mantenimiento Próximo',
-            `${equipo} - Mantenimiento en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`,
-            0,
-            '/tramites'
-          )
-
-          markNotified(notifyKey)
-        }
+      ;(maintenanceRes.data || []).forEach((item) => {
+        if (!item.fecha_programada) return
+        const scheduled = new Date(item.fecha_programada)
+        if (scheduled > twoDaysFromNow) return
+        const equipment = Array.isArray(item.equipos) ? item.equipos[0] : item.equipos
+        const name = equipment ? `${equipment.marca || "Equipo"} ${equipment.modelo || ""}`.trim() : "Equipo"
+        const days = Math.max(0, Math.ceil((scheduled.getTime() - now.getTime()) / 86400000))
+        sendAlert(`maintenance:${item.id}:${item.fecha_programada}`, "Mantenimiento próximo", `${name} requiere servicio ${days ? `en ${days} día${days === 1 ? "" : "s"}` : "hoy"}.`, "/tramites")
+      })
+      ;(equipmentRes.data || []).forEach((item) => {
+        const name = `${item.marca || "Equipo"} ${item.modelo || ""}`.trim()
+        sendAlert(`equipment:${item.id}:${item.estado_operativo}`, "Equipo fuera de servicio", `${name} está marcado como ${item.estado_operativo === "critico" ? "crítico" : "en mantenimiento"}.`, `/equipos/${item.id}`)
+      })
+      ;(partsRes.data || []).filter((item) => Number(item.stock_actual) <= Number(item.stock_minimo)).forEach((item) => {
+        sendAlert(`stock:${item.id}:${item.stock_actual}`, "Stock bajo", `${item.nombre}: quedan ${item.stock_actual} unidades (mínimo ${item.stock_minimo}).`, "/equipos")
       })
     }
 
-    // Ejecutar inmediatamente y luego cada hora
-    checkMaintenances()
-    const interval = setInterval(checkMaintenances, 60 * 60 * 1000) // 1 hora
-
-    return () => clearInterval(interval)
+    void checkAlerts()
+    const interval = window.setInterval(checkAlerts, 60 * 60 * 1000)
+    window.addEventListener("focus", checkAlerts)
+    return () => { window.clearInterval(interval); window.removeEventListener("focus", checkAlerts) }
   }, [permission, scheduleNotification, canNotifyNow, markNotified])
 
-  return null // Este componente no renderiza nada
+  return null
 }

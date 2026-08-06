@@ -74,6 +74,7 @@ export default function Home() {
   const [services, setServices] = useState<Service[]>([])
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [clients, setClients] = useState<Client[]>([])
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const { displayName, permissions } = useAuthSession()
   const { demoMode } = useDemoMode()
 
@@ -153,10 +154,12 @@ export default function Home() {
           <p className="mt-1 text-[15px] font-medium text-slate-500">Aquí tienes un resumen actualizado de tu operación.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button aria-label="Notificaciones" className="grid h-12 w-12 place-items-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50"><Icon name="bell" className="h-5 w-5" /></button>
-          <Link href="/equipos" className="hidden h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold shadow-sm transition hover:bg-slate-50 sm:flex"><Icon name="qr" className="h-5 w-5" />Escanear QR</Link>
+          <button type="button" aria-label="Notificaciones en preparación" onClick={() => setNotificationsOpen(true)} className="grid h-12 w-12 place-items-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50"><Icon name="bell" className="h-5 w-5" /></button>
+          <Link href="/escanear-qr" className="hidden h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold shadow-sm transition hover:bg-slate-50 sm:flex"><Icon name="qr" className="h-5 w-5" />Escanear QR</Link>
         </div>
       </header>
+
+      {notificationsOpen && <div className="mb-7 flex items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm text-blue-900"><div><p className="font-bold">Centro de notificaciones <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">WIP</span></p><p className="mt-1 text-blue-700">Preparado para alertas de equipos fuera de servicio, mantenimientos próximos y falta de stock.</p></div><button type="button" onClick={() => setNotificationsOpen(false)} className="font-semibold text-blue-700">Cerrar</button></div>}
 
       {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
