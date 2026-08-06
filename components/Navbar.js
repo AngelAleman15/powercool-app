@@ -11,11 +11,11 @@ const icons = {
   equipos: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14v4H5V5Zm2 4v10m10-10v10M9 13h6m-3-4v8" />,
   inventario: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="m12 3 7 4v8l-7 4-7-4V7l7-4Zm-7 4 7 4 7-4M12 11v8" />,
   tramites: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2m-6 0a3 3 0 0 0 6 0m-6 0a3 3 0 0 1 6 0m-6 7h6m-6 4h4" />,
-  admin: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-3.5a7.4 7.4 0 0 0-.1-1.2l2-1.5-2-3.5-2.3.9a8 8 0 0 0-2-1.2L14.7 3h-4l-.3 2.4a8 8 0 0 0-2 1.2l-2.3-.9-2 3.5 2 1.5A7.4 7.4 0 0 0 6 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.3-.9a8 8 0 0 0 2 1.2l.3 2.4h4l.3-2.4a8 8 0 0 0 2-1.2l2.3.9 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z" />,
+  admin: <><circle cx="12" cy="12" r="3" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.1 2.1-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.1-2.1.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H5.3v-3h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.1-2.1.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.1 2.1-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2v3h-.2a1.7 1.7 0 0 0-1.5 1Z" /></>,
 }
 
 function NavIcon({ name }) {
-  return <svg aria-hidden="true" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icons[name]}</svg>
+  return <svg aria-hidden="true" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">{icons[name]}</svg>
 }
 
 function Brand({ compact = false }) {
@@ -51,7 +51,10 @@ export default function Navbar() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[280px] flex-col border-r border-white/10 bg-[radial-gradient(circle_at_10%_100%,#173a66_0,transparent_34%),linear-gradient(145deg,#061426_0%,#071c35_58%,#03111f_100%)] px-4 py-7 md:flex">
+      <aside
+        className="fixed inset-y-0 left-0 z-50 hidden w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[#061426] px-4 py-7 md:flex"
+        style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.78) 0%,rgba(3,17,34,.64) 48%,rgba(3,17,34,.9) 100%),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}
+      >
         <Link href="/" aria-label="Ir al panel" className="mb-9"><Brand /></Link>
         <nav aria-label="Navegación principal" className="space-y-2">
           {navItems.map((item) => (

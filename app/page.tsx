@@ -20,7 +20,7 @@ type Service = {
 }
 
 type Equipment = { id: string | number; marca?: string; modelo?: string; cliente_id?: string; created_at?: string }
-type Client = { id: string | number; nombre?: string }
+type Client = { id: string | number; nombre?: string; created_at?: string }
 
 const iconPaths = {
   equipment: <><path d="M5 5h14v4H5z" /><path d="M7 9v10m10-10v10M9 13h6m-3-4v8" /></>,
@@ -67,6 +67,30 @@ function statusMeta(status?: string) {
   return { label: "Requiere mantenimiento", dot: "bg-orange-500", chip: "bg-orange-100 text-orange-700" }
 }
 
+function monthlyCounts<T>(items: T[], getDate: (item: T) => string | undefined, months: number) {
+  const now = new Date()
+  return Array.from({ length: months }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - months + 1 + index, 1)
+    const count = items.filter((item) => {
+      const value = getDate(item)
+      if (!value) return false
+      const itemDate = new Date(value)
+      return itemDate.getMonth() === date.getMonth() && itemDate.getFullYear() === date.getFullYear()
+    }).length
+    return { label: date.toLocaleDateString("es-UY", { month: "short" }).replace(".", ""), count }
+  })
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  const path = values.map((value, index) => {
+    const x = (index / Math.max(1, values.length - 1)) * 148 + 1
+    const y = 18 - (value / max) * 13
+    return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`
+  }).join(" ")
+  return <svg aria-hidden="true" className="mt-5 ml-auto h-5 w-[150px]" viewBox="0 0 150 20" fill="none"><path d={path} stroke="currentColor" strokeWidth="1.7" /></svg>
+}
+
 export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -75,6 +99,7 @@ export default function Home() {
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [chartRange, setChartRange] = useState(6)
   const { displayName, permissions } = useAuthSession()
   const { demoMode } = useDemoMode()
 
@@ -97,7 +122,7 @@ export default function Home() {
       const canRepuestos = permissions?.repuestos !== false
       const [equipmentRes, clientsRes, servicesRes, partsRes] = await Promise.all([
         canEquipos ? supabase.from("equipos").select("id, marca, modelo, cliente_id, created_at") : Promise.resolve(empty),
-        canClientes ? supabase.from("clientes").select("id, nombre") : Promise.resolve(empty),
+        canClientes ? supabase.from("clientes").select("id, nombre, created_at") : Promise.resolve(empty),
         canTramites ? supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, equipo_id, clientes(nombre), equipos(marca, modelo)").order("created_at", { ascending: false }) : Promise.resolve(empty),
         canRepuestos ? supabase.from("repuestos").select("id, stock_actual") : Promise.resolve(empty),
       ])
@@ -126,24 +151,20 @@ export default function Home() {
 
   const maintenance = useMemo(() => services.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).slice(0, 2), [services])
   const activity = useMemo(() => services.slice(0, 5), [services])
-  const chart = useMemo(() => {
-    const now = new Date()
-    return Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1)
-      const count = services.filter((service) => {
-        const serviceDate = new Date(service.fecha_programada || service.created_at || 0)
-        return serviceDate.getMonth() === date.getMonth() && serviceDate.getFullYear() === date.getFullYear() && service.estado === "completado"
-      }).length
-      return { label: date.toLocaleDateString("es-UY", { month: "short" }).replace(".", ""), count }
-    })
-  }, [services])
+  const chart = useMemo(() => monthlyCounts(services.filter((service) => service.estado === "completado"), (service) => service.fecha_programada || service.created_at, chartRange), [chartRange, services])
   const maxChart = Math.max(1, ...chart.map((item) => item.count))
+  const trends = useMemo(() => ({
+    equipment: monthlyCounts(equipment, (item) => item.created_at, 6).map((item) => item.count),
+    clients: monthlyCounts(clients, (item) => item.created_at, 6).map((item) => item.count),
+    maintenance: monthlyCounts(services.filter((item) => item.tipo === "mantenimiento"), (item) => item.created_at, 6).map((item) => item.count),
+    components: Array.from({ length: 6 }, () => stats.components),
+  }), [clients, equipment, services, stats.components])
 
   const metrics = [
-    { label: "Equipos registrados", value: stats.equipment, icon: "equipment" as const, tone: "text-blue-600 border-blue-600", note: "Equipos en operación", noteTone: "text-blue-600" },
-    { label: "Clientes activos", value: stats.clients, icon: "users" as const, tone: "text-blue-500 border-blue-300", note: "Sin cambios", noteTone: "text-slate-500" },
-    { label: "Mantenimientos pendientes", value: stats.pending, icon: "alert" as const, tone: "text-orange-500 border-orange-300", note: "Requieren atención", noteTone: "text-orange-600" },
-    { label: "Componentes críticos", value: stats.components, icon: "boxes" as const, tone: "text-red-600 border-red-600", note: "Requieren reposición", noteTone: "text-red-600" },
+    { label: "Equipos registrados", value: stats.equipment, icon: "equipment" as const, tone: "text-blue-600 border-blue-600", note: "Equipos en operación", noteTone: "text-blue-600", trend: trends.equipment },
+    { label: "Clientes activos", value: stats.clients, icon: "users" as const, tone: "text-blue-500 border-blue-300", note: "Sin cambios", noteTone: "text-slate-500", trend: trends.clients },
+    { label: "Mantenimientos pendientes", value: stats.pending, icon: "alert" as const, tone: "text-orange-500 border-orange-300", note: "Requieren atención", noteTone: "text-orange-600", trend: trends.maintenance },
+    { label: "Componentes críticos", value: stats.components, icon: "boxes" as const, tone: "text-red-600 border-red-600", note: "Requieren reposición", noteTone: "text-red-600", trend: trends.components },
   ]
 
   return (
@@ -174,7 +195,7 @@ export default function Home() {
                 <p className={`mt-4 text-xs font-semibold ${metric.noteTone}`}>{metric.note}</p>
               </div>
             </div>
-            <svg aria-hidden="true" className={`mt-5 ml-auto h-5 w-[150px] ${metric.tone.split(" ")[0]}`} viewBox="0 0 150 20" fill="none"><path d="M1 15 18 9l15 5L48 6l16 8 16-4 15 7 16-5 16 5 13-7 9 3" stroke="currentColor" strokeWidth="1.7" /></svg>
+            <div className={metric.tone.split(" ")[0]}><Sparkline values={metric.trend} /></div>
           </article>
         ))}
       </section>
@@ -200,7 +221,7 @@ export default function Home() {
           </section>
 
           <section className="mt-7 border-t border-slate-200 pt-7">
-            <div className="mb-6 flex items-start justify-between gap-3"><div className="flex gap-3"><Icon name="chart" className="mt-0.5 h-5 w-5 text-blue-600" /><div><h2 className="text-xl font-bold tracking-[-.03em]">Servicios este mes</h2><p className="mt-1 text-sm font-medium text-slate-500">Cantidad de servicios realizados.</p></div></div><span className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">Últimos 6 meses⌄</span></div>
+            <div className="mb-6 flex items-start justify-between gap-3"><div className="flex gap-3"><Icon name="chart" className="mt-0.5 h-5 w-5 text-blue-600" /><div><h2 className="text-xl font-bold tracking-[-.03em]">Servicios completados</h2><p className="mt-1 text-sm font-medium text-slate-500">Cantidad de servicios realizados por mes.</p></div></div><select aria-label="Periodo del gráfico" value={chartRange} onChange={(event) => setChartRange(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 outline-none focus:border-blue-500"><option value={6}>Últimos 6 meses</option><option value={12}>Últimos 12 meses</option></select></div>
             <div className="flex h-44 items-end gap-4 border-b border-slate-200 px-5 pt-4 sm:gap-8">
               {chart.map((item) => <div key={item.label} className="flex h-full flex-1 flex-col justify-end gap-2 text-center"><div className="mx-auto w-full max-w-10 rounded-t-md bg-gradient-to-t from-blue-300 to-blue-400" style={{ height: `${Math.max(item.count ? 20 : 6, (item.count / maxChart) * 110)}px` }} title={`${item.count} servicios`} /><span className="pb-2 text-xs text-slate-500">{item.label}</span></div>)}
             </div>

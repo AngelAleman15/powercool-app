@@ -277,104 +277,15 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-[#d8e4f4] bg-white shadow-[0_8px_30px_rgba(25,79,145,.12)] p-6 sm:p-7">
-        <h1 className="text-2xl font-bold text-[#214a79]">Acceso</h1>
-        <p className="text-sm text-[#5c7699] mt-1">Ingresa con enlace una vez y despues usa tu codigo.</p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_1px_1px,#d8e4f4_1px,transparent_1px)] bg-[size:16px_16px] lg:grid lg:grid-cols-[minmax(360px,37%)_1fr]">
+      <aside className="relative hidden min-h-screen overflow-hidden bg-[#061426] p-9 text-white lg:flex lg:flex-col" style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.7),rgba(4,24,49,.47),rgba(3,17,34,.86)),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}>
+        <div className="flex items-center gap-4"><div className="grid h-15 w-15 place-items-center rounded-xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] shadow-[0_10px_22px_rgba(8,94,205,.32)]"><svg className="h-9 w-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg></div><div><p className="text-[26px] font-bold tracking-[-.04em]">ClimaControl</p><p className="text-[15px] text-slate-300">Gestión técnica</p></div></div>
+        <div className="relative z-10 mt-24 max-w-md"><h1 className="text-[31px] font-bold leading-[1.35] tracking-[-.04em]">Gestiona tus equipos, clientes y mantenimientos de forma <span className="text-blue-400">simple y eficiente.</span></h1><div className="mt-12 space-y-8 text-slate-100"><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-blue-500/25 text-blue-200">▧</span><div><p className="font-bold">Control total</p><p className="mt-1 text-sm leading-6 text-slate-300">Monitorea todos tus equipos y servicios en tiempo real.</p></div></div><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-emerald-400/20 text-emerald-300">⌕</span><div><p className="font-bold">Mantenimientos al día</p><p className="mt-1 text-sm leading-6 text-slate-300">Recibe alertas y evita fallos inesperados.</p></div></div><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-violet-400/20 text-violet-300">▥</span><div><p className="font-bold">Reportes inteligentes</p><p className="mt-1 text-sm leading-6 text-slate-300">Toma mejores decisiones con datos claros y precisos.</p></div></div></div></div>
+        <p className="mt-auto flex items-center gap-3 text-sm text-slate-200"><span className="grid h-8 w-8 place-items-center rounded-full border border-blue-400/60 text-blue-300">♢</span>Tus datos están protegidos</p>
+      </aside>
 
-        {loading || processingLink ? (
-          <p className="mt-4 text-sm text-[#5c7699]">Cargando sesion...</p>
-        ) : user ? (
-          <div className="mt-5 space-y-4">
-            <div className="rounded-xl border border-[#d8e4f4] bg-[#f6f9ff] px-4 py-3">
-              <p className="text-sm text-[#3a5f8f]">Sesion activa como</p>
-              <p className="text-base font-semibold text-[#214a79]">{displayName}</p>
-              <p className="text-xs text-[#6a84a8]">{user.email}</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={signOut}
-                className="px-4 py-2 rounded-lg bg-[#1f67bf] text-white text-sm font-semibold hover:bg-[#1756a4] transition-colors"
-              >
-                Cerrar sesion
-              </button>
-              <Link
-                href="/"
-                className="px-4 py-2 rounded-lg border border-[#cddcf0] text-[#285887] text-sm font-semibold hover:bg-[#f6f9ff] transition-colors"
-              >
-                Ir al dashboard
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleMagicLink} className="mt-5 space-y-4">
-            <div>
-              <label htmlFor="fullName" className="text-sm font-semibold text-[#3a5f8f]">Nombre para mostrar</label>
-              <input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                placeholder="Ej: Angel"
-                className="mt-1 w-full rounded-lg border border-[#cddcf0] px-3 py-2 text-sm text-[#234876] outline-none focus:ring-2 focus:ring-[#77a6e0]"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="text-sm font-semibold text-[#3a5f8f]">Email</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                placeholder="tu@empresa.com"
-                className="mt-1 w-full rounded-lg border border-[#cddcf0] px-3 py-2 text-sm text-[#234876] outline-none focus:ring-2 focus:ring-[#77a6e0]"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="accessCode" className="text-sm font-semibold text-[#3a5f8f]">Codigo de acceso</label>
-              <input
-                id="accessCode"
-                type="password"
-                value={accessCode}
-                onChange={(event) => setAccessCode(event.target.value)}
-                required
-                minLength={MIN_ACCESS_CODE_LENGTH}
-                placeholder="Minimo 6 caracteres"
-                className="mt-1 w-full rounded-lg border border-[#cddcf0] px-3 py-2 text-sm text-[#234876] outline-none focus:ring-2 focus:ring-[#77a6e0]"
-              />
-            </div>
-
-            {message && <p className="text-sm text-[#1f7f48]">{message}</p>}
-            {error && <p className="text-sm text-[#b84a4a]">{error}</p>}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleCodeSignIn}
-                disabled={signingInWithCode}
-                className="w-full rounded-lg bg-[#1f67bf] text-white py-2.5 text-sm font-semibold hover:bg-[#1756a4] transition-colors disabled:opacity-70"
-              >
-                {signingInWithCode ? "Ingresando..." : "Entrar con codigo"}
-              </button>
-              <button
-                type="submit"
-                disabled={sending || cooldownLeft > 0}
-                className="w-full rounded-lg border border-[#b9cbe4] text-[#285887] py-2.5 text-sm font-semibold hover:bg-[#f6f9ff] transition-colors disabled:opacity-70"
-              >
-                {sending
-                  ? "Enviando..."
-                  : cooldownLeft > 0
-                    ? `Reenviar en ${cooldownLeft}s`
-                    : "Activar por email"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+      <main className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8"><div className="w-full max-w-[590px] rounded-3xl border border-slate-200 bg-white px-6 py-9 shadow-[0_24px_65px_rgba(15,42,82,.12)] sm:px-12 sm:py-14"><div className="mx-auto grid h-17 w-17 place-items-center rounded-2xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] text-white shadow-[0_12px_26px_rgba(8,94,205,.28)]"><svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg></div><div className="mt-6 text-center"><h2 className="text-3xl font-bold tracking-[-.045em] text-slate-900">Bienvenido de nuevo</h2><p className="mt-2 text-slate-500">Inicia sesión para continuar</p></div>
+        {loading || processingLink ? <p className="mt-9 text-center text-sm text-slate-500">Cargando sesión…</p> : user ? <div className="mt-9 space-y-4"><div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4"><p className="text-sm text-slate-600">Sesión activa como</p><p className="mt-1 font-bold text-slate-900">{displayName}</p><p className="text-sm text-slate-500">{user.email}</p></div><div className="flex flex-wrap gap-3"><button type="button" onClick={signOut} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700">Cerrar sesión</button><Link href="/" className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">Ir al Panel</Link></div></div> : <form onSubmit={handleMagicLink} className="mt-9 space-y-5"><div><label htmlFor="fullName" className="text-sm font-bold text-slate-800">Nombre para mostrar</label><input id="fullName" type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Ej: Ángel" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div><div><label htmlFor="email" className="text-sm font-bold text-slate-800">Correo electrónico</label><input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="tu@empresa.com" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div><div><label htmlFor="accessCode" className="text-sm font-bold text-slate-800">Código de acceso</label><input id="accessCode" type="password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} required minLength={MIN_ACCESS_CODE_LENGTH} placeholder="Mínimo 6 caracteres" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div>{message && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}{error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}<button type="button" onClick={handleCodeSignIn} disabled={signingInWithCode} className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_20px_rgba(37,99,235,.22)] transition hover:from-blue-700 hover:to-blue-800 disabled:opacity-70">{signingInWithCode ? "Ingresando…" : "Iniciar sesión"}</button><div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />o activa tu acceso<span className="h-px flex-1 bg-slate-200" /></div><button type="submit" disabled={sending || cooldownLeft > 0} className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50 disabled:opacity-70">{sending ? "Enviando…" : cooldownLeft > 0 ? `Reenviar en ${cooldownLeft}s` : "Recibir enlace por email"}</button></form>}</div></main>
     </div>
   )
 }

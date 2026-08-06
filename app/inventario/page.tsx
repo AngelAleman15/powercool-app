@@ -18,7 +18,10 @@ export default function InventarioPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { void loadParts() }, [loadParts])
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => { void loadParts() })
+    return () => window.cancelAnimationFrame(frame)
+  }, [loadParts])
   const lowStock = useMemo(() => parts.filter((part) => Number(part.stock_actual) <= Number(part.stock_minimo)).length, [parts])
 
   return (
