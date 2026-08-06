@@ -56,10 +56,10 @@ export default function ConfiguracionPage() {
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {settings.map((setting) => (
-          <button key={setting.title} type="button" onClick={() => setting.available && setSelected(setting.title)} className="group min-h-[220px] rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-[0_6px_18px_rgba(15,23,42,.025)] transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_14px_30px_rgba(15,23,42,.07)]">
-            <span className={`grid h-15 w-15 place-items-center rounded-xl text-[30px] font-medium ${setting.tone}`}>{setting.icon}</span>
-            <div className="mt-4 flex items-center justify-between gap-3"><h2 className="text-[19px] font-bold tracking-[-.03em]">{setting.title}</h2><span className="text-xl text-slate-500 transition group-hover:translate-x-0.5">›</span></div>
-            <p className="mt-2 max-w-[28ch] text-[15px] leading-6 text-slate-500">{setting.description}</p>
+          <button key={setting.title} type="button" onClick={() => setting.available && setSelected(setting.title)} className="group min-h-[198px] rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-[0_6px_18px_rgba(15,23,42,.025)] transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_14px_30px_rgba(15,23,42,.07)]">
+            <span className={`grid h-13 w-13 place-items-center rounded-xl text-[26px] font-medium ${setting.tone}`}>{setting.icon}</span>
+            <div className="mt-3 flex items-center justify-between gap-3"><h2 className="text-[18px] font-bold tracking-[-.03em]">{setting.title}</h2><span className="text-lg text-slate-500 transition group-hover:translate-x-0.5">›</span></div>
+            <p className="mt-1.5 max-w-[28ch] text-sm leading-5 text-slate-500">{setting.description}</p>
           </button>
         ))}
       </section>
