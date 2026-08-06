@@ -23,6 +23,7 @@ type Service = {
 
 type Equipment = { id: string | number; marca?: string; modelo?: string; cliente_id?: string; created_at?: string }
 type Client = { id: string | number; nombre?: string; created_at?: string }
+type Part = { id: string | number; stock_actual?: number; created_at?: string }
 
 const iconPaths = {
   equipment: <><path d="M5 5h14v4H5z" /><path d="M7 9v10m10-10v10M9 13h6m-3-4v8" /></>,
@@ -83,14 +84,21 @@ function monthlyCounts<T>(items: T[], getDate: (item: T) => string | undefined, 
   })
 }
 
-function Sparkline({ values }: { values: number[] }) {
+function Sparkline({ values, labels, id }: { values: number[]; labels: string[]; id: string }) {
   const max = Math.max(1, ...values)
-  const path = values.map((value, index) => {
-    const x = (index / Math.max(1, values.length - 1)) * 148 + 1
-    const y = 18 - (value / max) * 13
+  const width = 170
+  const graphBottom = 35
+  const points = values.map((value, index) => {
+    const x = (index / Math.max(1, values.length - 1)) * (width - 8) + 4
+    const y = graphBottom - (value / max) * 30
+    return { x, y, value }
+  })
+  const path = points.map(({ x, y }, index) => {
     return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`
   }).join(" ")
-  return <svg aria-hidden="true" className="mt-5 ml-auto h-5 w-[150px]" viewBox="0 0 150 20" fill="none"><path d={path} stroke="currentColor" strokeWidth="1.7" /></svg>
+  const areaPath = `${path} L${points.at(-1)?.x ?? width - 4} ${graphBottom} L${points[0]?.x ?? 4} ${graphBottom} Z`
+  const gradientId = `metric-gradient-${id}`
+  return <div className="mt-4 max-w-[170px] text-current"><svg role="img" aria-label={`Registros mensuales: ${values.join(", ")}`} className="h-11 w-full overflow-visible" viewBox={`0 0 ${width} 44`} fill="none"><defs><linearGradient id={gradientId} x1="0" x2="0" y1="5" y2={graphBottom} gradientUnits="userSpaceOnUse"><stop stopColor="currentColor" stopOpacity=".24" /><stop offset="1" stopColor="currentColor" stopOpacity="0" /></linearGradient></defs><path d={`M4 ${graphBottom}H${width - 4}`} stroke="currentColor" strokeOpacity=".15" strokeDasharray="3 4" /><path d={areaPath} fill={`url(#${gradientId})`} /><path d={path} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />{points.map(({ x, y, value }, index) => <circle key={`${labels[index]}-${index}`} cx={x} cy={y} r="2.8" fill="white" stroke="currentColor" strokeWidth="1.8"><title>{`${labels[index]}: ${value}`}</title></circle>)}</svg><div className="mt-0.5 grid grid-flow-col auto-cols-fr text-[10px] font-medium text-slate-400">{labels.map((label) => <span className="text-center" key={label}>{label}</span>)}</div></div>
 }
 
 export default function Home() {
@@ -101,6 +109,7 @@ export default function Home() {
   const [services, setServices] = useState<Service[]>([])
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [clients, setClients] = useState<Client[]>([])
+  const [parts, setParts] = useState<Part[]>([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [chartRange, setChartRange] = useState(6)
   const [chartRenderKey, setChartRenderKey] = useState(0)
@@ -115,6 +124,7 @@ export default function Home() {
         setEquipment(DEMO_EQUIPOS)
         setClients(DEMO_CLIENTES)
         setServices(DEMO_TRAMITES)
+        setParts([])
         setStats({ equipment: DEMO_STATS.equipos, clients: DEMO_STATS.clientes, pending: DEMO_STATS.pendientes, components: Math.max(3, Math.round(DEMO_STATS.equipos * 0.1)) })
         return
       }
@@ -128,17 +138,19 @@ export default function Home() {
         canEquipos ? supabase.from("equipos").select("id, marca, modelo, cliente_id, created_at") : Promise.resolve(empty),
         canClientes ? supabase.from("clientes").select("id, nombre, created_at") : Promise.resolve(empty),
         canTramites ? supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, equipo_id, clientes(nombre), equipos(marca, modelo)").order("created_at", { ascending: false }) : Promise.resolve(empty),
-        canRepuestos ? supabase.from("repuestos").select("id, stock_actual") : Promise.resolve(empty),
+        canRepuestos ? supabase.from("repuestos").select("id, stock_actual, created_at") : Promise.resolve(empty),
       ])
       if (equipmentRes.error || clientsRes.error || servicesRes.error || partsRes.error) throw new Error("sync")
 
       const realEquipment = (equipmentRes.data || []) as Equipment[]
       const realClients = (clientsRes.data || []) as Client[]
       const realServices = (servicesRes.data || []) as Service[]
-      const components = (partsRes.data || []).filter((part) => Number(part.stock_actual || 0) <= 3).length
+      const realParts = (partsRes.data || []) as Part[]
+      const components = realParts.filter((part) => Number(part.stock_actual || 0) <= 3).length
       setEquipment(realEquipment)
       setClients(realClients)
       setServices(realServices)
+      setParts(realParts)
       setStats({
         equipment: realEquipment.length,
         clients: realClients.length,
@@ -147,7 +159,7 @@ export default function Home() {
       })
     } catch {
       setError("No se pudo sincronizar el resumen. Revisa la conexión con Supabase.")
-      setEquipment([]); setClients([]); setServices([]); setStats({ equipment: 0, clients: 0, pending: 0, components: 0 })
+      setEquipment([]); setClients([]); setServices([]); setParts([]); setStats({ equipment: 0, clients: 0, pending: 0, components: 0 })
     } finally { setLoading(false) }
   }, [demoMode, permissions])
 
@@ -169,16 +181,17 @@ export default function Home() {
     }
   }, [pathname, chartRange, services.length])
 
-  const maintenance = useMemo(() => services.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).slice(0, 2), [services])
+  const maintenance = useMemo(() => services.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 3), [services])
   const activity = useMemo(() => services.slice(0, 5), [services])
   const chart = useMemo(() => monthlyCounts(services.filter((service) => service.estado === "completado"), (service) => service.fecha_programada || service.created_at, chartRange), [chartRange, services])
   const maxChart = Math.max(1, ...chart.map((item) => item.count))
   const trends = useMemo(() => ({
     equipment: monthlyCounts(equipment, (item) => item.created_at, 6).map((item) => item.count),
     clients: monthlyCounts(clients, (item) => item.created_at, 6).map((item) => item.count),
-    maintenance: monthlyCounts(services.filter((item) => item.tipo === "mantenimiento"), (item) => item.created_at, 6).map((item) => item.count),
-    components: Array.from({ length: 6 }, () => stats.components),
-  }), [clients, equipment, services, stats.components])
+    maintenance: monthlyCounts(services.filter((item) => item.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(item.estado || "")), (item) => item.created_at, 6).map((item) => item.count),
+    components: monthlyCounts(parts.filter((item) => Number(item.stock_actual || 0) <= 3), (item) => item.created_at, 6).map((item) => item.count),
+  }), [clients, equipment, parts, services])
+  const trendLabels = useMemo(() => monthlyCounts([], () => undefined, 6).map((item) => item.label), [])
 
   const metrics = [
     { label: "Equipos registrados", value: stats.equipment, icon: "equipment" as const, tone: "text-blue-600 border-blue-600", note: "Equipos en operación", noteTone: "text-blue-600", trend: trends.equipment },
@@ -210,7 +223,7 @@ export default function Home() {
                 <p className={`mt-3 text-xs font-semibold ${metric.noteTone}`}>{metric.note}</p>
               </div>
             </div>
-            <div className={metric.tone.split(" ")[0]}><Sparkline values={metric.trend} /></div>
+            <div className={metric.tone.split(" ")[0]}><Sparkline values={metric.trend} labels={trendLabels} id={metric.icon} /></div>
           </article>
         ))}
       </section>
