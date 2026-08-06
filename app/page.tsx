@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
@@ -92,6 +93,7 @@ function Sparkline({ values }: { values: number[] }) {
 }
 
 export default function Home() {
+  const pathname = usePathname()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [stats, setStats] = useState({ equipment: 0, clients: 0, pending: 0, components: 0 })
@@ -100,6 +102,7 @@ export default function Home() {
   const [clients, setClients] = useState<Client[]>([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [chartRange, setChartRange] = useState(6)
+  const [chartRenderKey, setChartRenderKey] = useState(0)
   const { displayName, permissions } = useAuthSession()
   const { demoMode } = useDemoMode()
 
@@ -149,6 +152,22 @@ export default function Home() {
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
 
+  useEffect(() => {
+    if (pathname !== "/") return
+
+    const refreshChart = () => setChartRenderKey((current) => current + 1)
+    const frame = window.requestAnimationFrame(refreshChart)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshChart()
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+  }, [pathname, chartRange, services.length])
+
   const maintenance = useMemo(() => services.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).slice(0, 2), [services])
   const activity = useMemo(() => services.slice(0, 5), [services])
   const chart = useMemo(() => monthlyCounts(services.filter((service) => service.estado === "completado"), (service) => service.fecha_programada || service.created_at, chartRange), [chartRange, services])
@@ -168,8 +187,8 @@ export default function Home() {
   ]
 
   return (
-    <div className="mx-auto max-w-[1450px] px-5 py-8 text-slate-900 sm:px-8 lg:px-9 lg:py-10">
-      <header className="mb-10 flex items-start justify-between gap-4">
+    <div className="mx-auto max-w-[1380px] px-5 py-6 text-slate-900 sm:px-7 lg:px-8 lg:py-8">
+      <header className="mb-7 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-bold tracking-[-0.045em] sm:text-[30px]">¡Bienvenido, {displayName || "usuario"}!</h1>
           <p className="mt-1 text-[15px] font-medium text-slate-500">Aquí tienes un resumen actualizado de tu operación.</p>
@@ -184,15 +203,15 @@ export default function Home() {
 
       {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <section className="grid gap-6 border-b border-slate-200 pb-10 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-5 border-b border-slate-200 pb-7 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
           <article key={metric.label} className="min-w-0">
-            <div className="flex items-center gap-5">
-              <div className={`grid h-[92px] w-[92px] shrink-0 place-items-center rounded-full border-[4px] bg-white shadow-[inset_0_0_0_8px_rgba(248,250,252,.95),0_8px_22px_rgba(15,23,42,.04)] ${metric.tone}`}><Icon name={metric.icon} className="h-8 w-8" /></div>
+            <div className="flex items-center gap-4">
+              <div className={`grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full border-[3px] bg-white shadow-[inset_0_0_0_7px_rgba(248,250,252,.95),0_8px_18px_rgba(15,23,42,.04)] ${metric.tone}`}><Icon name={metric.icon} className="h-7 w-7" /></div>
               <div className="min-w-0">
                 <p className="text-[34px] font-bold leading-none tracking-[-.05em]">{loading ? "–" : metric.value}</p>
-                <p className="mt-2 text-sm font-semibold text-slate-600">{metric.label}</p>
-                <p className={`mt-4 text-xs font-semibold ${metric.noteTone}`}>{metric.note}</p>
+                <p className="mt-1.5 text-[13px] font-semibold text-slate-600">{metric.label}</p>
+                <p className={`mt-3 text-xs font-semibold ${metric.noteTone}`}>{metric.note}</p>
               </div>
             </div>
             <div className={metric.tone.split(" ")[0]}><Sparkline values={metric.trend} /></div>
@@ -201,13 +220,13 @@ export default function Home() {
       </section>
 
       <div className="grid xl:grid-cols-[1.16fr_.94fr]">
-        <div className="py-8 pr-0 xl:pr-7">
+        <div className="py-6 pr-0 xl:pr-6">
           <section>
-            <div className="mb-7 flex items-start justify-between gap-3">
+            <div className="mb-5 flex items-start justify-between gap-3">
               <div className="flex gap-3"><Icon name="alert" className="mt-0.5 h-5 w-5 text-orange-500" /><div><h2 className="text-xl font-bold tracking-[-.03em]">Mantenimientos pendientes</h2><p className="mt-1 text-sm font-medium text-slate-500">Equipos que superaron su intervalo de servicio.</p></div></div>
               <Link href="/tramites" className="whitespace-nowrap text-sm font-bold text-blue-600">Ver todos <span className="text-xl leading-none">›</span></Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {maintenance.length ? maintenance.map((service) => {
                 const waitingDays = service.fecha_programada ? Math.max(1, Math.floor((Date.now() - new Date(service.fecha_programada).getTime()) / 86400000)) : 0
                 return <Link href={`/tramites/${service.id}`} key={service.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_5px_16px_rgba(15,23,42,.025)] transition hover:border-blue-200">
@@ -220,15 +239,15 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="mt-7 border-t border-slate-200 pt-7">
+          <section className="mt-6 border-t border-slate-200 pt-6">
             <div className="mb-6 flex items-start justify-between gap-3"><div className="flex gap-3"><Icon name="chart" className="mt-0.5 h-5 w-5 text-blue-600" /><div><h2 className="text-xl font-bold tracking-[-.03em]">Servicios completados</h2><p className="mt-1 text-sm font-medium text-slate-500">Cantidad de servicios realizados por mes.</p></div></div><select aria-label="Periodo del gráfico" value={chartRange} onChange={(event) => setChartRange(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 outline-none focus:border-blue-500"><option value={6}>Últimos 6 meses</option><option value={12}>Últimos 12 meses</option></select></div>
-            <div className="flex h-44 items-end gap-4 border-b border-slate-200 px-5 pt-4 sm:gap-8">
+            <div key={chartRenderKey} className="flex h-36 items-end gap-3 border-b border-slate-200 px-4 pt-3 sm:gap-6">
               {chart.map((item) => <div key={item.label} className="flex h-full flex-1 flex-col justify-end gap-2 text-center"><div className="mx-auto w-full max-w-10 rounded-t-md bg-gradient-to-t from-blue-300 to-blue-400" style={{ height: `${Math.max(item.count ? 20 : 6, (item.count / maxChart) * 110)}px` }} title={`${item.count} servicios`} /><span className="pb-2 text-xs text-slate-500">{item.label}</span></div>)}
             </div>
           </section>
         </div>
 
-        <section className="border-t border-slate-200 py-8 xl:border-l xl:border-t-0 xl:pl-8">
+        <section className="border-t border-slate-200 py-6 xl:border-l xl:border-t-0 xl:pl-7">
           <div className="mb-7 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Icon name="wrench" className="h-6 w-6 text-blue-600" /><h2 className="text-xl font-bold tracking-[-.03em]">Actividad reciente</h2></div><Link href="/tramites" className="text-sm font-bold text-blue-600">Ver todo el historial</Link></div>
           <div className="relative space-y-0 before:absolute before:bottom-5 before:left-[5px] before:top-5 before:w-px before:bg-slate-200">
             {activity.length ? activity.map((service) => { const state = statusMeta(service.estado); return <Link href={`/tramites/${service.id}`} key={service.id} className="relative flex gap-4 border-b border-slate-200 py-5 first:pt-2 last:border-0"><span className={`relative z-10 mt-1.5 h-3 w-3 shrink-0 rounded-full ring-4 ring-white ${state.dot}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"><p className="text-sm font-medium text-slate-500">{relativeDate(service.created_at)}</p><span className={`rounded-full px-3 py-1 text-xs font-bold ${state.chip}`}>{state.label}</span></div><p className="mt-2 font-bold text-slate-900">{service.equipo_id || "Servicio"}</p><p className="mt-1 text-sm text-slate-500">{service.tipo === "mantenimiento" ? "Mantenimiento" : "Servicio"} · {clientName(service, clients)}</p></div><Icon name="chevron" className="mt-7 h-5 w-5 shrink-0 text-slate-500" /></Link> }) : <p className="py-10 text-center text-sm text-slate-500">Todavía no hay actividad para mostrar.</p>}

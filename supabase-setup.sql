@@ -76,6 +76,22 @@ BEGIN
     ALTER TABLE equipos ADD COLUMN prioridad TEXT DEFAULT 'normal'
       CHECK (prioridad IN ('normal', 'atencion', 'critico'));
   END IF;
+
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_name = 'equipos' AND column_name = 'created_at'
+  ) THEN
+    ALTER TABLE equipos ADD COLUMN created_at TIMESTAMP WITH TIME ZONE
+      DEFAULT TIMEZONE('utc', NOW());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT FROM information_schema.columns
+    WHERE table_name = 'equipos' AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE equipos ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE
+      DEFAULT TIMEZONE('utc', NOW());
+  END IF;
 END $$;
 
 -- Índices para mejorar el rendimiento
@@ -112,6 +128,11 @@ $$;
 DROP TRIGGER IF EXISTS trg_profiles_updated_at ON profiles;
 CREATE TRIGGER trg_profiles_updated_at
 BEFORE UPDATE ON profiles
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_equipos_updated_at ON equipos;
+CREATE TRIGGER trg_equipos_updated_at
+BEFORE UPDATE ON equipos
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- Auto-creación de perfil cuando se registra un usuario nuevo
@@ -345,6 +366,8 @@ BEGIN
 END $$;
 
 ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE role_permissions FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE role_permissions TO authenticated;
 
 DROP POLICY IF EXISTS "role_permissions_select_authenticated" ON role_permissions;
 DROP POLICY IF EXISTS "role_permissions_write_privileged" ON role_permissions;

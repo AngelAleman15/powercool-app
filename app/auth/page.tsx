@@ -12,6 +12,10 @@ const MAGIC_LINK_COOLDOWN_SECONDS = 60
 const SERVER_RATE_LIMIT_COOLDOWN_SECONDS = 60 * 60
 const MIN_ACCESS_CODE_LENGTH = 6
 
+function Snowflake({ className = "" }: { className?: string }) {
+  return <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg>
+}
+
 function getCooldownStorageKey(email: string) {
   const normalizedEmail = String(email || "").trim().toLowerCase()
   return `powercool.auth.lastMagicLinkAt:${normalizedEmail || "anon"}`
@@ -36,6 +40,8 @@ export default function AuthPage() {
   const [signingInWithCode, setSigningInWithCode] = useState(false)
   const [processingLink, setProcessingLink] = useState(false)
   const [cooldownLeft, setCooldownLeft] = useState(0)
+  const [activationMode, setActivationMode] = useState(false)
+  const [showAccessCode, setShowAccessCode] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
 
@@ -43,81 +49,47 @@ export default function AuthPage() {
   const pendingAccessCodeStorageKey = useMemo(() => getEmailScopedKey(PENDING_ACCESS_CODE_KEY, email), [email])
 
   const syncPendingIdentity = useCallback(async (activeUser: { id: string; email?: string } | null | undefined) => {
-    if (!activeUser?.id || !activeUser?.email) return { codeActivated: false }
-    if (typeof window === "undefined") return
+    if (!activeUser?.id || !activeUser?.email || typeof window === "undefined") return { codeActivated: false }
 
     const normalizedEmail = String(activeUser.email).trim().toLowerCase()
     const nameKey = getEmailScopedKey(PENDING_NAME_KEY, normalizedEmail)
     const codeKey = getEmailScopedKey(PENDING_ACCESS_CODE_KEY, normalizedEmail)
     const preferredName = window.localStorage.getItem(nameKey)?.trim() || ""
     const pendingCode = window.localStorage.getItem(codeKey) || ""
-
     const authUpdate: { data?: { full_name: string }; password?: string } = {}
+
     if (preferredName) authUpdate.data = { full_name: preferredName }
     if (pendingCode.length >= MIN_ACCESS_CODE_LENGTH) authUpdate.password = pendingCode
 
     if (authUpdate.data || authUpdate.password) {
       const { error: updateUserError } = await supabase.auth.updateUser(authUpdate)
-      if (updateUserError) {
-        return {
-          codeActivated: false,
-          error: updateUserError.message || "No se pudo activar el codigo de acceso.",
-        }
-      }
+      if (updateUserError) return { codeActivated: false, error: updateUserError.message || "No se pudo activar el código de acceso." }
     }
 
     if (preferredName) {
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ full_name: preferredName })
-        .eq("id", activeUser.id)
-
-      if (profileError) {
-        return {
-          codeActivated: !!authUpdate.password,
-          error: profileError.message || "El codigo se activo, pero no se pudo guardar el nombre.",
-        }
-      }
+      const { error: profileError } = await supabase.from("profiles").update({ full_name: preferredName }).eq("id", activeUser.id)
+      if (profileError) return { codeActivated: Boolean(authUpdate.password), error: profileError.message || "El código se activó, pero no se pudo guardar el nombre." }
     }
 
     window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
     window.localStorage.removeItem(nameKey)
     window.localStorage.removeItem(codeKey)
-    return { codeActivated: !!authUpdate.password }
+    return { codeActivated: Boolean(authUpdate.password) }
   }, [])
 
   useEffect(() => {
-    if (typeof window === "undefined") return
     const savedEmail = window.localStorage.getItem(LAST_EMAIL_KEY)
     if (savedEmail) setEmail(savedEmail)
   }, [])
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-
     const syncCooldown = () => {
-      const key = getCooldownStorageKey(email)
-      const rateLimitKey = getRateLimitUntilStorageKey(email)
-      const raw = window.localStorage.getItem(key)
-      const rateLimitUntil = Number(window.localStorage.getItem(rateLimitKey) || 0)
-      const lastSentAt = Number(raw || 0)
+      const lastSentAt = Number(window.localStorage.getItem(getCooldownStorageKey(email)) || 0)
+      const rateLimitUntil = Number(window.localStorage.getItem(getRateLimitUntilStorageKey(email)) || 0)
       const rateLimitLeft = Math.max(0, Math.ceil((rateLimitUntil - Date.now()) / 1000))
-
-      if (rateLimitLeft > 0) {
-        setCooldownLeft(rateLimitLeft)
-        return
-      }
-
-      if (!Number.isFinite(lastSentAt) || lastSentAt <= 0) {
-        setCooldownLeft(0)
-        return
-      }
-
-      const elapsed = Math.floor((Date.now() - lastSentAt) / 1000)
-      const left = Math.max(0, MAGIC_LINK_COOLDOWN_SECONDS - elapsed)
-      setCooldownLeft(left)
+      const magicLinkLeft = Math.max(0, MAGIC_LINK_COOLDOWN_SECONDS - Math.floor((Date.now() - lastSentAt) / 1000))
+      setCooldownLeft(Math.max(rateLimitLeft, magicLinkLeft))
     }
-
     syncCooldown()
     const timer = window.setInterval(syncCooldown, 1000)
     return () => window.clearInterval(timer)
@@ -125,167 +97,104 @@ export default function AuthPage() {
 
   useEffect(() => {
     const hydrateSessionFromHash = async () => {
-      if (typeof window === "undefined") return
-      const hash = window.location.hash || ""
-      if (!hash.includes("access_token=") || !hash.includes("refresh_token=")) return
-
-      const params = new URLSearchParams(hash.replace(/^#/, ""))
-      const access_token = params.get("access_token")
-      const refresh_token = params.get("refresh_token")
-      if (!access_token || !refresh_token) return
+      const params = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+      const accessToken = params.get("access_token")
+      const refreshToken = params.get("refresh_token")
+      if (!accessToken || !refreshToken) return
 
       setProcessingLink(true)
       try {
-        const { data, error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token })
-        if (setSessionError) {
-          setError(setSessionError.message || "No se pudo validar el enlace de acceso.")
-        } else {
-          const syncResult = await syncPendingIdentity(data.session?.user)
-          if (syncResult?.error) {
-            setError(syncResult.error)
-          } else if (syncResult?.codeActivated) {
-            setMessage("Acceso confirmado. Tu codigo ya puede usarse para entrar sin enlace.")
-          } else {
-            setMessage("Acceso confirmado. No habia un codigo pendiente para activar en este dispositivo.")
-          }
+        const { data, error: setSessionError } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        if (setSessionError) setError(setSessionError.message || "No se pudo validar el enlace de acceso.")
+        else {
+          const result = await syncPendingIdentity(data.session?.user)
+          if (result.error) setError(result.error)
+          else setMessage(result.codeActivated ? "Acceso activado: podrás entrar con tu código en adelante." : "Acceso confirmado.")
           window.history.replaceState({}, document.title, "/auth")
         }
-      } finally {
-        setProcessingLink(false)
-      }
+      } finally { setProcessingLink(false) }
     }
-
-    hydrateSessionFromHash()
+    void hydrateSessionFromHash()
   }, [syncPendingIdentity])
 
   useEffect(() => {
-    const syncCurrentUser = async () => {
-      const syncResult = await syncPendingIdentity(user)
-      if (syncResult?.error) setError(syncResult.error)
-    }
-
-    void syncCurrentUser()
+    void syncPendingIdentity(user).then((result) => {
+      if (result.error) setError(result.error)
+    })
   }, [syncPendingIdentity, user])
 
   const handleMagicLink = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     const normalizedEmail = email.trim().toLowerCase()
     const normalizedName = fullName.trim()
     const normalizedCode = accessCode.trim()
-
-    if (!normalizedName) {
-      setError("Ingresa el nombre que queres mostrar antes de pedir el enlace.")
+    if (!normalizedName || !normalizedEmail || normalizedCode.length < MIN_ACCESS_CODE_LENGTH) {
+      setError(`Completa tu nombre, correo y un código de al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
       return
     }
-
-    if (normalizedCode.length < MIN_ACCESS_CODE_LENGTH) {
-      setError(`El codigo debe tener al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
-      return
-    }
-
     if (cooldownLeft > 0) {
-      const minutesLeft = Math.ceil(cooldownLeft / 60)
-      setError(
-        cooldownLeft > MAGIC_LINK_COOLDOWN_SECONDS
-          ? `Supabase esta limitando los emails. Espera aproximadamente ${minutesLeft} min antes de pedir otro enlace.`
-          : `Espera ${cooldownLeft}s antes de pedir otro enlace.`
-      )
+      setError(cooldownLeft > MAGIC_LINK_COOLDOWN_SECONDS ? "Supabase limitó temporalmente los correos. Intenta nuevamente más tarde." : `Espera ${cooldownLeft}s antes de pedir otro enlace.`)
       return
     }
 
-    setError("")
-    setMessage("")
-    setSending(true)
-
+    setError(""); setMessage(""); setSending(true)
     try {
       const configuredAppUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim()
-      const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : ""
-      const baseUrl = configuredAppUrl || runtimeOrigin
-      const redirectTo = baseUrl ? `${baseUrl.replace(/\/$/, "")}/auth` : undefined
-
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: {
-          emailRedirectTo: redirectTo,
-          data: { full_name: normalizedName },
-        },
-      })
-
+      const baseUrl = configuredAppUrl || window.location.origin
+      const { error: authError } = await supabase.auth.signInWithOtp({ email: normalizedEmail, options: { emailRedirectTo: `${baseUrl.replace(/\/$/, "")}/auth`, data: { full_name: normalizedName } } })
       if (authError) {
-        const rawMessage = String(authError.message || "")
-        if (authError.status === 429 || /rate limit|too many/i.test(rawMessage)) {
-          if (typeof window !== "undefined") {
-            const rateLimitKey = getRateLimitUntilStorageKey(normalizedEmail)
-            window.localStorage.setItem(rateLimitKey, String(Date.now() + SERVER_RATE_LIMIT_COOLDOWN_SECONDS * 1000))
-            setCooldownLeft(SERVER_RATE_LIMIT_COOLDOWN_SECONDS)
-          }
-          setError("Supabase bloqueo temporalmente el envio de emails por limite del proyecto. Espera cerca de 1 hora o activa SMTP propio en Supabase.")
-          return
-        }
-        setError(authError.message)
+        if (authError.status === 429 || /rate limit|too many/i.test(String(authError.message || ""))) {
+          window.localStorage.setItem(getRateLimitUntilStorageKey(normalizedEmail), String(Date.now() + SERVER_RATE_LIMIT_COOLDOWN_SECONDS * 1000))
+          setCooldownLeft(SERVER_RATE_LIMIT_COOLDOWN_SECONDS)
+          setError("Supabase bloqueó temporalmente el envío de emails. Intenta nuevamente dentro de una hora.")
+        } else setError(authError.message)
         return
       }
-
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(pendingNameStorageKey, normalizedName)
-        window.localStorage.setItem(pendingAccessCodeStorageKey, normalizedCode)
-        window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
-
-        const cooldownKey = getCooldownStorageKey(normalizedEmail)
-        window.localStorage.setItem(cooldownKey, String(Date.now()))
-        setCooldownLeft(MAGIC_LINK_COOLDOWN_SECONDS)
-      }
-
-      setMessage("Te enviamos un enlace por email. Al abrirlo una vez, queda activado este codigo para futuros ingresos.")
-    } finally {
-      setSending(false)
-    }
+      window.localStorage.setItem(pendingNameStorageKey, normalizedName)
+      window.localStorage.setItem(pendingAccessCodeStorageKey, normalizedCode)
+      window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
+      window.localStorage.setItem(getCooldownStorageKey(normalizedEmail), String(Date.now()))
+      setCooldownLeft(MAGIC_LINK_COOLDOWN_SECONDS)
+      setMessage("Revisa tu correo y abre el enlace una vez. Después podrás usar solamente tu email y código.")
+    } finally { setSending(false) }
   }
 
-  const handleCodeSignIn = async () => {
+  const handleCodeSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     const normalizedEmail = email.trim().toLowerCase()
     const normalizedCode = accessCode.trim()
-
     if (!normalizedEmail || normalizedCode.length < MIN_ACCESS_CODE_LENGTH) {
-      setError(`Ingresa tu email y un codigo de al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
+      setError(`Ingresa tu email y un código de al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
       return
     }
-
-    setError("")
-    setMessage("")
-    setSigningInWithCode(true)
-
+    setError(""); setMessage(""); setSigningInWithCode(true)
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password: normalizedCode,
-      })
-
+      const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: normalizedCode })
       if (authError) {
-        setError("No se pudo entrar con ese codigo. Si todavia no lo activaste, pedi un enlace primero.")
+        setError("No se pudo entrar con ese código. Si es tu primer acceso, actívalo por email.")
         return
       }
-
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
-      }
-      setMessage("Acceso confirmado con codigo.")
-    } finally {
-      setSigningInWithCode(false)
-    }
+      window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
+      setMessage("Acceso confirmado.")
+    } finally { setSigningInWithCode(false) }
   }
 
-  return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_1px_1px,#d8e4f4_1px,transparent_1px)] bg-[size:16px_16px] lg:grid lg:grid-cols-[minmax(360px,37%)_1fr]">
-      <aside className="relative hidden min-h-screen overflow-hidden bg-[#061426] p-9 text-white lg:flex lg:flex-col" style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.7),rgba(4,24,49,.47),rgba(3,17,34,.86)),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}>
-        <div className="flex items-center gap-4"><div className="grid h-15 w-15 place-items-center rounded-xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] shadow-[0_10px_22px_rgba(8,94,205,.32)]"><svg className="h-9 w-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg></div><div><p className="text-[26px] font-bold tracking-[-.04em]">ClimaControl</p><p className="text-[15px] text-slate-300">Gestión técnica</p></div></div>
-        <div className="relative z-10 mt-24 max-w-md"><h1 className="text-[31px] font-bold leading-[1.35] tracking-[-.04em]">Gestiona tus equipos, clientes y mantenimientos de forma <span className="text-blue-400">simple y eficiente.</span></h1><div className="mt-12 space-y-8 text-slate-100"><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-blue-500/25 text-blue-200">▧</span><div><p className="font-bold">Control total</p><p className="mt-1 text-sm leading-6 text-slate-300">Monitorea todos tus equipos y servicios en tiempo real.</p></div></div><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-emerald-400/20 text-emerald-300">⌕</span><div><p className="font-bold">Mantenimientos al día</p><p className="mt-1 text-sm leading-6 text-slate-300">Recibe alertas y evita fallos inesperados.</p></div></div><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-violet-400/20 text-violet-300">▥</span><div><p className="font-bold">Reportes inteligentes</p><p className="mt-1 text-sm leading-6 text-slate-300">Toma mejores decisiones con datos claros y precisos.</p></div></div></div></div>
-        <p className="mt-auto flex items-center gap-3 text-sm text-slate-200"><span className="grid h-8 w-8 place-items-center rounded-full border border-blue-400/60 text-blue-300">♢</span>Tus datos están protegidos</p>
-      </aside>
+  const codeInput = <div><div className="flex items-center justify-between gap-3"><label htmlFor="accessCode" className="text-sm font-bold text-slate-800">Código de acceso</label><button type="button" onClick={() => setShowAccessCode((visible) => !visible)} className="text-xs font-semibold text-blue-700 hover:text-blue-800">{showAccessCode ? "Ocultar" : "Mostrar"}</button></div><input id="accessCode" type={showAccessCode ? "text" : "password"} value={accessCode} onChange={(event) => setAccessCode(event.target.value)} required minLength={MIN_ACCESS_CODE_LENGTH} autoComplete="current-password" placeholder="Tu código personal" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div>
 
-      <main className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8"><div className="w-full max-w-[590px] rounded-3xl border border-slate-200 bg-white px-6 py-9 shadow-[0_24px_65px_rgba(15,42,82,.12)] sm:px-12 sm:py-14"><div className="mx-auto grid h-17 w-17 place-items-center rounded-2xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] text-white shadow-[0_12px_26px_rgba(8,94,205,.28)]"><svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg></div><div className="mt-6 text-center"><h2 className="text-3xl font-bold tracking-[-.045em] text-slate-900">Bienvenido de nuevo</h2><p className="mt-2 text-slate-500">Inicia sesión para continuar</p></div>
-        {loading || processingLink ? <p className="mt-9 text-center text-sm text-slate-500">Cargando sesión…</p> : user ? <div className="mt-9 space-y-4"><div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4"><p className="text-sm text-slate-600">Sesión activa como</p><p className="mt-1 font-bold text-slate-900">{displayName}</p><p className="text-sm text-slate-500">{user.email}</p></div><div className="flex flex-wrap gap-3"><button type="button" onClick={signOut} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700">Cerrar sesión</button><Link href="/" className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">Ir al Panel</Link></div></div> : <form onSubmit={handleMagicLink} className="mt-9 space-y-5"><div><label htmlFor="fullName" className="text-sm font-bold text-slate-800">Nombre para mostrar</label><input id="fullName" type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Ej: Ángel" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div><div><label htmlFor="email" className="text-sm font-bold text-slate-800">Correo electrónico</label><input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="tu@empresa.com" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div><div><label htmlFor="accessCode" className="text-sm font-bold text-slate-800">Código de acceso</label><input id="accessCode" type="password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} required minLength={MIN_ACCESS_CODE_LENGTH} placeholder="Mínimo 6 caracteres" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div>{message && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}{error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}<button type="button" onClick={handleCodeSignIn} disabled={signingInWithCode} className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_20px_rgba(37,99,235,.22)] transition hover:from-blue-700 hover:to-blue-800 disabled:opacity-70">{signingInWithCode ? "Ingresando…" : "Iniciar sesión"}</button><div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />o activa tu acceso<span className="h-px flex-1 bg-slate-200" /></div><button type="submit" disabled={sending || cooldownLeft > 0} className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50 disabled:opacity-70">{sending ? "Enviando…" : cooldownLeft > 0 ? `Reenviar en ${cooldownLeft}s` : "Recibir enlace por email"}</button></form>}</div></main>
-    </div>
-  )
+  return <div className="min-h-screen w-full bg-[radial-gradient(circle_at_1px_1px,#d8e4f4_1px,transparent_1px)] bg-[size:16px_16px] md:ml-[-280px] md:w-[calc(100%+280px)] lg:grid lg:grid-cols-[minmax(420px,37%)_1fr]">
+    <aside className="relative hidden min-h-screen overflow-hidden bg-[#061426] p-12 text-white lg:flex lg:flex-col" style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.72),rgba(4,24,49,.43),rgba(3,17,34,.9)),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}>
+      <div className="flex items-center gap-4"><div className="grid h-15 w-15 place-items-center rounded-xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] shadow-[0_10px_22px_rgba(8,94,205,.32)]"><Snowflake className="h-9 w-9" /></div><div><p className="text-[26px] font-bold tracking-[-.04em]">ClimaControl</p><p className="text-[15px] text-slate-300">Gestión técnica</p></div></div>
+      <div className="relative z-10 mt-24 max-w-md"><h1 className="text-[31px] font-bold leading-[1.35] tracking-[-.04em]">Gestiona tus equipos, clientes y mantenimientos de forma <span className="text-blue-400">simple y eficiente.</span></h1><div className="mt-12 space-y-8 text-slate-100"><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-blue-500/25 text-lg text-blue-200">▧</span><div><p className="font-bold">Control total</p><p className="mt-1 text-sm leading-6 text-slate-300">Monitorea todos tus equipos y servicios en tiempo real.</p></div></div><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-emerald-400/20 text-lg text-emerald-300">⌕</span><div><p className="font-bold">Mantenimientos al día</p><p className="mt-1 text-sm leading-6 text-slate-300">Recibe alertas y evita fallos inesperados.</p></div></div><div className="flex gap-4"><span className="grid h-13 w-13 shrink-0 place-items-center rounded-xl bg-violet-400/20 text-lg text-violet-300">▥</span><div><p className="font-bold">Reportes inteligentes</p><p className="mt-1 text-sm leading-6 text-slate-300">Toma mejores decisiones con datos claros y precisos.</p></div></div></div></div>
+      <p className="mt-auto flex items-center gap-3 text-sm text-slate-200"><span className="grid h-8 w-8 place-items-center rounded-full border border-blue-400/60 text-blue-300">♢</span>Tus datos están protegidos</p>
+    </aside>
+
+    <main className="flex min-h-screen items-center justify-center p-6 sm:p-10 xl:p-14"><div className="w-full max-w-[650px] rounded-3xl border border-slate-200 bg-white px-7 py-10 shadow-[0_24px_65px_rgba(15,42,82,.12)] sm:px-14 sm:py-12"><div className="mx-auto grid h-17 w-17 place-items-center rounded-2xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] text-white shadow-[0_12px_26px_rgba(8,94,205,.28)]"><Snowflake className="h-10 w-10" /></div><div className="mt-6 text-center"><h2 className="text-3xl font-bold tracking-[-.045em] text-slate-900">{activationMode ? "Activa tu acceso" : "Bienvenido de nuevo"}</h2><p className="mt-2 text-slate-500">{activationMode ? "Configura tu código una sola vez" : "Ingresa con tu email y código personal"}</p></div>
+      {loading || processingLink ? <p className="mt-9 text-center text-sm text-slate-500">Validando sesión…</p> : user ? <div className="mt-9 space-y-4"><div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4"><p className="text-sm text-slate-600">Sesión activa como</p><p className="mt-1 font-bold text-slate-900">{displayName}</p><p className="text-sm text-slate-500">{user.email}</p></div><div className="flex flex-wrap gap-3"><button type="button" onClick={signOut} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700">Cerrar sesión</button><Link href="/" className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">Ir al Panel</Link></div></div> : activationMode ? <form onSubmit={handleMagicLink} className="mt-9 space-y-5"><div><label htmlFor="fullName" className="text-sm font-bold text-slate-800">Nombre para mostrar</label><input id="fullName" type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Ej: Ángel" autoComplete="name" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div><div><label htmlFor="email" className="text-sm font-bold text-slate-800">Correo electrónico</label><input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" placeholder="tu@empresa.com" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div>{codeInput}<Status message={message} error={error} /><button type="submit" disabled={sending || cooldownLeft > 0} className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_20px_rgba(37,99,235,.22)] transition hover:from-blue-700 hover:to-blue-800 disabled:opacity-70">{sending ? "Enviando…" : cooldownLeft > 0 ? `Reenviar en ${cooldownLeft}s` : "Recibir enlace de activación"}</button><button type="button" onClick={() => { setActivationMode(false); setError(""); setMessage("") }} className="w-full text-sm font-semibold text-slate-500 hover:text-blue-700">Ya tengo un código</button></form> : <form onSubmit={handleCodeSignIn} className="mt-9 space-y-5"><div><label htmlFor="email" className="text-sm font-bold text-slate-800">Correo electrónico</label><input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" placeholder="tu@empresa.com" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></div>{codeInput}<Status message={message} error={error} /><button type="submit" disabled={signingInWithCode} className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_20px_rgba(37,99,235,.22)] transition hover:from-blue-700 hover:to-blue-800 disabled:opacity-70">{signingInWithCode ? "Ingresando…" : "Iniciar sesión"}</button><div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />¿Primera vez? <span className="h-px flex-1 bg-slate-200" /></div><button type="button" onClick={() => { setActivationMode(true); setError(""); setMessage("") }} className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50">Activar mi acceso por email</button></form>}</div></main>
+  </div>
+}
+
+function Status({ message, error }: { message: string; error: string }) {
+  if (message) return <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>
+  if (error) return <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+  return null
 }
