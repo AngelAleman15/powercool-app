@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useRef, useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import { useDemoMode } from "@/lib/useDemoMode"
@@ -79,11 +80,14 @@ function normalizeHeader(header) {
 }
 
 export default function Clientes() {
+  const router = useRouter()
   const fileInputRef = useRef(null)
   const [clientes, setClientes] = useState([])
   const [equiposByCliente, setEquiposByCliente] = useState({})
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("todo")
+  const [cityFilter, setCityFilter] = useState("todas")
+  const [actionMenuId, setActionMenuId] = useState(null)
   const [selectedClientId, setSelectedClientId] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -185,7 +189,7 @@ export default function Clientes() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, statusFilter])
+  }, [search, statusFilter, cityFilter])
 
   const filtrados = clientes.filter((c) => {
     const matchesSearch =
@@ -193,17 +197,31 @@ export default function Clientes() {
       c.contacto?.toLowerCase().includes(search.toLowerCase()) ||
       c.email?.toLowerCase().includes(search.toLowerCase()) ||
       c.telefono?.includes(search) ||
-      c.ciudad?.toLowerCase().includes(search.toLowerCase())
+      c.ciudad?.toLowerCase().includes(search.toLowerCase()) ||
+      c.rut?.toLowerCase().includes(search.toLowerCase()) ||
+      c.identificador_fiscal?.toLowerCase().includes(search.toLowerCase())
 
     const matchesStatus =
       statusFilter === "todo"
         ? true
         : statusFilter === "activos"
           ? c.status === "activo"
-          : c.status === "inactivo"
+          : statusFilter === "inactivos"
+            ? c.status === "inactivo"
+            : c.status === "suspendido"
 
-    return matchesSearch && matchesStatus
+    const matchesCity = cityFilter === "todas" || (c.ciudad || "").toLowerCase() === cityFilter
+
+    return matchesSearch && matchesStatus && matchesCity
   })
+
+  const clientMetrics = {
+    total: clientes.length,
+    active: clientes.filter((client) => client.status === "activo").length,
+    inactive: clientes.filter((client) => client.status === "inactivo").length,
+    suspended: clientes.filter((client) => client.status === "suspendido").length,
+  }
+  const cityOptions = [...new Set(clientes.map((client) => client.ciudad).filter(Boolean))].sort()
 
   const totalPages = Math.max(1, Math.ceil(filtrados.length / rowsPerPage))
   const currentPageSafe = Math.min(currentPage, totalPages)
@@ -450,18 +468,35 @@ export default function Clientes() {
   }
 
   return (
-    <div className="px-2 sm:px-3 py-4 sm:py-6 text-[#314d72]">
-      <div className="border-b border-[#d4dfec] pb-4 mb-4">
+    <div className="px-4 py-7 text-slate-900 sm:px-6 lg:px-7">
+      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#1f4371] tracking-tight">Clientes</h1>
-          <p className="text-sm sm:text-base font-medium text-[#4f6f95] mt-1">Listado de clientes y detalles de sus instalaciones.</p>
-          {demoMode && (
-            <p className="mt-1 text-xs text-[#4c6d99]">Modo Demo activo</p>
-          )}
+          <h1 className="text-3xl font-bold tracking-[-.04em] text-slate-950">Clientes</h1>
+          <p className="mt-2 text-sm text-slate-500 sm:text-base">Administra todos tus clientes y su información.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={handleExport} className="inline-flex h-11 items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-50" title="Exportar clientes filtrados a CSV">
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            Exportar
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <button onClick={() => !demoMode && setShowModal(true)} disabled={demoMode} className={`inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white shadow-sm transition ${demoMode ? "cursor-not-allowed bg-slate-300" : "bg-blue-600 hover:bg-blue-700"}`}>
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
+            Nuevo cliente
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Total clientes", value: clientMetrics.total, detail: `Mostrando ${filtrados.length}`, tone: "text-blue-600 bg-blue-50", icon: "users" },
+          { label: "Activos", value: clientMetrics.active, detail: clientMetrics.total ? `${Math.round((clientMetrics.active / clientMetrics.total) * 100)}% del total` : "Sin registros", tone: "text-emerald-600 bg-emerald-50", icon: "check" },
+          { label: "Inactivos", value: clientMetrics.inactive, detail: clientMetrics.total ? `${Math.round((clientMetrics.inactive / clientMetrics.total) * 100)}% del total` : "Sin registros", tone: "text-amber-600 bg-amber-50", icon: "clock" },
+          { label: "Suspendidos", value: clientMetrics.suspended, detail: clientMetrics.total ? `${Math.round((clientMetrics.suspended / clientMetrics.total) * 100)}% del total` : "Sin registros", tone: "text-rose-600 bg-rose-50", icon: "close" },
+        ].map((metric) => <div key={metric.label} className="flex min-h-32 items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4"><span className={`grid h-14 w-14 place-items-center rounded-full ${metric.tone}`}><svg aria-hidden="true" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">{metric.icon === "users" && <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2m15-9a4 4 0 1 0-3-6.65M21 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round" />}{metric.icon === "check" && <path d="m8 12 2.5 2.5L16 9m5 3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" strokeLinecap="round" strokeLinejoin="round" />}{metric.icon === "clock" && <path d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" strokeLinecap="round" strokeLinejoin="round" />}{metric.icon === "close" && <path d="m9 9 6 6m0-6-6 6m12-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" strokeLinecap="round" strokeLinejoin="round" />}</svg></span><div><p className="text-3xl font-bold tracking-[-.04em] text-slate-950">{metric.value}</p><p className="mt-1 text-sm font-semibold text-slate-700">{metric.label}</p><p className="mt-2 text-xs text-slate-500">{metric.detail}</p></div></div>)}
+      </div>
+
+      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <input
           ref={fileInputRef}
           type="file"
@@ -469,45 +504,8 @@ export default function Clientes() {
           className="hidden"
           onChange={handleImportFile}
         />
-        <button
-          onClick={() => !demoMode && setShowModal(true)}
-          disabled={demoMode}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold shadow-[0_3px_8px_rgba(43,102,176,.2)] transition-all ${
-            demoMode
-              ? "bg-[#c4d1e4] text-[#7a8fae] cursor-not-allowed"
-              : "bg-[#1f6bc1] text-white hover:bg-[#1b5ca6]"
-          }`}
-        >
-          <span className="text-base leading-none">+</span>
-          Añadir Cliente
-        </button>
-        <button
-          type="button"
-          onClick={handleImportClick}
-          disabled={importing}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-white border border-[#cad7e9] text-[#2f69b0] hover:bg-[#edf4ff] disabled:opacity-60"
-          title="Importar clientes desde CSV"
-        >
-          {importing ? "Importando..." : "Importar CSV"}
-        </button>
-        <button
-          type="button"
-          onClick={handleExport}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-white border border-[#cad7e9] text-[#2f69b0] hover:bg-[#edf4ff]"
-          title="Exportar clientes filtrados a CSV"
-        >
-          Exportar CSV
-        </button>
-      </div>
-
-      {bulkMessage && (
-        <div className="mb-4 rounded-md border border-[#cbd8ea] bg-[#f8fbff] px-3 py-2 text-sm font-medium text-[#3f5f87]">
-          {bulkMessage}
-        </div>
-      )}
-
-      <div className="mb-3">
-        <div className="relative max-w-xl">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-5 py-4">
+          <div className="relative min-w-[240px] flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg className="h-4 w-4 text-[#8ea3be]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -515,45 +513,26 @@ export default function Clientes() {
           </div>
           <input
             type="text"
-            placeholder="Buscar cliente..."
+            placeholder="Buscar cliente, contacto o empresa..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-[#cbd8ea] rounded-md bg-white text-sm text-[#3e5f87] placeholder-[#9dafc6] focus:outline-none focus:ring-2 focus:ring-[#8ba9cf]"
+            className="block h-11 w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           />
         </div>
-      </div>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500"><option value="todo">Estado: Todos</option><option value="activos">Estado: Activos</option><option value="inactivos">Estado: Inactivos</option><option value="suspendidos">Estado: Suspendidos</option></select>
+          <select value={cityFilter} onChange={(event) => setCityFilter(event.target.value)} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500"><option value="todas">Ciudad: Todas</option>{cityOptions.map((city) => <option key={city} value={city.toLowerCase()}>{city}</option>)}</select>
+          <button type="button" onClick={handleImportClick} disabled={importing} className="h-11 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60">{importing ? "Importando..." : "Importar CSV"}</button>
+        </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-[#4f6990]">
-        <span>Filtro:</span>
-        <button
-          onClick={() => setStatusFilter("todo")}
-          className={statusFilter === "todo" ? "text-[#1f6bc1]" : "text-[#6983a7] hover:text-[#1f6bc1]"}
-        >
-          Todo
-        </button>
-        <span className="text-[#9fb1c8]">|</span>
-        <button
-          onClick={() => setStatusFilter("activos")}
-          className={statusFilter === "activos" ? "text-[#1f6bc1]" : "text-[#6983a7] hover:text-[#1f6bc1]"}
-        >
-          Activos
-        </button>
-        <span className="text-[#9fb1c8]">|</span>
-        <button
-          onClick={() => setStatusFilter("inactivos")}
-          className={statusFilter === "inactivos" ? "text-[#1f6bc1]" : "text-[#6983a7] hover:text-[#1f6bc1]"}
-        >
-          Inactivos
-        </button>
-      </div>
+        {bulkMessage && <div className="mx-5 mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">{bulkMessage}</div>}
 
       {loading ? (
         <div className="flex items-center justify-center py-10">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#d8e4f3] border-b-[#2d72c4]"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
-          <div className="xl:col-span-9 rounded-md border border-[#d3dfef] bg-[#f9fbff] overflow-hidden shadow-[0_6px_16px_rgba(50,89,141,.1)]">
+        <div>
+          <div className="overflow-hidden">
             <div className="px-3 py-3 space-y-3 lg:hidden">
               {pageRows.map((cliente) => {
                 const selected = String(selectedClientId) === String(cliente.id)
@@ -607,15 +586,16 @@ export default function Clientes() {
             </div>
 
             <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[940px] text-sm">
               <thead>
-                <tr className="bg-[#f1f5fb] text-[#3f5f87] border-b border-[#d7e3f1]">
-                  <th className="text-left py-3 px-3">Cliente</th>
-                  <th className="hidden sm:table-cell text-left py-3 px-3">Contacto</th>
-                  <th className="text-left py-3 px-3">Ubicación</th>
-                  <th className="hidden sm:table-cell text-left py-3 px-3">Equipos</th>
-                  <th className="text-left py-3 px-3">Estado</th>
-                  <th className="text-left py-3 px-3">Acciones</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-500">
+                  <th className="px-5 py-3 text-left">Cliente</th>
+                  <th className="px-4 py-3 text-left">Contacto</th>
+                  <th className="px-4 py-3 text-left">Teléfono</th>
+                  <th className="px-4 py-3 text-left">Estado</th>
+                  <th className="px-4 py-3 text-left">Último servicio</th>
+                  <th className="px-4 py-3 text-center">Equipos</th>
+                  <th className="px-5 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -625,50 +605,31 @@ export default function Clientes() {
                   return (
                     <tr
                       key={cliente.id}
-                      onClick={() => setSelectedClientId(cliente.id)}
-                      className={`border-b border-[#e3ebf7] cursor-pointer ${selected ? "bg-[#edf4ff]" : "bg-white hover:bg-[#f7faff]"}`}
+                      onClick={() => router.push(`/clientes/${cliente.id}`)}
+                      className={`border-b border-slate-100 cursor-pointer transition-colors ${selected ? "bg-blue-50/60" : "bg-white hover:bg-slate-50"}`}
                     >
-                      <td className="py-3 px-3 font-semibold text-[#2462ad]">{cliente.nombre}</td>
-                      <td className="hidden sm:table-cell py-3 px-3">
-                        <div className="flex items-center gap-2 text-[#3f5f87]">
+                      <td className="px-5 py-4"><div className="flex items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-blue-50 text-sm font-bold text-blue-700">{getInitials(cliente.nombre)}</span><div><Link onClick={(event) => event.stopPropagation()} href={`/clientes/${cliente.id}`} className="font-semibold text-slate-900 hover:text-blue-700">{cliente.nombre}</Link><p className="mt-1 text-xs text-slate-500">{cliente.rut || cliente.identificador_fiscal || "Sin identificador fiscal"}</p></div></div></td>
+                      <td className="px-4 py-4">
+                        <div className="text-slate-700">
                           <span
-                            className="h-7 w-7 rounded-full inline-flex items-center justify-center text-white text-[11px] font-bold"
+                            className="hidden h-7 w-7 rounded-full sm:inline-flex items-center justify-center text-white text-[11px] font-bold"
                             style={{ backgroundColor: getAvatarColor(cliente.nombre) }}
                           >
                             {getInitials(cliente.contacto || cliente.nombre)}
                           </span>
-                          <span className="font-medium">{cliente.contacto || cliente.nombre}</span>
+                          <div><p className="font-medium">{cliente.contacto || cliente.nombre}</p><p className="mt-1 text-xs text-slate-500">{cliente.email || "Sin correo"}</p></div>
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-[#425f86]">{cliente.ciudad || "Sin ciudad"}</td>
-                      <td className="hidden sm:table-cell py-3 px-3 font-semibold text-[#425f86]">{equiposCount}</td>
-                      <td className="py-3 px-3">
-                        <span className={`text-xs px-3 py-1 rounded font-semibold ${cliente.status === "activo" ? "bg-[#2fa04a] text-white" : "bg-[#d94a4a] text-white"}`}>
-                          {cliente.status === "activo" ? "Activo" : "Inactivo"}
+                      <td className="px-4 py-4 text-slate-700">{cliente.telefono || "Sin teléfono"}</td>
+                      <td className="px-4 py-4"><span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${cliente.status === "activo" ? "bg-emerald-100 text-emerald-700" : cliente.status === "suspendido" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
+                          {cliente.status === "activo" ? "Activo" : cliente.status === "suspendido" ? "Suspendido" : "Inactivo"}
                         </span>
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/clientes/${cliente.id}`}
-                            className="px-3 py-1 rounded-md bg-[#1f6bc1] text-white text-xs font-semibold hover:bg-[#19599f]"
-                          >
-                            Ver Detalles
-                          </Link>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEdit(cliente)
-                            }}
-                            disabled={demoMode}
-                            className={`p-1.5 rounded border ${demoMode ? "border-[#d2dbea] text-[#9caec6]" : "border-[#cad7e9] text-[#4272aa] hover:bg-[#edf4ff]"}`}
-                            title="Editar"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                        </div>
+                      <td className="px-4 py-4"><p className="font-medium text-slate-700">{cliente.updated_at ? new Date(cliente.updated_at).toLocaleDateString("es-UY", { day: "2-digit", month: "short", year: "numeric" }) : "Sin servicios"}</p><p className="mt-1 text-xs text-slate-500">{cliente.updated_at ? "Servicio registrado" : "—"}</p></td>
+                      <td className="px-4 py-4 text-center font-semibold text-slate-700">{equiposCount}</td>
+                      <td className="relative px-5 py-4 text-right">
+                        <button onClick={(event) => { event.stopPropagation(); setActionMenuId(actionMenuId === cliente.id ? null : cliente.id) }} className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800" aria-label={`Acciones para ${cliente.nombre}`}>•••</button>
+                        {actionMenuId === cliente.id && <div onClick={(event) => event.stopPropagation()} className="absolute right-5 top-12 z-10 w-44 rounded-xl border border-slate-200 bg-white p-1 text-left shadow-lg"><Link href={`/clientes/${cliente.id}`} className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Ver cliente</Link><button disabled={demoMode} onClick={() => { setActionMenuId(null); handleEdit(cliente) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Editar</button><button onClick={() => { setActionMenuId(null); handleVerInstalaciones(cliente.id) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Ver equipos</button><button onClick={() => { setActionMenuId(null); handleVerMantenimientos(cliente.id) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Historial de servicios</button></div>}
                       </td>
                     </tr>
                   )
@@ -732,7 +693,7 @@ export default function Clientes() {
             </div>
           </div>
 
-          <aside className="xl:col-span-3 rounded-md border border-[#d3dfef] bg-[#f9fbff] shadow-[0_6px_16px_rgba(50,89,141,.1)]">
+          <aside className="hidden">
             <div className="px-4 py-3 border-b border-[#dbe6f4]">
               <h3 className="text-[28px] font-bold text-[#2a4d7a]">Información del Cliente</h3>
             </div>
@@ -766,6 +727,7 @@ export default function Clientes() {
           </aside>
         </div>
       )}
+      </div>
 
       {/* Modal */}
       {showModal && (
