@@ -22,7 +22,7 @@ type Service = {
 }
 
 type Equipment = { id: string | number; marca?: string; modelo?: string; cliente_id?: string; created_at?: string }
-type Client = { id: string | number; nombre?: string; created_at?: string }
+type Client = { id: string | number; nombre?: string; estado?: string; created_at?: string }
 type Part = { id: string | number; stock_actual?: number; created_at?: string }
 
 const iconPaths = {
@@ -54,8 +54,9 @@ function equipmentName(service: Service, equipment: Equipment[]) {
 }
 
 function relativeDate(value?: string) {
-  if (!value) return "Recientemente"
-  const days = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86400000))
+  const date = value ? new Date(value) : null
+  if (!date || Number.isNaN(date.getTime())) return "Sin fecha"
+  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000))
   if (days === 0) return "Hoy"
   if (days === 1) return "Ayer"
   if (days < 7) return `Hace ${days} días`
@@ -68,6 +69,17 @@ function statusMeta(status?: string) {
   if (status === "en_proceso") return { label: "Requiere mantenimiento", dot: "bg-orange-500", chip: "bg-orange-100 text-orange-700" }
   if (status === "cancelado") return { label: "Fuera de servicio", dot: "bg-red-600", chip: "bg-red-100 text-red-700" }
   return { label: "Requiere mantenimiento", dot: "bg-orange-500", chip: "bg-orange-100 text-orange-700" }
+}
+
+function maintenanceSchedule(service: Service) {
+  if (service.estado === "en_proceso") return { value: "En curso", detail: "mantenimiento en proceso", tone: "text-orange-600" }
+  const date = service.fecha_programada ? new Date(`${service.fecha_programada}T12:00:00`) : null
+  if (!date || Number.isNaN(date.getTime())) return { value: "Sin fecha", detail: "requiere programación", tone: "text-slate-500" }
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const difference = Math.round((date.getTime() - today.getTime()) / 86400000)
+  if (difference > 0) return { value: `En ${difference} días`, detail: "mantenimiento programado", tone: "text-orange-600" }
+  if (difference === 0) return { value: "Hoy", detail: "mantenimiento programado", tone: "text-orange-600" }
+  return { value: `${Math.abs(difference)} días`, detail: "mantenimiento vencido", tone: "text-red-600" }
 }
 
 function monthlyCounts<T>(items: T[], getDate: (item: T) => string | undefined, months: number) {
@@ -136,7 +148,7 @@ export default function Home() {
       const canRepuestos = permissions?.repuestos !== false
       const [equipmentRes, clientsRes, servicesRes, partsRes] = await Promise.all([
         canEquipos ? supabase.from("equipos").select("id, marca, modelo, cliente_id, created_at") : Promise.resolve(empty),
-        canClientes ? supabase.from("clientes").select("id, nombre, created_at") : Promise.resolve(empty),
+        canClientes ? supabase.from("clientes").select("id, nombre, estado, created_at") : Promise.resolve(empty),
         canTramites ? supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, equipo_id, clientes(nombre), equipos(marca, modelo)").order("created_at", { ascending: false }) : Promise.resolve(empty),
         canRepuestos ? supabase.from("repuestos").select("id, stock_actual, created_at") : Promise.resolve(empty),
       ])
@@ -153,7 +165,7 @@ export default function Home() {
       setParts(realParts)
       setStats({
         equipment: realEquipment.length,
-        clients: realClients.length,
+        clients: realClients.filter((client) => client.estado === "activo").length,
         pending: realServices.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).length,
         components,
       })
@@ -181,7 +193,7 @@ export default function Home() {
     }
   }, [pathname, chartRange, services.length])
 
-  const maintenance = useMemo(() => services.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 3), [services])
+  const maintenance = useMemo(() => services.filter((service) => service.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(service.estado || "")).sort((a, b) => new Date(a.fecha_programada || a.created_at || 0).getTime() - new Date(b.fecha_programada || b.created_at || 0).getTime()).slice(0, 3), [services])
   const activity = useMemo(() => services.slice(0, 5), [services])
   const chart = useMemo(() => monthlyCounts(services.filter((service) => service.estado === "completado"), (service) => service.fecha_programada || service.created_at, chartRange), [chartRange, services])
   const maxChart = Math.max(1, ...chart.map((item) => item.count))
@@ -195,7 +207,7 @@ export default function Home() {
 
   const metrics = [
     { label: "Equipos registrados", value: stats.equipment, icon: "equipment" as const, tone: "text-blue-600 border-blue-600", note: "Equipos en operación", noteTone: "text-blue-600", trend: trends.equipment },
-    { label: "Clientes activos", value: stats.clients, icon: "users" as const, tone: "text-blue-500 border-blue-300", note: "Sin cambios", noteTone: "text-slate-500", trend: trends.clients },
+    { label: "Clientes activos", value: stats.clients, icon: "users" as const, tone: "text-blue-500 border-blue-300", note: `${clients.length ? Math.round((stats.clients / clients.length) * 100) : 0}% del total`, noteTone: "text-slate-500", trend: trends.clients },
     { label: "Mantenimientos pendientes", value: stats.pending, icon: "alert" as const, tone: "text-orange-500 border-orange-300", note: "Requieren atención", noteTone: "text-orange-600", trend: trends.maintenance },
     { label: "Componentes críticos", value: stats.components, icon: "boxes" as const, tone: "text-red-600 border-red-600", note: "Requieren reposición", noteTone: "text-red-600", trend: trends.components },
   ]
@@ -237,11 +249,11 @@ export default function Home() {
             </div>
             <div className="space-y-2.5">
               {maintenance.length ? maintenance.map((service) => {
-                const waitingDays = service.fecha_programada ? Math.max(1, Math.floor((Date.now() - new Date(service.fecha_programada).getTime()) / 86400000)) : 0
+                const schedule = maintenanceSchedule(service)
                 return <Link href={`/tramites/${service.id}`} key={service.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_5px_16px_rgba(15,23,42,.025)] transition hover:border-blue-200">
                   <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500"><Icon name="equipment" className="h-7 w-7" /></div>
-                  <div className="min-w-0 flex-1"><p className="truncate font-bold">{equipmentName(service, equipment)}</p><p className="mt-1 truncate text-sm text-slate-500">{clientName(service, clients)} · {service.equipo_id || "Equipo"}</p></div>
-                  <div className="hidden text-right sm:block"><p className="font-bold text-orange-600">{waitingDays} días</p><p className="mt-1 text-xs text-slate-500">sin mantenimiento</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate font-bold">{equipmentName(service, equipment)}</p><p className="mt-1 truncate text-sm text-slate-500">{clientName(service, clients)}</p></div>
+                  <div className="hidden text-right sm:block"><p className={`font-bold ${schedule.tone}`}>{schedule.value}</p><p className="mt-1 text-xs text-slate-500">{schedule.detail}</p></div>
                   <span className={`hidden rounded-full px-3 py-1 text-xs font-bold md:inline ${service.estado === "en_proceso" ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`}>{service.estado === "en_proceso" ? "Media" : "Alta"}</span><Icon name="chevron" className="h-5 w-5 text-slate-500" />
                 </Link>
               }) : <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">No hay mantenimientos pendientes.</div>}
@@ -259,7 +271,7 @@ export default function Home() {
         <section className="border-t border-slate-200 py-6 xl:border-l xl:border-t-0 xl:pl-7">
           <div className="mb-7 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Icon name="wrench" className="h-6 w-6 text-blue-600" /><h2 className="text-xl font-bold tracking-[-.03em]">Actividad reciente</h2></div><Link href="/tramites" className="text-sm font-bold text-blue-600">Ver todo el historial</Link></div>
           <div className="relative space-y-0 before:absolute before:bottom-5 before:left-[5px] before:top-5 before:w-px before:bg-slate-200">
-            {activity.length ? activity.map((service) => { const state = statusMeta(service.estado); return <Link href={`/tramites/${service.id}`} key={service.id} className="relative flex gap-4 border-b border-slate-200 py-5 first:pt-2 last:border-0"><span className={`relative z-10 mt-1.5 h-3 w-3 shrink-0 rounded-full ring-4 ring-white ${state.dot}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"><p className="text-sm font-medium text-slate-500">{relativeDate(service.created_at)}</p><span className={`rounded-full px-3 py-1 text-xs font-bold ${state.chip}`}>{state.label}</span></div><p className="mt-2 font-bold text-slate-900">{service.equipo_id || "Servicio"}</p><p className="mt-1 text-sm text-slate-500">{service.tipo === "mantenimiento" ? "Mantenimiento" : "Servicio"} · {clientName(service, clients)}</p></div><Icon name="chevron" className="mt-7 h-5 w-5 shrink-0 text-slate-500" /></Link> }) : <p className="py-10 text-center text-sm text-slate-500">Todavía no hay actividad para mostrar.</p>}
+            {activity.length ? activity.map((service) => { const state = statusMeta(service.estado); return <Link href={`/tramites/${service.id}`} key={service.id} className="relative flex gap-4 border-b border-slate-200 py-5 first:pt-2 last:border-0"><span className={`relative z-10 mt-1.5 h-3 w-3 shrink-0 rounded-full ring-4 ring-white ${state.dot}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"><p className="text-sm font-medium text-slate-500">{relativeDate(service.created_at)}</p><span className={`rounded-full px-3 py-1 text-xs font-bold ${state.chip}`}>{state.label}</span></div><p className="mt-2 font-bold text-slate-900">{equipmentName(service, equipment)}</p><p className="mt-1 text-sm text-slate-500">{service.tipo === "mantenimiento" ? "Mantenimiento" : "Servicio"} · {clientName(service, clients)}</p></div><Icon name="chevron" className="mt-7 h-5 w-5 shrink-0 text-slate-500" /></Link> }) : <p className="py-10 text-center text-sm text-slate-500">Todavía no hay actividad para mostrar.</p>}
           </div>
         </section>
       </div>
