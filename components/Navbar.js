@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useAuthSession } from "@/lib/useAuthSession"
 import { isPublicPath } from "@/lib/roleAccess"
 
@@ -34,12 +34,17 @@ function Brand({ compact = false }) {
 
 export default function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { loading, user, displayName, role, signOut } = useAuthSession()
   const shouldShowNav = !isPublicPath(pathname || "/")
 
   if (!shouldShowNav) return null
 
   const isActive = (path) => path === "/" ? pathname === "/" : pathname.startsWith(path)
+  const handleSignOut = async () => {
+    await signOut()
+    router.replace("/auth")
+  }
   const navItems = [
     { href: "/", label: "Panel", icon: "panel" },
     { href: "/clientes", label: "Clientes", icon: "clientes" },
@@ -71,14 +76,14 @@ export default function Navbar() {
               <p className="truncate text-sm font-semibold text-white">{loading ? "Cargando..." : displayName}</p>
               <p className="truncate text-xs capitalize text-slate-400">{role || "Usuario"}</p>
             </div>
-            {!loading && user && <button type="button" onClick={signOut} aria-label="Cerrar sesión" className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4 4-5-4-5m4 5H3" /></svg></button>}
+            {!loading && user && <button type="button" onClick={handleSignOut} aria-label="Cerrar sesión" className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4 4-5-4-5m4 5H3" /></svg></button>}
           </div>
         </div>
       </aside>
 
       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
         <Link href="/" aria-label="Ir al panel"><Brand compact /></Link>
-        {!loading && user && <button type="button" onClick={signOut} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">Salir</button>}
+        {!loading && user && <button type="button" onClick={handleSignOut} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">Salir</button>}
       </header>
       <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-50 flex border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] md:hidden">
         {navItems.map((item) => (
