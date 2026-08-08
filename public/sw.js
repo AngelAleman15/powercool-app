@@ -1,5 +1,5 @@
 // Service Worker para PowerCool PWA
-const CACHE_NAME = 'powercool-v3';
+const CACHE_NAME = 'powercool-v4';
 const urlsToCache = [
   '/',
   '/equipos',
@@ -46,7 +46,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // La autenticacion debe ir siempre directa a red para no interferir con tokens, redirects o hashes.
-  if (url.pathname.startsWith('/auth')) {
+  if (url.pathname.startsWith('/auth') || url.pathname.startsWith('/escanear-qr')) {
     return;
   }
 
