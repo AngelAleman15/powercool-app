@@ -9,6 +9,7 @@ export default function Tramites() {
   const [equipos, setEquipos] = useState([])
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [showModal, setShowModal] = useState(false)
   const [showEquipoModal, setShowEquipoModal] = useState(false)
   const [tipoTramite, setTipoTramite] = useState("mantenimiento")
@@ -56,13 +57,17 @@ export default function Tramites() {
 
   const cargarDatos = useCallback(async () => {
     setLoading(true)
+    setError("")
     
-    const [{ data: tramitesData }, { data: equiposData }, { data: clientesData }] = await Promise.all([
+    const [{ data: tramitesData, error: tramitesError }, { data: equiposData, error: equiposError }, { data: clientesData, error: clientesError }] = await Promise.all([
       supabase.from("tramites").select("*, equipos(marca, modelo), clientes(nombre)").order("created_at", { ascending: false }),
       supabase.from("equipos").select("id, marca, modelo, cliente_id"),
       supabase.from("clientes").select("*")
     ])
 
+    if (tramitesError || equiposError || clientesError) {
+      setError("No se pudieron cargar todos los datos. Reintenta en unos segundos.")
+    }
     setTramites(tramitesData || [])
     setEquipos(equiposData || [])
     setClientes(clientesData || [])
@@ -114,6 +119,8 @@ export default function Tramites() {
 
     if (!error) {
       cargarDatos()
+    } else {
+      setError("No se pudo actualizar el estado. Verifica tu conexión e inténtalo nuevamente.")
     }
   }
 
@@ -154,6 +161,8 @@ export default function Tramites() {
         estado: "pendiente"
       })
       cargarDatos()
+    } else {
+      setError("No se pudo guardar el trámite. Verifica los datos e inténtalo nuevamente.")
     }
   }
 
@@ -306,6 +315,12 @@ export default function Tramites() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mx-4 mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 sm:mx-6" role="alert">
+          {error}
+        </div>
+      )}
 
       {/* Tabs con nuevo estilo */}
       <div className="px-4 sm:px-6 mb-6">

@@ -1,444 +1,52 @@
 "use client"
 
-import { useCallback, useState, useEffect, useMemo, useRef } from 'react'
-import { Calendar, dateFnsLocalizer } from 'react-big-calendar'
-import { format, parse, startOfWeek, getDay } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
-import 'react-big-calendar/lib/css/react-big-calendar.css'
+import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { Calendar, dateFnsLocalizer } from "react-big-calendar"
+import { format, getDay, parse, startOfWeek } from "date-fns"
+import { es } from "date-fns/locale"
+import { supabase } from "@/lib/supabase"
+import "react-big-calendar/lib/css/react-big-calendar.css"
 
-const locales = {
-  'es': es,
+const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { es } })
+const styles = { pendiente: "#f59e0b", en_proceso: "#2563eb", completado: "#059669", cancelado: "#e11d48" }
+const names = { pendiente: "Pendiente", en_proceso: "En proceso", completado: "Completado", cancelado: "Cancelado" }
+
+function toLocalDate(value) {
+  if (!value) return null
+  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number)
+  return year && month && day ? new Date(year, month - 1, day) : null
 }
-
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-})
 
 export default function CalendarioPage() {
   const [tramites, setTramites] = useState([])
-  const [events, setEvents] = useState([])
-  const [selectedEvent, setSelectedEvent] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [showMobileStats, setShowMobileStats] = useState(false)
-  const [currentView, setCurrentView] = useState('month')
-  const [hoverMenu, setHoverMenu] = useState(null)
-  const calendarShellRef = useRef(null)
+  const [selected, setSelected] = useState(null)
+  const [error, setError] = useState("")
 
-  const parseLocalDate = useCallback((dateValue) => {
-    if (!dateValue) return null
-    const dateStr = String(dateValue).slice(0, 10)
-    const [year, month, day] = dateStr.split('-').map(Number)
-    if (!year || !month || !day) return null
-    return new Date(year, month - 1, day, 0, 0, 0, 0)
+  const load = useCallback(async () => {
+    setLoading(true); setError("")
+    const { data, error: queryError } = await supabase.from("tramites").select("*, equipos(marca, modelo), clientes(nombre)").order("fecha_programada", { ascending: true })
+    if (queryError) setError("No se pudo cargar el calendario. Intenta nuevamente.")
+    setTramites(data || []); setLoading(false)
   }, [])
 
-  const toDayKey = useCallback((date) => format(date, 'yyyy-MM-dd'), [])
-
-  const hiddenEventsByDay = useMemo(() => {
-    const grouped = {}
-    events.forEach((event) => {
-      const dayKey = event.dayKey
-      if (!grouped[dayKey]) grouped[dayKey] = []
-      grouped[dayKey].push(event)
-    })
-
-    const hiddenMap = {}
-    Object.keys(grouped).forEach((dayKey) => {
-      hiddenMap[dayKey] = grouped[dayKey].slice(3)
-    })
-
-    return hiddenMap
-  }, [events])
-
-  const cargarTramites = useCallback(async () => {
-    setLoading(true)
-    const { data } = await supabase
-      .from('tramites')
-      .select('*, equipos(marca, modelo), clientes(nombre)')
-      .order('fecha_programada', { ascending: true })
-
-    if (data) {
-      setTramites(data)
-      
-      // Convertir trámites a eventos del calendario
-      const eventos = data
-        .filter(t => t.fecha_programada && t.estado !== 'cancelado')
-        .map((t) => {
-          const startDate = parseLocalDate(t.fecha_programada)
-          if (!startDate) return null
-
-          const endDate = new Date(startDate)
-          endDate.setHours(23, 59, 59, 999)
-
-          return {
-            id: t.id,
-            title: `${t.tipo === 'mantenimiento' ? '🔧' : '💰'} ${t.equipos?.marca || ''} ${t.equipos?.modelo || ''} - ${t.clientes?.nombre || 'Sin cliente'}`,
-            start: startDate,
-            end: endDate,
-            allDay: false,
-            resource: t,
-            estado: t.estado,
-            tipo: t.tipo,
-            dayKey: toDayKey(startDate)
-          }
-        })
-        .filter(Boolean)
-
-      const dailyOrderMap = {}
-      const eventosConOrden = eventos.map((event) => {
-        const dayKey = event.dayKey
-        const currentOrder = (dailyOrderMap[dayKey] || 0) + 1
-        dailyOrderMap[dayKey] = currentOrder
-
-        return {
-          ...event,
-          dayOrder: currentOrder
-        }
-      })
-      
-      setEvents(eventosConOrden)
-    }
-    setLoading(false)
-  }, [parseLocalDate, toDayKey])
-
   useEffect(() => {
-    const initTimer = setTimeout(() => {
-      cargarTramites()
-    }, 0)
+    const timer = window.setTimeout(load, 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
+  const events = useMemo(() => tramites.filter((t) => t.fecha_programada && t.estado !== "cancelado").map((t) => {
+    const start = toLocalDate(t.fecha_programada); const end = new Date(start); end.setHours(23, 59, 59, 999)
+    return { id: t.id, title: `${t.equipos ? `${t.equipos.marca} ${t.equipos.modelo}` : "Equipo sin asignar"} · ${t.clientes?.nombre || "Sin cliente"}`, start, end, allDay: true, resource: t }
+  }), [tramites])
+  const stats = { total: events.length, pending: events.filter((event) => event.resource.estado === "pendiente").length, progress: events.filter((event) => event.resource.estado === "en_proceso").length, done: events.filter((event) => event.resource.estado === "completado").length }
+  const eventStyleGetter = (event) => ({ style: { backgroundColor: styles[event.resource.estado] || styles.pendiente, color: "#fff", border: 0, borderRadius: 6, fontSize: 12, padding: "3px 6px" } })
 
-    return () => clearTimeout(initTimer)
-  }, [cargarTramites])
-
-  const eventStyleGetter = (event) => {
-    let backgroundColor = '#3b82f6' // azul default
-    
-    if (event.estado === 'completado') {
-      backgroundColor = '#10b981' // verde
-    } else if (event.estado === 'pendiente') {
-      backgroundColor = '#eab308' // amarillo
-    } else if (event.estado === 'en_proceso') {
-      backgroundColor = '#6366f1' // índigo
-    }
-    
-    if (event.tipo === 'abono') {
-      backgroundColor = '#14b8a6' // teal
-    }
-
-    return {
-      style: {
-        display: currentView === 'month' && event.dayOrder > 3 ? 'none' : 'block',
-        backgroundColor,
-        borderRadius: '6px',
-        opacity: 0.9,
-        color: 'white',
-        border: '0px',
-        fontSize: '12px',
-        padding: '2px 5px'
-      }
-    }
-  }
-
-  const handleDayHover = (event, dateValue) => {
-    if (currentView !== 'month' || !calendarShellRef.current) return
-
-    const dayKey = toDayKey(dateValue)
-    const hidden = hiddenEventsByDay[dayKey] || []
-    if (hidden.length === 0) {
-      setHoverMenu(null)
-      return
-    }
-
-    const cellRect = event.currentTarget.getBoundingClientRect()
-    const shellRect = calendarShellRef.current.getBoundingClientRect()
-
-    setHoverMenu({
-      dayKey,
-      hidden,
-      dateValue,
-      top: cellRect.top - shellRect.top + 6,
-      left: cellRect.left - shellRect.left + 6
-    })
-  }
-
-  const handleDayLeave = () => {
-    setHoverMenu(null)
-  }
-
-  const DateCellWrapper = ({ value, children }) => {
-    return (
-      <div
-        className="h-full w-full"
-        onMouseEnter={(event) => handleDayHover(event, value)}
-        onMouseLeave={handleDayLeave}
-      >
-        {children}
-      </div>
-    )
-  }
-
-  const handleSelectEvent = (event) => {
-    setSelectedEvent(event.resource)
-  }
-
-  return (
-    <div className="px-4 sm:px-6 py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-sky-500/20 border border-sky-500/30 rounded-xl">
-              <svg className="w-8 h-8 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Calendario</h1>
-              <p className="text-sm text-gray-400">Visualiza todos tus trámites programados</p>
-            </div>
-          </div>
-          
-          <Link
-            href="/tramites"
-            className="px-4 py-2 bg-sky-500 text-black rounded-lg text-sm font-semibold hover:bg-sky-400 transition-all"
-          >
-            + Nuevo Trámite
-          </Link>
-        </div>
-
-        {/* Leyenda */}
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10 mb-6">
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#8b5cf6]"></div>
-              <span className="text-gray-300">Mantenimiento</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#14b8a6]"></div>
-              <span className="text-gray-300">Abono</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#eab308]"></div>
-              <span className="text-gray-300">Pendiente</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#6366f1]"></div>
-              <span className="text-gray-300">En Proceso</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#10b981]"></div>
-              <span className="text-gray-300">Completado</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Calendario */}
-        <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 sm:p-6 border border-white/10 overflow-visible">
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400">Cargando calendario...</p>
-            </div>
-          ) : (
-            <div ref={calendarShellRef} className="calendar-shell relative h-[360px] sm:h-[560px] lg:h-[640px]">
-              <Calendar
-                localizer={localizer}
-                events={events}
-                startAccessor="start"
-                endAccessor="end"
-                popup
-                views={["month", "week", "day", "agenda"]}
-                style={{ height: '100%' }}
-                eventPropGetter={eventStyleGetter}
-                onSelectEvent={handleSelectEvent}
-                onView={setCurrentView}
-                components={{
-                  dateCellWrapper: DateCellWrapper
-                }}
-                messages={{
-                  next: "Sig",
-                  previous: "Ant",
-                  today: "Hoy",
-                  month: "Mes",
-                  week: "Semana",
-                  day: "Día",
-                  agenda: "Agenda",
-                  date: "Fecha",
-                  time: "Hora",
-                  event: "Trámite",
-                  noEventsInRange: "No hay trámites en este rango",
-                  showMore: (total) => `+ Ver más (${total})`
-                }}
-                culture="es"
-              />
-
-              {hoverMenu && currentView === 'month' && (
-                <div
-                  className="calendar-hover-menu absolute z-40 w-72 max-w-[90vw] rounded-lg border border-white/15 bg-[#10131a] shadow-2xl p-3"
-                  style={{ top: hoverMenu.top, left: hoverMenu.left }}
-                  onMouseEnter={() => setHoverMenu(hoverMenu)}
-                  onMouseLeave={handleDayLeave}
-                >
-                  <p className="text-xs text-gray-300 mb-2 font-semibold">
-                    {hoverMenu.dateValue.toLocaleDateString('es-UY', {
-                      weekday: 'long',
-                      day: '2-digit',
-                      month: 'long'
-                    })}
-                  </p>
-
-                  <div className="space-y-2 max-h-64 overflow-y-auto no-scrollbar">
-                    {hoverMenu.hidden.map((event) => (
-                      <button
-                        key={`hover-${event.id}`}
-                        className="w-full text-left rounded-md border border-white/10 bg-white/5 px-2 py-1.5 hover:bg-white/10 transition-colors"
-                        onClick={() => setSelectedEvent(event.resource)}
-                      >
-                        <p className="text-[11px] text-gray-100 leading-tight">{event.title}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Stats Rápidas */}
-        <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-white/10">
-            <p className="text-gray-400 text-xs mb-1">Total Programados</p>
-            <p className="text-2xl font-bold text-white">{events.length}</p>
-          </div>
-          <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-amber-500/30">
-            <p className="text-gray-400 text-xs mb-1">Pendientes</p>
-            <p className="text-2xl font-bold text-amber-400">{events.filter(e => e.estado === 'pendiente').length}</p>
-          </div>
-          <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-blue-500/30">
-            <p className="text-gray-400 text-xs mb-1">En Proceso</p>
-            <p className="text-2xl font-bold text-blue-400">{events.filter(e => e.estado === 'en_proceso').length}</p>
-          </div>
-          <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-4 border border-green-500/30">
-            <p className="text-gray-400 text-xs mb-1">Completados Este Mes</p>
-            <p className="text-2xl font-bold text-green-400">
-              {tramites.filter(t => {
-                const fecha = new Date(t.fecha_programada || t.created_at)
-                const ahora = new Date()
-                return fecha.getMonth() === ahora.getMonth() && 
-                       fecha.getFullYear() === ahora.getFullYear() &&
-                       t.estado === 'completado'
-              }).length}
-            </p>
-          </div>
-        </div>
-
-        {/* Stats en apartado móvil */}
-        <div className="md:hidden mt-6">
-          <button
-            onClick={() => setShowMobileStats(!showMobileStats)}
-            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-gradient-to-br from-[#111] to-[#1a1a1a] text-left flex items-center justify-between"
-          >
-            <span className="text-sm font-semibold text-white">Menú de estadísticas</span>
-            <span className="text-xs text-gray-400">{showMobileStats ? 'Ocultar' : 'Ver'}</span>
-          </button>
-
-          {showMobileStats && (
-            <div className="grid grid-cols-2 gap-3 mt-3">
-              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-white/10">
-                <p className="text-gray-400 text-xs mb-1">Total</p>
-                <p className="text-xl font-bold text-white">{events.length}</p>
-              </div>
-              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-amber-500/30">
-                <p className="text-gray-400 text-xs mb-1">Pendientes</p>
-                <p className="text-xl font-bold text-amber-400">{events.filter(e => e.estado === 'pendiente').length}</p>
-              </div>
-              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-blue-500/30">
-                <p className="text-gray-400 text-xs mb-1">En Proceso</p>
-                <p className="text-xl font-bold text-blue-400">{events.filter(e => e.estado === 'en_proceso').length}</p>
-              </div>
-              <div className="bg-gradient-to-br from-[#111] to-[#1a1a1a] rounded-xl p-3 border border-green-500/30">
-                <p className="text-gray-400 text-xs mb-1">Completados Mes</p>
-                <p className="text-xl font-bold text-green-400">{tramites.filter(t => {
-                  const fecha = parseLocalDate(t.fecha_programada || t.created_at)
-                  const ahora = new Date()
-                  if (!fecha) return false
-                  return fecha.getMonth() === ahora.getMonth() &&
-                    fecha.getFullYear() === ahora.getFullYear() &&
-                    t.estado === 'completado'
-                }).length}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Modal de Evento Seleccionado */}
-        {selectedEvent && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
-            <div className="bg-[#111] border border-white/10 rounded-xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">Detalle del Trámite</h3>
-                <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-white">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-gray-400">Tipo</p>
-                  <p className="text-white font-semibold">{selectedEvent.tipo === 'mantenimiento' ? '🔧 Mantenimiento' : '💰 Abono'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Cliente</p>
-                  <p className="text-white">{selectedEvent.clientes?.nombre || 'Sin cliente'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Equipo</p>
-                  <p className="text-white">{selectedEvent.equipos?.marca} {selectedEvent.equipos?.modelo}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Fecha</p>
-                  <p className="text-white">{parseLocalDate(selectedEvent.fecha_programada)?.toLocaleDateString('es-UY', {
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }) || 'Sin fecha'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Estado</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                    selectedEvent.estado === 'completado' ? 'bg-green-500/20 text-green-500' :
-                    selectedEvent.estado === 'en_proceso' ? 'bg-blue-500/20 text-blue-500' :
-                    selectedEvent.estado === 'pendiente' ? 'bg-yellow-500/20 text-yellow-500' :
-                    'bg-red-500/20 text-red-500'
-                  }`}>
-                    {selectedEvent.estado.replace('_', ' ').toUpperCase()}
-                  </span>
-                </div>
-                {selectedEvent.descripcion && (
-                  <div>
-                    <p className="text-xs text-gray-400">Descripción</p>
-                    <p className="text-white text-sm">{selectedEvent.descripcion}</p>
-                  </div>
-                )}
-              </div>
-
-              <Link
-                href={`/tramites/${selectedEvent.id}`}
-                className="block mt-6 w-full px-4 py-2 bg-white text-black text-center rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
-              >
-                Ver Detalles Completos
-              </Link>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  return <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <header className="mb-6 flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium text-blue-600">Planificación operativa</p><h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Calendario</h1><p className="mt-1 text-sm text-slate-500">Consulta los mantenimientos y abonos programados.</p></div><Link href="/tramites" className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">Gestionar trámites</Link></header>
+    <section className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[["Programados", stats.total, "text-slate-950"], ["Pendientes", stats.pending, "text-amber-600"], ["En proceso", stats.progress, "text-blue-600"], ["Completados", stats.done, "text-emerald-600"]].map(([label, value, tone]) => <article key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-sm text-slate-500">{label}</p><p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p></article>)}</section>
+    {error && <p role="alert" className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-slate-100 px-5 py-4 text-sm text-slate-600">{[["Pendiente", "#f59e0b"], ["En proceso", "#2563eb"], ["Completado", "#059669"]].map(([label, color]) => <span className="flex items-center gap-2" key={label}><i className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}</span>)}</div><div className="h-[520px] p-3 sm:p-5">{loading ? <div className="grid h-full place-items-center"><span className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" /></div> : <Calendar localizer={localizer} events={events} startAccessor="start" endAccessor="end" eventPropGetter={eventStyleGetter} onSelectEvent={(event) => setSelected(event.resource)} views={["month", "week", "agenda"]} messages={{ next: "Siguiente", previous: "Anterior", today: "Hoy", month: "Mes", week: "Semana", agenda: "Agenda", date: "Fecha", time: "Hora", event: "Trámite", noEventsInRange: "No hay trámites en este rango", showMore: (total) => `+${total} más` }} culture="es" />}</div></section>
+    {selected && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 p-4" onMouseDown={() => setSelected(null)}><section className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-start justify-between"><div><p className="text-sm font-medium text-blue-600">{selected.tipo === "mantenimiento" ? "Mantenimiento" : "Abono"}</p><h2 className="mt-1 text-xl font-bold text-slate-950">{selected.equipos ? `${selected.equipos.marca} ${selected.equipos.modelo}` : "Equipo sin asignar"}</h2></div><button className="text-xl text-slate-400 hover:text-slate-700" onClick={() => setSelected(null)} aria-label="Cerrar">×</button></div><dl className="mt-5 space-y-4 text-sm"><div><dt className="text-slate-500">Cliente</dt><dd className="mt-1 font-medium text-slate-900">{selected.clientes?.nombre || "Sin cliente"}</dd></div><div><dt className="text-slate-500">Fecha</dt><dd className="mt-1 font-medium capitalize text-slate-900">{toLocalDate(selected.fecha_programada)?.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</dd></div><div><dt className="text-slate-500">Estado</dt><dd className="mt-1 font-medium text-slate-900">{names[selected.estado] || "Pendiente"}</dd></div></dl><Link href={`/tramites/${selected.id}`} className="mt-6 block rounded-lg bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700">Ver detalle</Link></section></div>}
+  </main>
 }
