@@ -107,7 +107,7 @@ export default function ClienteDetallePage() {
 
       const bySearch =
         !searchText.trim() ||
-        matchText(`${equipo.marca} ${equipo.modelo} ${equipo.tipo} ${equipo.capacidad} ${equipo.ubicacion} ${equipo.id}`)
+        matchText(`${equipo.marca} ${equipo.modelo} ${equipo.tipo} ${equipo.capacidad} ${equipo.ubicacion}`)
 
       return byTipo && bySearch
     })
@@ -370,7 +370,7 @@ export default function ClienteDetallePage() {
   if (!cliente) return null
 
   return (
-    <div className="px-2 sm:px-3 py-4 sm:py-6 text-[#314d72]">
+    <div className="mx-auto max-w-[1260px] px-5 py-7 text-slate-900 sm:px-7 lg:px-9">
       <div className="flex items-start sm:items-center gap-3 justify-between flex-col sm:flex-row border-b border-[#d4dfec] pb-4 mb-4">
         <div className="flex items-center gap-3">
           <Link
@@ -547,7 +547,7 @@ export default function ClienteDetallePage() {
                     <p className="text-[#1e5ca7] font-bold text-lg leading-tight truncate">
                       {equipo.marca || "Sin marca"} {equipo.modelo || ""}
                     </p>
-                    <p className="text-sm text-[#4a678f] mt-0.5">ID: {equipo.id}</p>
+                    <p className="text-sm text-[#4a678f] mt-0.5">{equipo.ubicacion || "Ubicación sin definir"}</p>
                   </div>
                   <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#eaf2ff] text-[#2e67ac] font-semibold whitespace-nowrap">
                     {equipo.tipo || "Tipo no definido"}
