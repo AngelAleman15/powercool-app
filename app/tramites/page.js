@@ -3,8 +3,6 @@
 import { useCallback, useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 
 export default function Tramites() {
   const [tramites, setTramites] = useState([])
@@ -17,7 +15,6 @@ export default function Tramites() {
   const [editingTramite, setEditingTramite] = useState(null)
   const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(null)
   const closeEstadoMenuRef = useRef(null)
-  const { demoMode } = useDemoMode()
   
   const [formData, setFormData] = useState({
     tipo: "mantenimiento",
@@ -58,14 +55,6 @@ export default function Tramites() {
   }, [])
 
   const cargarDatos = useCallback(async () => {
-    if (demoMode) {
-      setTramites(DEMO_TRAMITES)
-      setEquipos(DEMO_EQUIPOS.map((e) => ({ id: e.id, marca: e.marca, modelo: e.modelo, cliente_id: e.cliente_id })))
-      setClientes(DEMO_CLIENTES)
-      setLoading(false)
-      return
-    }
-
     setLoading(true)
     
     const [{ data: tramitesData }, { data: equiposData }, { data: clientesData }] = await Promise.all([
@@ -78,7 +67,7 @@ export default function Tramites() {
     setEquipos(equiposData || [])
     setClientes(clientesData || [])
     setLoading(false)
-  }, [demoMode])
+  }, [])
 
   useEffect(() => {
     const initTimer = setTimeout(() => {
@@ -103,8 +92,6 @@ export default function Tramites() {
   }
 
   const crearEquipoRapido = async () => {
-    if (demoMode) return
-    
     const { data, error } = await supabase
       .from("equipos")
       .insert([{ ...nuevoEquipo, cliente_id: formData.cliente_id }])
@@ -120,11 +107,6 @@ export default function Tramites() {
   }
 
   const cambiarEstado = async (tramiteId, nuevoEstado) => {
-    if (demoMode) {
-      setTramites((prev) => prev.map((t) => (t.id === tramiteId ? { ...t, estado: nuevoEstado } : t)))
-      return
-    }
-
     const { error } = await supabase
       .from("tramites")
       .update({ estado: nuevoEstado })
@@ -142,12 +124,6 @@ export default function Tramites() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (demoMode) {
-      setShowModal(false)
-      setEditingTramite(null)
-      return
-    }
-    
     let error
     if (editingTramite) {
       // Actualizar trámite existente
@@ -320,13 +296,8 @@ export default function Tramites() {
             <p className="text-sm sm:text-base font-medium text-[#4f6f95] mt-1">Gestión integral de mantenimientos y abonos</p>
           </div>
           <button
-            onClick={() => !demoMode && setShowModal(true)}
-            disabled={demoMode}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full sm:w-auto justify-center ${
-              demoMode
-                ? "bg-[#e8eff9] text-[#7f96b8] cursor-not-allowed"
-                : "bg-white text-black hover:bg-gray-200"
-            }`}
+            onClick={() => setShowModal(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition-all hover:bg-gray-200 sm:w-auto"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

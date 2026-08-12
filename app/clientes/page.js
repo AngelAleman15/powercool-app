@@ -4,18 +4,8 @@ import { useCallback, useRef, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
-import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 import QRCodeComponent from "@/components/QRCodeComponent"
 import { CIUDADES_URUGUAY } from "@/lib/uruguayCities"
-
-const DEMO_STATUS_BY_ID = {
-  "demo-c-1": "activo",
-  "demo-c-2": "activo",
-  "demo-c-3": "inactivo",
-  "demo-c-4": "activo",
-  "demo-c-5": "activo",
-}
 
 const CSV_HEADERS = ["nombre", "email", "telefono", "direccion", "ciudad", "latitud", "longitud"]
 
@@ -110,7 +100,6 @@ export default function Clientes() {
   const [bulkMessage, setBulkMessage] = useState("")
   const [editingId, setEditingId] = useState(null)
   const [showCitySuggestions, setShowCitySuggestions] = useState(false)
-  const { demoMode } = useDemoMode()
   const rowsPerPage = 5
 
   const toNullableNumber = (value) => {
@@ -133,26 +122,14 @@ export default function Clientes() {
     return avatarPalette[key % avatarPalette.length]
   }
 
-  const normalizeClient = useCallback((client, idx = 0) => ({
+  const normalizeClient = useCallback((client) => ({
     ...client,
     contacto: client.contacto || client.responsable || client.referente || client.nombre,
-    status: client.estado || DEMO_STATUS_BY_ID[client.id] || (idx % 7 === 3 ? "inactivo" : "activo"),
+    status: client.estado || "activo",
   }), [])
 
   const cargarClientes = useCallback(async () => {
     try {
-      if (demoMode) {
-        const equiposMapDemo = DEMO_EQUIPOS.reduce((acc, equipo) => {
-          const key = String(equipo.cliente_id || "")
-          acc[key] = (acc[key] || 0) + 1
-          return acc
-        }, {})
-        setEquiposByCliente(equiposMapDemo)
-        setClientes((DEMO_CLIENTES || []).map((c, idx) => normalizeClient(c, idx)))
-        setLoading(false)
-        return
-      }
-
       setLoading(true)
       const [clientesRes, equiposRes] = await Promise.all([
         supabase.from("clientes").select("*").order("created_at", { ascending: false }),
@@ -160,13 +137,8 @@ export default function Clientes() {
       ])
 
       if (clientesRes.error || equiposRes.error) {
-        const equiposMapDemo = DEMO_EQUIPOS.reduce((acc, equipo) => {
-          const key = String(equipo.cliente_id || "")
-          acc[key] = (acc[key] || 0) + 1
-          return acc
-        }, {})
-        setEquiposByCliente(equiposMapDemo)
-        setClientes((DEMO_CLIENTES || []).map((c, idx) => normalizeClient(c, idx)))
+        setEquiposByCliente({})
+        setClientes([])
         return
       }
 
@@ -181,7 +153,7 @@ export default function Clientes() {
     } finally {
       setLoading(false)
     }
-  }, [demoMode, normalizeClient])
+  }, [normalizeClient])
 
   useEffect(() => {
     cargarClientes()
@@ -264,10 +236,6 @@ export default function Clientes() {
   }
 
   const handleImportClick = () => {
-    if (demoMode) {
-      setBulkMessage("La importación queda deshabilitada en vista previa para no tocar datos reales.")
-      return
-    }
     fileInputRef.current?.click()
   }
 
@@ -323,12 +291,6 @@ export default function Clientes() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (demoMode) {
-      setShowModal(false)
-      setEditingId(null)
-      return
-    }
-
     setSaving(true)
 
     let error
@@ -377,7 +339,6 @@ export default function Clientes() {
   }
 
   const handleEdit = (cliente) => {
-    if (demoMode) return
     setEditingId(cliente.id)
     setFormData({
       nombre: cliente.nombre || "",
@@ -399,12 +360,6 @@ export default function Clientes() {
 
   const cargarEquipos = async (clienteId) => {
     try {
-      if (demoMode) {
-        const equiposFiltrados = DEMO_EQUIPOS.filter(e => String(e.cliente_id) === String(clienteId))
-        setEquiposDetalle(equiposFiltrados)
-        return
-      }
-
       let { data, error } = await supabase
         .from("equipos")
         .select("*")
@@ -429,12 +384,6 @@ export default function Clientes() {
 
   const cargarTramites = async (clienteId) => {
     try {
-      if (demoMode) {
-        const tramitesFiltrados = DEMO_TRAMITES.filter(t => String(t.cliente_id) === String(clienteId))
-        setTramitesDetalle(tramitesFiltrados)
-        return
-      }
-
       let { data, error } = await supabase
         .from("tramites")
         .select("*, equipos(marca, modelo)")
@@ -480,7 +429,7 @@ export default function Clientes() {
             Exportar
             <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
-          <button onClick={() => !demoMode && setShowModal(true)} disabled={demoMode} className={`inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white shadow-sm transition ${demoMode ? "cursor-not-allowed bg-slate-300" : "bg-blue-600 hover:bg-blue-700"}`}>
+          <button onClick={() => setShowModal(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
             <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
             Nuevo cliente
           </button>
@@ -574,8 +523,7 @@ export default function Clientes() {
                           e.stopPropagation()
                           handleEdit(cliente)
                         }}
-                        disabled={demoMode}
-                        className={`px-3 py-1.5 rounded-md border text-xs font-semibold ${demoMode ? "border-[#d2dbea] text-[#9caec6]" : "border-[#cad7e9] text-[#4272aa] hover:bg-[#edf4ff]"}`}
+                        className="rounded-md border border-[#cad7e9] px-3 py-1.5 text-xs font-semibold text-[#4272aa] hover:bg-[#edf4ff]"
                       >
                         Editar
                       </button>
@@ -629,7 +577,7 @@ export default function Clientes() {
                       <td className="px-4 py-4 text-center font-semibold text-slate-700">{equiposCount}</td>
                       <td className="relative px-5 py-4 text-right">
                         <button onClick={(event) => { event.stopPropagation(); setActionMenuId(actionMenuId === cliente.id ? null : cliente.id) }} className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800" aria-label={`Acciones para ${cliente.nombre}`}>•••</button>
-                        {actionMenuId === cliente.id && <div onClick={(event) => event.stopPropagation()} className="absolute right-5 top-12 z-10 w-44 rounded-xl border border-slate-200 bg-white p-1 text-left shadow-lg"><Link href={`/clientes/${cliente.id}`} className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Ver cliente</Link><button disabled={demoMode} onClick={() => { setActionMenuId(null); handleEdit(cliente) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Editar</button><button onClick={() => { setActionMenuId(null); handleVerInstalaciones(cliente.id) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Ver equipos</button><button onClick={() => { setActionMenuId(null); handleVerMantenimientos(cliente.id) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Historial de servicios</button></div>}
+                        {actionMenuId === cliente.id && <div onClick={(event) => event.stopPropagation()} className="absolute right-5 top-12 z-10 w-44 rounded-xl border border-slate-200 bg-white p-1 text-left shadow-lg"><Link href={`/clientes/${cliente.id}`} className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Ver cliente</Link><button onClick={() => { setActionMenuId(null); handleEdit(cliente) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Editar</button><button onClick={() => { setActionMenuId(null); handleVerInstalaciones(cliente.id) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Ver equipos</button><button onClick={() => { setActionMenuId(null); handleVerMantenimientos(cliente.id) }} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Historial de servicios</button></div>}
                       </td>
                     </tr>
                   )

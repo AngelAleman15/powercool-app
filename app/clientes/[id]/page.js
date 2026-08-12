@@ -4,15 +4,12 @@ import { useCallback, useMemo, useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 import QRCodeComponent from "@/components/QRCodeComponent"
 import { CIUDADES_URUGUAY } from "@/lib/uruguayCities"
 
 export default function ClienteDetallePage() {
   const params = useParams()
   const router = useRouter()
-  const { demoMode } = useDemoMode()
 
   const clienteId = Array.isArray(params.id) ? params.id[0] : params.id
 
@@ -153,30 +150,6 @@ export default function ClienteDetallePage() {
     setLoading(true)
 
     try {
-      if (demoMode) {
-        const clienteDemo = DEMO_CLIENTES.find((c) => String(c.id) === String(clienteId))
-
-        if (!clienteDemo) {
-          router.push("/clientes")
-          return
-        }
-
-        setCliente(clienteDemo)
-        setFormData({
-          nombre: clienteDemo.nombre || "",
-          email: clienteDemo.email || "",
-          telefono: clienteDemo.telefono || "",
-          direccion: clienteDemo.direccion || "",
-          ciudad: clienteDemo.ciudad || "",
-          latitud: clienteDemo.latitud ?? "",
-          longitud: clienteDemo.longitud ?? "",
-        })
-
-        setEquipos(DEMO_EQUIPOS.filter((e) => String(e.cliente_id) === String(clienteId)))
-        setTramites(DEMO_TRAMITES.filter((t) => String(t.cliente_id) === String(clienteId)))
-        return
-      }
-
       const [clienteRes, equiposResOrdered, tramitesResOrdered] = await Promise.all([
         supabase.from("clientes").select("*").eq("id", clienteId).single(),
         supabase.from("equipos").select("*").eq("cliente_id", clienteId).order("created_at", { ascending: false }),
@@ -226,7 +199,7 @@ export default function ClienteDetallePage() {
     } finally {
       setLoading(false)
     }
-  }, [clienteId, demoMode, router])
+  }, [clienteId, router])
 
   useEffect(() => {
     if (!clienteId) return
@@ -338,25 +311,6 @@ export default function ClienteDetallePage() {
       return
     }
 
-    if (demoMode) {
-      const fakeId = `demo-eq-${Date.now()}`
-      setEquipos((prev) => [
-        {
-          id: fakeId,
-          cliente_id: clienteId,
-          marca: equipoFormData.marca,
-          modelo: equipoFormData.modelo,
-          tipo: equipoFormData.tipo,
-          capacidad: equipoFormData.capacidad,
-          ubicacion: equipoFormData.ubicacion,
-        },
-        ...prev,
-      ])
-      setShowEquipoModal(false)
-      resetEquipoForm()
-      return
-    }
-
     setSavingEquipo(true)
 
     const { error } = await supabase.from("equipos").insert([
@@ -381,11 +335,6 @@ export default function ClienteDetallePage() {
 
   const handleUpdateClient = async (e) => {
     e.preventDefault()
-
-    if (demoMode) {
-      setShowEditModal(false)
-      return
-    }
 
     setSaving(true)
 

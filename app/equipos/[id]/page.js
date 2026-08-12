@@ -7,8 +7,6 @@ import html2canvas from "html2canvas"
 import QRCodeComponent from "@/components/QRCodeComponent"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_TRAMITES } from "@/lib/demoData"
 
 export default function EquipoPage({ params }) {
 
@@ -17,7 +15,6 @@ export default function EquipoPage({ params }) {
   const [loading, setLoading] = useState(true)
   const [showExportModal, setShowExportModal] = useState(false)
   const [incluirHistorial, setIncluirHistorial] = useState(true)
-  const { demoMode } = useDemoMode()
   const searchParams = useSearchParams()
 
   const fichaRef = useRef()
@@ -32,25 +29,6 @@ export default function EquipoPage({ params }) {
   const cargarEquipo = useCallback(async () => {
     setLoading(true)
     const { id } = await params
-
-    const isDemoId = String(id).startsWith("DEMO-EQ-")
-    if (demoMode || isDemoId) {
-      const demoEquipo = DEMO_EQUIPOS.find((e) => String(e.id) === String(id))
-      if (demoEquipo) {
-        const demoCliente = DEMO_CLIENTES.find((c) => c.id === demoEquipo.cliente_id)
-        const demoHistorial = DEMO_TRAMITES
-          .filter((t) => t.equipo_id === demoEquipo.id)
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-
-        setEquipo({
-          ...demoEquipo,
-          clientes: demoCliente || null,
-        })
-        setHistorial(demoHistorial)
-        setLoading(false)
-        return
-      }
-    }
 
     const { data } = await supabase
       .from("equipos")
@@ -73,7 +51,7 @@ export default function EquipoPage({ params }) {
     }
 
     setLoading(false)
-  }, [demoMode, params])
+  }, [params])
 
   useEffect(() => {
     const initTimer = setTimeout(() => {

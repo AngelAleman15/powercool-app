@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
-import { useDemoMode } from "@/lib/useDemoMode"
-import { DEMO_CLIENTES, DEMO_EQUIPOS, DEMO_STATS, DEMO_TRAMITES } from "@/lib/demoData"
 import PageHeader from "@/components/PageHeader"
 
 type Service = {
@@ -126,21 +124,11 @@ export default function Home() {
   const [chartRange, setChartRange] = useState(6)
   const [chartRenderKey, setChartRenderKey] = useState(0)
   const { displayName, permissions } = useAuthSession()
-  const { demoMode } = useDemoMode()
 
   const loadDashboard = useCallback(async () => {
     setLoading(true)
     setError("")
     try {
-      if (demoMode) {
-        setEquipment(DEMO_EQUIPOS)
-        setClients(DEMO_CLIENTES)
-        setServices(DEMO_TRAMITES)
-        setParts([])
-        setStats({ equipment: DEMO_STATS.equipos, clients: DEMO_STATS.clientes, pending: DEMO_STATS.pendientes, components: Math.max(3, Math.round(DEMO_STATS.equipos * 0.1)) })
-        return
-      }
-
       const empty = { data: [], error: null }
       const canEquipos = permissions?.equipos !== false
       const canClientes = permissions?.clientes !== false
@@ -173,7 +161,7 @@ export default function Home() {
       setError("No se pudo sincronizar el resumen. Revisa la conexión con Supabase.")
       setEquipment([]); setClients([]); setServices([]); setParts([]); setStats({ equipment: 0, clients: 0, pending: 0, components: 0 })
     } finally { setLoading(false) }
-  }, [demoMode, permissions])
+  }, [permissions])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
 
