@@ -184,7 +184,7 @@ export default function EquipoPage({ params }) {
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold text-[#1f4371]">{equipo.marca} {equipo.modelo}</h1>
-                    <p className="text-[#6f87a8] font-mono text-xs mt-1">ID: {equipo.id}</p>
+                    <p className="text-[#6f87a8] text-xs mt-1">Activo registrado · {equipo.ubicacion || "ubicación pendiente"}</p>
                   </div>
                 </div>
 
