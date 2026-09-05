@@ -3,8 +3,10 @@
 import { useCallback, useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 
 export default function Tramites() {
+  const searchParams = useSearchParams()
   const [tramites, setTramites] = useState([])
   const [equipos, setEquipos] = useState([])
   const [clientes, setClientes] = useState([])
@@ -16,6 +18,7 @@ export default function Tramites() {
   const [editingTramite, setEditingTramite] = useState(null)
   const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(null)
   const closeEstadoMenuRef = useRef(null)
+  const quickServiceOpenedRef = useRef(false)
   
   const [formData, setFormData] = useState({
     tipo: "mantenimiento",
@@ -81,6 +84,25 @@ export default function Tramites() {
 
     return () => clearTimeout(initTimer)
   }, [cargarDatos])
+
+  useEffect(() => {
+    const equipoId = searchParams.get("equipoId")
+    if (quickServiceOpenedRef.current || !equipoId || loading) return
+
+    const equipo = equipos.find((item) => item.id === equipoId)
+    if (!equipo) return
+
+    const clienteId = searchParams.get("clienteId") || equipo.cliente_id || ""
+    const openQuickService = window.setTimeout(() => {
+      quickServiceOpenedRef.current = true
+      setTipoTramite("mantenimiento")
+      setEditingTramite(null)
+      setFormData((current) => ({ ...current, tipo: "mantenimiento", cliente_id: clienteId, equipo_id: equipoId }))
+      setShowModal(true)
+    }, 0)
+
+    return () => window.clearTimeout(openQuickService)
+  }, [equipos, loading, searchParams])
 
   const handleChange = (e) => {
     const { name, value } = e.target

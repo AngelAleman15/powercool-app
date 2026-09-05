@@ -152,9 +152,16 @@ export default function EquipoPage({ params }) {
     )
   }
 
+  const estadoOperativo = {
+    operativo: { label: "Operativo", className: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" },
+    atencion: { label: "Requiere atención", className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200" },
+    mantenimiento: { label: "En mantenimiento", className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200" },
+    critico: { label: "Fuera de servicio", className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" },
+  }[equipo.estado_operativo || "operativo"] || { label: "Sin estado", className: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200" }
+
   return (
 
-    <div className="equipment-detail mx-auto max-w-[1260px] px-5 py-7 text-slate-900 sm:px-7 lg:px-9">
+    <div className="equipment-detail mx-auto max-w-[1260px] px-4 py-5 text-slate-900 sm:px-6 sm:py-7 lg:px-9">
 
       {/* Back Button */}
       <Link href={backHref} className="inline-flex items-center gap-2 text-sm text-[#4f6f98] hover:text-[#1f6bc1] mb-4 transition-colors">
@@ -182,14 +189,17 @@ export default function EquipoPage({ params }) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                     </svg>
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-[#1f4371]">{equipo.marca} {equipo.modelo}</h1>
+                  <div className="min-w-0">
+                    <h1 className="truncate text-xl font-bold text-[#1f4371] sm:text-2xl">{equipo.marca} {equipo.modelo}</h1>
                     <p className="text-[#6f87a8] text-xs mt-1">Activo registrado · {equipo.ubicacion || "ubicación pendiente"}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-start md:items-end gap-2">
+                <div className="flex w-full flex-col items-start gap-3 md:w-auto md:items-end">
                   <div className="flex flex-wrap gap-2">
+                    <span className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${estadoOperativo.className}`}>
+                      {estadoOperativo.label}
+                    </span>
                     <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#eaf2ff] text-[#2e67ac] font-semibold border border-[#d6e5f7]">
                       Tipo: {equipo.tipo || "Split"}
                     </span>
@@ -197,15 +207,19 @@ export default function EquipoPage({ params }) {
                       Capacidad: {equipo.capacidad || "Sin capacidad"}
                     </span>
                   </div>
-                  <button
-                    onClick={() => setShowExportModal(true)}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1f6bc1] hover:bg-[#19599f] text-white text-xs font-semibold rounded-md transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Exportar PDF
-                  </button>
+                  <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
+                    <Link href={`/tramites?equipoId=${encodeURIComponent(equipo.id)}&clienteId=${encodeURIComponent(equipo.cliente_id || "")}`} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700 sm:flex-none">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      Registrar servicio
+                    </Link>
+                    <button
+                      onClick={() => setShowExportModal(true)}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      <span className="hidden sm:inline">Exportar PDF</span><span className="sm:hidden">PDF</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

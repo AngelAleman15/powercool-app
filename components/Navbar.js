@@ -18,6 +18,10 @@ function NavIcon({ name }) {
   return <svg aria-hidden="true" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">{icons[name]}</svg>
 }
 
+function ScanIcon({ className = "h-4 w-4" }) {
+  return <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.9" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 9V5h4m8 0h4v4M4 15v4h4m8 0h4v-4M8 8h3v3H8zM13 8h3v3h-3zM8 13h3v3H8zM13 13h3v3h-3z" /></svg>
+}
+
 function Brand({ compact = false }) {
   return (
     <div className={`flex items-center gap-3 ${compact ? "" : "px-3"}`}>
@@ -83,7 +87,10 @@ export default function Navbar() {
 
       <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur lg:hidden sm:px-6">
         <Link href="/" aria-label="Ir al panel" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-blue-600"><Brand compact /></Link>
-        {!loading && user && <button type="button" onClick={handleSignOut} className="min-h-10 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Salir</button>}
+        <div className="flex items-center gap-2">
+          <Link href="/escanear-qr" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 outline-none transition hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" aria-label="Escanear código QR"><ScanIcon /><span className="hidden sm:inline">Escanear</span></Link>
+          {!loading && user && <button type="button" onClick={handleSignOut} className="min-h-10 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Salir</button>}
+        </div>
       </header>
       <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-50 flex overflow-x-auto border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
         {navItems.map((item) => (
