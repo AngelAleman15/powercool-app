@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import NotificationManager from "@/components/NotificationManager";
-import LocalNotifications from "@/components/LocalNotifications";
-import AuthGate from "@/components/AuthGate";
+import AppShell from "@/components/AppShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,12 +38,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
-        <NotificationManager />
-        <LocalNotifications />
-        <Navbar />
-        <main className="min-h-screen min-w-0 overflow-x-clip pb-20 lg:ml-[280px] lg:pb-0">
-          <AuthGate>{children}</AuthGate>
-        </main>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
