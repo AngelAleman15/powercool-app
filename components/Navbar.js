@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useState } from "react"
 import { useAuthSession } from "@/lib/useAuthSession"
 import { isPublicPath } from "@/lib/roleAccess"
 
@@ -11,6 +12,7 @@ const icons = {
   equipos: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14v4H5V5Zm2 4v10m10-10v10M9 13h6m-3-4v8" />,
   inventario: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="m12 3 7 4v8l-7 4-7-4V7l7-4Zm-7 4 7 4 7-4M12 11v8" />,
   tramites: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2m-6 0a3 3 0 0 0 6 0m-6 0a3 3 0 0 1 6 0m-6 7h6m-6 4h4" />,
+  qr: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 9V5h4m8 0h4v4M4 15v4h4m8 0h4v-4M8 8h3v3H8zM13 8h3v3h-3zM8 13h3v3H8zM13 13h3v3h-3z" />,
   admin: <><circle cx="12" cy="12" r="3" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.1 2.1-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2.1-2.1.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H5.3v-3h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.1-2.1.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.1 2.1-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2v3h-.2a1.7 1.7 0 0 0-1.5 1Z" /></>,
 }
 
@@ -40,6 +42,7 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { loading, user, displayName, role, signOut } = useAuthSession()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const shouldShowNav = !isPublicPath(pathname || "/")
 
   if (!shouldShowNav) return null
@@ -56,6 +59,11 @@ export default function Navbar() {
     { href: "/tramites", label: "Mantenimientos", icon: "tramites" },
     { href: "/inventario", label: "Inventario", icon: "inventario" },
     { href: "/configuracion", label: "Configuración", icon: "admin" },
+  ]
+  const mobileNavItems = [
+    { href: "/", label: "Panel", icon: "panel" },
+    { href: "/escanear-qr", label: "Escanear", icon: "qr" },
+    { href: "/equipos", label: "Equipos", icon: "equipos" },
   ]
 
   return (
@@ -92,7 +100,21 @@ export default function Navbar() {
           {!loading && user && <button type="button" onClick={handleSignOut} className="min-h-10 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Salir</button>}
         </div>
       </header>
-      <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-50 flex overflow-x-auto border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
+      {mobileMenuOpen && <div className="fixed inset-0 z-[60] bg-slate-950/30 backdrop-blur-[1px] sm:hidden" onClick={() => setMobileMenuOpen(false)}>
+        <section role="dialog" aria-modal="true" aria-label="Más opciones" className="absolute inset-x-3 bottom-[5.25rem] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <p className="px-2 pb-2 pt-1 text-xs font-semibold uppercase tracking-[.12em] text-slate-400">Más opciones</p>
+          <div className="grid grid-cols-2 gap-2">
+            {navItems.filter((item) => !["/", "/equipos"].includes(item.href)).map((item) => <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className={`flex min-h-14 items-center gap-3 rounded-xl px-3 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-blue-600 ${isActive(item.href) ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}><NavIcon name={item.icon} />{item.label}</Link>)}
+          </div>
+        </section>
+      </div>}
+      <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-50 flex border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur sm:hidden">
+        {mobileNavItems.map((item) => (
+          <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[10px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 ${isActive(item.href) ? "bg-blue-50 text-[#1264d5]" : "text-slate-500 hover:bg-slate-50"}`}><NavIcon name={item.icon} /><span>{item.label}</span></Link>
+        ))}
+        <button type="button" onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-label="Abrir más opciones" className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[10px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 ${mobileMenuOpen ? "bg-blue-50 text-[#1264d5]" : "text-slate-500 hover:bg-slate-50"}`}><svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg><span>Más</span></button>
+      </nav>
+      <nav aria-label="Navegación para tablet" className="fixed inset-x-0 bottom-0 z-50 hidden overflow-x-auto border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur sm:flex lg:hidden">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={`flex min-h-12 min-w-[64px] flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[10px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 ${isActive(item.href) ? "bg-blue-50 text-[#1264d5]" : "text-slate-500 hover:bg-slate-50"}`}>
             <NavIcon name={item.icon} />

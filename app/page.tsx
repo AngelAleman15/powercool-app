@@ -218,15 +218,15 @@ export default function Home() {
 
       {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <section className="grid gap-5 border-b border-slate-200 pb-7 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 border-b border-slate-200 pb-6 sm:gap-5 sm:pb-7 xl:grid-cols-4">
         {metrics.map((metric) => (
           <article key={metric.label} className="min-w-0">
             <div className="flex items-center gap-4">
-              <div className={`grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full border-[3px] bg-white shadow-[inset_0_0_0_7px_rgba(248,250,252,.95),0_8px_18px_rgba(15,23,42,.04)] ${metric.tone}`}><Icon name={metric.icon} className="h-7 w-7" /></div>
+              <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 bg-white shadow-[inset_0_0_0_5px_rgba(248,250,252,.95),0_8px_18px_rgba(15,23,42,.04)] sm:h-[76px] sm:w-[76px] sm:border-[3px] sm:shadow-[inset_0_0_0_7px_rgba(248,250,252,.95),0_8px_18px_rgba(15,23,42,.04)] ${metric.tone}`}><Icon name={metric.icon} className="h-5 w-5 sm:h-7 sm:w-7" /></div>
               <div className="min-w-0">
-                <p className="text-[34px] font-bold leading-none tracking-[-.05em]">{loading ? "–" : metric.value}</p>
-                <p className="mt-1.5 text-[13px] font-semibold text-slate-600">{metric.label}</p>
-                <p className={`mt-3 text-xs font-semibold ${metric.noteTone}`}>{metric.note}</p>
+                <p className="text-[27px] font-bold leading-none tracking-[-.05em] sm:text-[34px]">{loading ? "–" : metric.value}</p>
+                <p className="mt-1 text-xs font-semibold leading-4 text-slate-600 sm:mt-1.5 sm:text-[13px]">{metric.label}</p>
+                <p className={`mt-2 text-[11px] font-semibold sm:mt-3 sm:text-xs ${metric.noteTone}`}>{metric.note}</p>
               </div>
             </div>
             <div className={metric.tone.split(" ")[0]}><Sparkline values={metric.trend} labels={trendLabels} id={metric.icon} /></div>
