@@ -1,0 +1,61 @@
+.calendar-shell .rbc-toolbar {
+  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+}
+
+.calendar-shell .rbc-toolbar button {
+  min-height: 2.25rem;
+  border-color: #e2e8f0;
+  border-radius: 0.5rem;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.calendar-shell .rbc-toolbar button:hover,
+.calendar-shell .rbc-toolbar button.rbc-active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  box-shadow: none;
+  color: #1d4ed8;
+}
+
+.calendar-shell .rbc-header {
+  border-bottom: 0;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.6rem 0.25rem;
+  text-transform: uppercase;
+}
+
+.calendar-shell .rbc-month-view,
+.calendar-shell .rbc-time-view,
+.calendar-shell .rbc-agenda-view {
+  border-color: #e2e8f0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.calendar-shell .rbc-day-bg + .rbc-day-bg,
+.calendar-shell .rbc-month-row + .rbc-month-row,
+.calendar-shell .rbc-header + .rbc-header {
+  border-color: #f1f5f9;
+}
+
+.calendar-shell .rbc-off-range-bg { background: #fafcff; }
+.calendar-shell .rbc-today { background: #f0f7ff; }
+.calendar-shell .rbc-date-cell { color: #475569; font-size: 0.8125rem; padding: 0.4rem 0.5rem; }
+.calendar-shell .rbc-event { box-shadow: none; font-weight: 600; }
+.calendar-shell .rbc-show-more { color: #2563eb; font-size: 0.75rem; font-weight: 700; }
+
+@media (max-width: 640px) {
+  .calendar-shell .rbc-toolbar { align-items: stretch; flex-direction: column; margin-bottom: 0.75rem; }
+  .calendar-shell .rbc-toolbar-label { order: -1; color: #0f172a; font-size: 0.9375rem; font-weight: 700; text-align: center; }
+  .calendar-shell .rbc-btn-group { display: flex; }
+  .calendar-shell .rbc-btn-group button { flex: 1; padding: 0.35rem 0.25rem; }
+  .calendar-shell .rbc-header { font-size: 0.625rem; padding-inline: 0; }
+  .calendar-shell .rbc-date-cell { font-size: 0.6875rem; padding: 0.25rem; }
+  .calendar-shell .rbc-event { font-size: 0.625rem !important; line-height: 1.1; padding: 2px 3px !important; }
+  .calendar-shell .rbc-row-segment { padding-inline: 1px; }
+}

@@ -2,26 +2,26 @@ import Link from "next/link"
 
 export default function SinAccesoPage() {
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-[#d8e4f4] bg-white shadow-[0_8px_28px_rgba(36,84,145,.12)] p-6 sm:p-8 text-center">
-        <div className="mx-auto h-12 w-12 rounded-full bg-[#f5f8ff] border border-[#d8e4f4] flex items-center justify-center">
-          <span className="text-[#2a5e97] text-xl font-bold">!</span>
+    <div className="flex min-h-[calc(100vh-7rem)] items-center justify-center px-4 py-10 sm:px-6">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-[0_18px_45px_rgba(15,23,42,.08)] sm:p-9">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+          <span className="text-xl font-semibold">!</span>
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-[#214a79]">Sin acceso</h1>
-        <p className="mt-2 text-sm text-[#5a7698]">
+        <h1 className="mt-5 text-2xl font-semibold tracking-[-.03em] text-slate-950">Sin acceso</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
           Tu rol no tiene permisos para ver esta pantalla.
         </p>
 
-        <div className="mt-6 flex items-center justify-center gap-2">
+        <div className="mt-7 flex flex-col justify-center gap-2.5 sm:flex-row">
           <Link
             href="/"
-            className="px-4 py-2 rounded-lg bg-[#1f67bf] text-white text-sm font-semibold hover:bg-[#1756a4] transition-colors"
+            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100"
           >
             Ir al inicio
           </Link>
           <Link
             href="/auth"
-            className="px-4 py-2 rounded-lg border border-[#cddcf0] text-[#285887] text-sm font-semibold hover:bg-[#f6f9ff] transition-colors"
+            className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100"
           >
             Cambiar sesión
           </Link>

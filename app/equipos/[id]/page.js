@@ -154,7 +154,7 @@ export default function EquipoPage({ params }) {
 
   return (
 
-    <div className="px-4 sm:px-6 py-4 sm:py-6 text-[#314d72]">
+    <div className="equipment-detail mx-auto max-w-[1260px] px-5 py-7 text-slate-900 sm:px-7 lg:px-9">
 
       {/* Back Button */}
       <Link href={backHref} className="inline-flex items-center gap-2 text-sm text-[#4f6f98] hover:text-[#1f6bc1] mb-4 transition-colors">
@@ -170,7 +170,7 @@ export default function EquipoPage({ params }) {
         <div className="lg:col-span-2">
           <div
             ref={fichaRef}
-            className="bg-[#f9fbff] rounded-xl p-6 border border-[#d3dfef] shadow-[0_6px_16px_rgba(50,89,141,.1)]"
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,.05)] sm:p-6"
           >
 
             {/* Header */}
@@ -333,7 +333,7 @@ export default function EquipoPage({ params }) {
 
         {/* Sidebar - QR Code */}
         <div className="lg:col-span-1">
-          <div className="bg-[#f9fbff] rounded-xl p-4 border border-[#d3dfef] shadow-[0_6px_16px_rgba(50,89,141,.1)] sticky top-16 overflow-hidden">
+          <div className="sticky top-16 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,.05)]">
             <div className="rounded-lg border border-[#d8e5f5] bg-white px-3 py-2 mb-3">
               <h3 className="text-base font-bold text-[#2a4d7a]">Tarjeta de Acceso QR</h3>
               <p className="text-[11px] text-[#6f87a8]">Escanea para abrir la ficha del equipo</p>
@@ -397,6 +397,14 @@ export default function EquipoPage({ params }) {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        .equipment-detail :global([class*="bg-[#f9fbff]"]) { background-color: #fff !important; }
+        .equipment-detail :global([class*="border-[#d3dfef]"]), .equipment-detail :global([class*="border-[#dbe6f4]"]), .equipment-detail :global([class*="border-[#cad8ea]"]) { border-color: #e2e8f0 !important; }
+        .equipment-detail :global([class*="text-[#1f4371]"]), .equipment-detail :global([class*="text-[#2a4d7a]"]) { color: #0f172a !important; }
+        .equipment-detail :global([class*="text-[#607b9f]"]), .equipment-detail :global([class*="text-[#6f87a8]"]) { color: #64748b !important; }
+        .equipment-detail :global([class*="rounded-md"]) { border-radius: .75rem; }
+      `}</style>
 
     </div>
   )

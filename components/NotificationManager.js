@@ -62,7 +62,7 @@ export default function NotificationManager() {
         sendAlert(`equipment:${item.id}:${item.estado_operativo}`, "Equipo fuera de servicio", `${name} está marcado como ${item.estado_operativo === "critico" ? "crítico" : "en mantenimiento"}.`, `/equipos/${item.id}`)
       })
       ;(partsRes.data || []).filter((item) => Number(item.stock_actual) <= Number(item.stock_minimo)).forEach((item) => {
-        sendAlert(`stock:${item.id}:${item.stock_actual}`, "Stock bajo", `${item.nombre}: quedan ${item.stock_actual} unidades (mínimo ${item.stock_minimo}).`, "/equipos")
+        sendAlert(`stock:${item.id}:${item.stock_actual}`, "Stock bajo", `${item.nombre}: quedan ${item.stock_actual} unidades (mínimo ${item.stock_minimo}).`, "/inventario")
       })
     }
 

@@ -370,8 +370,8 @@ export default function ClienteDetallePage() {
   if (!cliente) return null
 
   return (
-    <div className="mx-auto max-w-[1260px] px-5 py-7 text-slate-900 sm:px-7 lg:px-9">
-      <div className="flex items-start sm:items-center gap-3 justify-between flex-col sm:flex-row border-b border-[#d4dfec] pb-4 mb-4">
+    <div className="client-detail mx-auto max-w-[1260px] px-5 py-7 text-slate-900 sm:px-7 lg:px-9">
+      <div className="mb-6 flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
           <Link
             href="/clientes"
@@ -383,7 +383,7 @@ export default function ClienteDetallePage() {
             </svg>
           </Link>
           <div>
-            <h1 className="text-4xl font-bold text-[#1f4371] tracking-tight">Detalle del Cliente</h1>
+            <h1 className="text-2xl font-bold tracking-[-.035em] text-slate-950 sm:text-3xl">Detalle del Cliente</h1>
             <p className="text-sm text-[#607b9f] mt-1">Información real, ubicación y equipos asociados.</p>
           </div>
         </div>
@@ -917,6 +917,13 @@ export default function ClienteDetallePage() {
           </div>
         </div>
       )}
+      <style jsx>{`
+        .client-detail :global([class*="bg-[#f9fbff]"]) { background-color: #fff !important; }
+        .client-detail :global([class*="border-[#d3dfef]"]), .client-detail :global([class*="border-[#dbe6f4]"]), .client-detail :global([class*="border-[#cad8ea]"]) { border-color: #e2e8f0 !important; }
+        .client-detail :global([class*="text-[#1f4371]"]), .client-detail :global([class*="text-[#2a4d7a]"]), .client-detail :global([class*="text-[#2e5e96]"]) { color: #0f172a !important; }
+        .client-detail :global([class*="text-[#607b9f]"]), .client-detail :global([class*="text-[#47658d]"]), .client-detail :global([class*="text-[#59779f]"]), .client-detail :global([class*="text-[#6f87a8]"]) { color: #64748b !important; }
+        .client-detail :global([class*="rounded-md"]) { border-radius: .75rem; }
+      `}</style>
     </div>
   )
 }

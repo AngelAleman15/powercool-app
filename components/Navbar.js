@@ -20,13 +20,13 @@ function NavIcon({ name }) {
 
 function Brand({ compact = false }) {
   return (
-    <div className="flex items-center gap-3 px-3">
-      <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-[#2784ff] to-[#0958c9] shadow-[0_10px_22px_rgba(8,94,205,.32)]">
-        <svg aria-hidden="true" className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg>
+    <div className={`flex items-center gap-3 ${compact ? "" : "px-3"}`}>
+      <div className={`${compact ? "h-9 w-9 rounded-lg" : "h-11 w-11 rounded-xl"} grid place-items-center bg-gradient-to-br from-[#2784ff] to-[#0958c9] shadow-[0_10px_22px_rgba(8,94,205,.32)]`}>
+        <svg aria-hidden="true" className={`${compact ? "h-5 w-5" : "h-7 w-7"} text-white`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg>
       </div>
       <div>
-        <p className={`text-lg font-bold tracking-[-0.03em] ${compact ? "text-slate-900" : "text-white"}`}>ClimaControl</p>
-        <p className={`text-sm ${compact ? "text-slate-500" : "text-slate-400"}`}>Gestión técnica</p>
+        <p className={`${compact ? "text-base" : "text-lg"} font-bold tracking-[-0.03em] ${compact ? "text-slate-900" : "text-white"}`}>ClimaControl</p>
+        <p className={`${compact ? "text-[11px]" : "text-sm"} ${compact ? "text-slate-500" : "text-slate-400"}`}>Gestión técnica</p>
       </div>
     </div>
   )
@@ -57,13 +57,13 @@ export default function Navbar() {
   return (
     <>
       <aside
-        className="fixed inset-y-0 left-0 z-50 hidden w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[#061426] px-4 py-7 md:flex"
+        className="fixed inset-y-0 left-0 z-50 hidden w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[#061426] px-4 py-7 lg:flex"
         style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.78) 0%,rgba(3,17,34,.64) 48%,rgba(3,17,34,.9) 100%),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}
       >
-        <Link href="/" aria-label="Ir al panel" className="mb-9"><Brand /></Link>
+        <Link href="/" aria-label="Ir al panel" className="mb-9 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white"><Brand /></Link>
         <nav aria-label="Navegación principal" className="space-y-2">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={`flex items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-semibold transition-all ${isActive(item.href) ? "bg-gradient-to-r from-[#1976e9] to-[#1758aa] text-white shadow-[0_10px_24px_rgba(18,106,220,.3)]" : "text-slate-300 hover:bg-white/8 hover:text-white"}`}>
+            <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={`flex min-h-12 items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-semibold outline-none transition-all focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#061426] ${isActive(item.href) ? "bg-gradient-to-r from-[#1976e9] to-[#1758aa] text-white shadow-[0_10px_24px_rgba(18,106,220,.3)]" : "text-slate-300 hover:bg-white/8 hover:text-white"}`}>
               <NavIcon name={item.icon} />
               {item.label}
             </Link>
@@ -76,18 +76,18 @@ export default function Navbar() {
               <p className="truncate text-sm font-semibold text-white">{loading ? "Cargando..." : displayName}</p>
               <p className="truncate text-xs capitalize text-slate-400">{role || "Usuario"}</p>
             </div>
-            {!loading && user && <button type="button" onClick={handleSignOut} aria-label="Cerrar sesión" className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4 4-5-4-5m4 5H3" /></svg></button>}
+            {!loading && user && <button type="button" onClick={handleSignOut} aria-label="Cerrar sesión" className="rounded-lg p-2 text-slate-400 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4 4-5-4-5m4 5H3" /></svg></button>}
           </div>
         </div>
       </aside>
 
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
-        <Link href="/" aria-label="Ir al panel"><Brand compact /></Link>
-        {!loading && user && <button type="button" onClick={handleSignOut} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">Salir</button>}
+      <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur lg:hidden sm:px-6">
+        <Link href="/" aria-label="Ir al panel" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-blue-600"><Brand compact /></Link>
+        {!loading && user && <button type="button" onClick={handleSignOut} className="min-h-10 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Salir</button>}
       </header>
-      <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-50 flex border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] md:hidden">
+      <nav aria-label="Navegación móvil" className="fixed inset-x-0 bottom-0 z-50 flex overflow-x-auto border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
         {navItems.map((item) => (
-          <Link key={item.href} href={item.href} className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold ${isActive(item.href) ? "text-[#1264d5]" : "text-slate-500"}`}>
+          <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={`flex min-h-12 min-w-[64px] flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[10px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 ${isActive(item.href) ? "bg-blue-50 text-[#1264d5]" : "text-slate-500 hover:bg-slate-50"}`}>
             <NavIcon name={item.icon} />
             <span className="truncate">{item.label}</span>
           </Link>

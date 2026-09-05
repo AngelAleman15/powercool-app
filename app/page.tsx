@@ -21,7 +21,13 @@ type Service = {
 
 type Equipment = { id: string | number; marca?: string; modelo?: string; cliente_id?: string; created_at?: string }
 type Client = { id: string | number; nombre?: string; estado?: string; created_at?: string }
-type Part = { id: string | number; stock_actual?: number; created_at?: string }
+type Part = { id: string | number; stock_actual?: number; stock_minimo?: number; created_at?: string }
+
+function hasLowStock(part: Part) {
+  const actual = Number(part.stock_actual)
+  const minimum = Number(part.stock_minimo)
+  return Number.isFinite(actual) && Number.isFinite(minimum) && actual <= minimum
+}
 
 const iconPaths = {
   equipment: <><path d="M5 5h14v4H5z" /><path d="M7 9v10m10-10v10M9 13h6m-3-4v8" /></>,
@@ -138,7 +144,7 @@ export default function Home() {
         canEquipos ? supabase.from("equipos").select("id, marca, modelo, cliente_id, created_at") : Promise.resolve(empty),
         canClientes ? supabase.from("clientes").select("id, nombre, estado, created_at") : Promise.resolve(empty),
         canTramites ? supabase.from("tramites").select("id, tipo, estado, created_at, fecha_programada, cliente_id, equipo_id, clientes(nombre), equipos(marca, modelo)").order("created_at", { ascending: false }) : Promise.resolve(empty),
-        canRepuestos ? supabase.from("repuestos").select("id, stock_actual, created_at") : Promise.resolve(empty),
+        canRepuestos ? supabase.from("repuestos").select("id, stock_actual, stock_minimo, created_at") : Promise.resolve(empty),
       ])
       if (equipmentRes.error || clientsRes.error || servicesRes.error || partsRes.error) throw new Error("sync")
 
@@ -146,7 +152,7 @@ export default function Home() {
       const realClients = (clientsRes.data || []) as Client[]
       const realServices = (servicesRes.data || []) as Service[]
       const realParts = (partsRes.data || []) as Part[]
-      const components = realParts.filter((part) => Number(part.stock_actual || 0) <= 3).length
+      const components = realParts.filter(hasLowStock).length
       setEquipment(realEquipment)
       setClients(realClients)
       setServices(realServices)
@@ -189,7 +195,7 @@ export default function Home() {
     equipment: monthlyCounts(equipment, (item) => item.created_at, 6).map((item) => item.count),
     clients: monthlyCounts(clients, (item) => item.created_at, 6).map((item) => item.count),
     maintenance: monthlyCounts(services.filter((item) => item.tipo === "mantenimiento" && ["pendiente", "en_proceso"].includes(item.estado || "")), (item) => item.created_at, 6).map((item) => item.count),
-    components: monthlyCounts(parts.filter((item) => Number(item.stock_actual || 0) <= 3), (item) => item.created_at, 6).map((item) => item.count),
+    components: monthlyCounts(parts.filter(hasLowStock), (item) => item.created_at, 6).map((item) => item.count),
   }), [clients, equipment, parts, services])
   const trendLabels = useMemo(() => monthlyCounts([], () => undefined, 6).map((item) => item.label), [])
 

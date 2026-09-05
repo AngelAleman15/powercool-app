@@ -182,9 +182,9 @@ export default function AdminPage() {
   )
 
   return (
-    <div className="px-3 sm:px-6 lg:px-12 py-6 sm:py-8 text-[#223f66]">
-      <div className="space-y-6">
-        <section className="rounded-2xl border border-[#d1dcec] bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_100%)] p-5 sm:p-6 shadow-[0_8px_26px_rgba(36,84,145,.10)]">
+    <div className="mx-auto max-w-7xl px-4 py-6 text-slate-900 sm:px-6 sm:py-8 lg:px-8">
+      <div className="space-y-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6280a5]">Panel de administración</p>
@@ -201,11 +201,11 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Link href="/" className="rounded-lg bg-[#1f67bf] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1756a4] transition-colors">
+          <div className="mt-6 flex flex-wrap gap-2.5">
+            <Link href="/" className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100">
               Volver al inicio
             </Link>
-            <Link href="/auth" className="rounded-lg border border-[#cddcf0] px-4 py-2 text-sm font-semibold text-[#285887] hover:bg-[#f6f9ff] transition-colors">
+            <Link href="/auth" className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100">
               Cambiar sesión
             </Link>
           </div>
@@ -218,11 +218,11 @@ export default function AdminPage() {
         )}
 
         {authLoading || loading ? (
-          <section className="rounded-xl border border-[#d1dcec] bg-white px-5 py-8 text-center text-[#5c7699] shadow-[0_8px_26px_rgba(36,84,145,.08)]">
+          <section className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500 shadow-sm">
             Cargando panel de administración...
           </section>
         ) : profiles.length === 0 ? (
-          <section className="rounded-xl border border-[#d1dcec] bg-white px-5 py-8 text-center text-[#5c7699] shadow-[0_8px_26px_rgba(36,84,145,.08)]">
+          <section className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500 shadow-sm">
             No hay usuarios para mostrar.
           </section>
         ) : (
@@ -233,7 +233,7 @@ export default function AdminPage() {
               const isLockedForOwner = currentRole === "owner" && profile.role === "admin"
 
               return (
-                <article key={profile.id} className="rounded-2xl border border-[#d1dcec] bg-white p-4 sm:p-5 shadow-[0_8px_26px_rgba(36,84,145,.08)]">
+                <article key={profile.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -261,7 +261,7 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {MODULES.map((module) => {
                       const enabled = !!permissionMap[module.key]
                       const disabled = !canManageRoles || isLockedForOwner || (module.key === "admin" && !canEditAdminRow)

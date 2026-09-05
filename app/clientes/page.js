@@ -417,7 +417,7 @@ export default function Clientes() {
   }
 
   return (
-    <div className="px-4 py-7 text-slate-900 sm:px-6 lg:px-7">
+    <div className="client-directory mx-auto max-w-[1260px] px-4 py-7 text-slate-900 sm:px-6 lg:px-8">
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-[-.04em] text-slate-950">Clientes</h1>
@@ -997,6 +997,13 @@ export default function Clientes() {
           </div>
         </div>
       )}
+      <style jsx>{`
+        .client-directory :global([class*="bg-[#f9fbff]"]), .client-directory :global([class*="bg-[#f8fbff]"]) { background-color: #fff !important; }
+        .client-directory :global([class*="border-[#d3dfef]"]), .client-directory :global([class*="border-[#dbe6f4]"]), .client-directory :global([class*="border-[#cad8ea]"]), .client-directory :global([class*="border-[#cfdced]"]) { border-color: #e2e8f0 !important; }
+        .client-directory :global([class*="text-[#1f4371]"]), .client-directory :global([class*="text-[#2a4d7a]"]), .client-directory :global([class*="text-[#2462ad]"]) { color: #0f172a !important; }
+        .client-directory :global([class*="text-[#607b9f]"]), .client-directory :global([class*="text-[#47658d]"]), .client-directory :global([class*="text-[#6f87a8]"]) { color: #64748b !important; }
+        .client-directory :global([class*="rounded-md"]) { border-radius: .75rem; }
+      `}</style>
     </div>
   )
 }

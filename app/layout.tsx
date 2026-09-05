@@ -44,7 +44,7 @@ export default function RootLayout({
         <NotificationManager />
         <LocalNotifications />
         <Navbar />
-        <main className="min-h-screen pb-20 md:ml-[280px] md:pb-0">
+        <main className="min-h-screen min-w-0 overflow-x-clip pb-20 lg:ml-[280px] lg:pb-0">
           <AuthGate>{children}</AuthGate>
         </main>
       </body>

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { BrowserQRCodeReader } from "@zxing/browser"
+import { supabase } from "@/lib/supabase"
 
 type BarcodeDetectorInstance = { detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>> }
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorInstance
@@ -47,6 +48,7 @@ export default function EscanearQrPage() {
   const streamRef = useRef<MediaStream | null>(null)
   const frameRef = useRef<number | null>(null)
   const zxingControlsRef = useRef<{ stop: () => void } | null>(null)
+  const verifyingRef = useRef(false)
   const [state, setState] = useState<"idle" | "scanning" | "unsupported" | "error">("idle")
   const [message, setMessage] = useState("Activa la cámara para escanear un código QR generado por PowerCool.")
   const [recentScans, setRecentScans] = useState<ScanHistoryItem[]>(readRecentScans)
@@ -60,14 +62,31 @@ export default function EscanearQrPage() {
     streamRef.current = null
   }, [])
 
-  const handleValue = useCallback((rawValue: string) => {
+  const handleValue = useCallback(async (rawValue: string) => {
+    if (verifyingRef.current) return
     const destination = getPowerCoolEquipmentUrl(rawValue)
     if (!destination) {
       setMessage("Este código no fue generado por PowerCool o no corresponde a un equipo.")
       return
     }
-    stopScanner()
     const equipmentId = decodeURIComponent(destination.split("/")[2]?.split("?")[0] || "")
+    if (!equipmentId) {
+      setMessage("El código QR no contiene un identificador de equipo válido.")
+      return
+    }
+    verifyingRef.current = true
+    setMessage("Verificando el equipo…")
+    const { data, error } = await supabase.from("equipos").select("id").eq("id", equipmentId).maybeSingle()
+    verifyingRef.current = false
+    if (error) {
+      setMessage("No pudimos verificar el equipo. Revisa tu conexión e inténtalo nuevamente.")
+      return
+    }
+    if (!data) {
+      setMessage("Este código pertenece a un equipo que ya no está disponible.")
+      return
+    }
+    stopScanner()
     setRecentScans((currentScans) => {
       const nextScans = [{ equipmentId, scannedAt: new Date().toISOString() }, ...currentScans.filter((item) => item.equipmentId !== equipmentId)].slice(0, 3)
       window.localStorage.setItem(SCAN_HISTORY_KEY, JSON.stringify(nextScans))
@@ -155,16 +174,16 @@ export default function EscanearQrPage() {
   useEffect(() => stopScanner, [stopScanner])
 
   return (
-    <div className="mx-auto max-w-[1190px] px-4 py-6 text-slate-900 sm:px-6 lg:py-8">
-      <section className="overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_20px_55px_rgba(15,23,42,.16)]">
-        <header className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-5 text-slate-900 sm:px-6 sm:py-8 lg:py-10">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,.10)]">
+        <header className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-7 sm:py-5">
           <div className="flex min-w-0 items-center gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600"><svg aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4M8 8h3v3H8zM13 8h3v3h-3zM8 13h3v3H8zM13 13h3v3h-3z" strokeLinecap="round" strokeLinejoin="round" /></svg></span><div className="min-w-0"><h1 className="text-xl font-bold tracking-[-.035em] sm:text-2xl">Escanear código QR</h1><p className="mt-1 text-sm text-slate-500">Escanea el código QR del equipo para ver su información.</p></div></div>
           <Link href="/" aria-label="Cerrar escáner" className="grid h-10 w-10 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"><svg aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" /></svg></Link>
         </header>
 
         <div className="grid lg:grid-cols-[minmax(0,1.04fr)_minmax(310px,.96fr)]">
-          <section className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r lg:p-5">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-950 shadow-inner">
+          <section className="border-b border-slate-200 p-4 sm:p-5 lg:border-b-0 lg:border-r lg:p-6">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-950 shadow-inner sm:rounded-2xl">
               <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
               <div className="pointer-events-none absolute inset-[24%_22%] before:absolute before:left-1/2 before:top-1/2 before:h-px before:w-[calc(100%+18px)] before:-translate-x-1/2 before:bg-blue-400 after:absolute after:left-1/2 after:top-1/2 after:h-[calc(100%+18px)] after:w-px after:-translate-x-1/2 after:-translate-y-1/2 after:bg-blue-400/40"><span className="absolute left-0 top-0 h-8 w-8 rounded-tl-lg border-l-4 border-t-4 border-blue-400" /><span className="absolute right-0 top-0 h-8 w-8 rounded-tr-lg border-r-4 border-t-4 border-blue-400" /><span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-lg border-b-4 border-l-4 border-blue-400" /><span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-lg border-b-4 border-r-4 border-blue-400" /></div>
               {state === "scanning" && <span className="pointer-events-none absolute left-[22%] right-[22%] top-1/2 h-0.5 bg-blue-400 shadow-[0_0_18px_rgba(96,165,250,.9)]" />}
