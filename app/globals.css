@@ -40,6 +40,16 @@ textarea {
   font: inherit;
 }
 
+button:not(:disabled) {
+  transition-duration: 160ms;
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-timing-function: ease-out;
+}
+
+button:not(:disabled):active {
+  transform: scale(.99);
+}
+
 :focus-visible {
   outline: 2px solid var(--pc-brand);
   outline-offset: 3px;
@@ -55,8 +65,32 @@ textarea {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pc-modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pc-popover-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pc-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pc-skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
 @layer utilities {
   .animate-slide-down { animation: pc-fade-down 180ms ease-out; }
+  .animate-pc-modal-in { animation: pc-modal-in 180ms ease-out both; }
+  .animate-pc-popover-in { animation: pc-popover-in 160ms ease-out both; }
+  .animate-pc-overlay-in { animation: pc-overlay-in 140ms ease-out both; }
+  .pc-skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 38%, #f1f5f9 63%); background-size: 400% 100%; animation: pc-skeleton-shimmer 1.2s ease-in-out infinite; }
   .line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; line-clamp: 1; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

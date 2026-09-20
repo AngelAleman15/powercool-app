@@ -100,8 +100,8 @@ export default function Navbar() {
           {!loading && user && <button type="button" onClick={handleSignOut} className="min-h-10 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Salir</button>}
         </div>
       </header>
-      {mobileMenuOpen && <div className="fixed inset-0 z-[60] bg-slate-950/30 backdrop-blur-[1px] sm:hidden" onClick={() => setMobileMenuOpen(false)}>
-        <section role="dialog" aria-modal="true" aria-label="Más opciones" className="absolute inset-x-3 bottom-[5.25rem] rounded-xl border border-slate-200 bg-white p-3 shadow-[var(--pc-shadow-float)]" onClick={(event) => event.stopPropagation()}>
+      {mobileMenuOpen && <div className="fixed inset-0 z-[60] animate-pc-overlay-in bg-slate-950/30 backdrop-blur-[1px] sm:hidden" onClick={() => setMobileMenuOpen(false)}>
+        <section role="dialog" aria-modal="true" aria-label="Más opciones" className="animate-pc-modal-in absolute inset-x-3 bottom-[5.25rem] rounded-xl border border-slate-200 bg-white p-3 shadow-[var(--pc-shadow-float)]" onClick={(event) => event.stopPropagation()}>
           <p className="px-2 pb-2 pt-1 text-xs font-semibold uppercase tracking-[.12em] text-slate-400">Más opciones</p>
           <div className="grid grid-cols-2 gap-2">
             {navItems.filter((item) => !["/", "/equipos"].includes(item.href)).map((item) => <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className={`flex min-h-14 items-center gap-3 rounded-lg px-3 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-blue-600 ${isActive(item.href) ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}><NavIcon name={item.icon} />{item.label}</Link>)}

@@ -224,7 +224,7 @@ export default function Home() {
             <div className="flex items-center gap-4">
               <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 bg-white shadow-[inset_0_0_0_5px_rgba(248,250,252,.95),0_8px_18px_rgba(15,23,42,.04)] sm:h-[76px] sm:w-[76px] sm:border-[3px] sm:shadow-[inset_0_0_0_7px_rgba(248,250,252,.95),0_8px_18px_rgba(15,23,42,.04)] ${metric.tone}`}><Icon name={metric.icon} className="h-5 w-5 sm:h-7 sm:w-7" /></div>
               <div className="min-w-0">
-                <p className="text-[27px] font-bold leading-none tracking-[-.05em] sm:text-[34px]">{loading ? "–" : metric.value}</p>
+                <p className="text-[27px] font-bold leading-none tracking-[-.05em] sm:text-[34px]">{loading ? <span className="pc-skeleton inline-block h-7 w-9 rounded-md align-middle sm:h-8" aria-label="Cargando métrica" /> : metric.value}</p>
                 <p className="mt-1 text-xs font-semibold leading-4 text-slate-600 sm:mt-1.5 sm:text-[13px]">{metric.label}</p>
                 <p className={`mt-2 text-[11px] font-semibold sm:mt-3 sm:text-xs ${metric.noteTone}`}>{metric.note}</p>
               </div>
@@ -257,7 +257,7 @@ export default function Home() {
           <section className="mt-6 border-t border-slate-200 pt-6">
             <div className="mb-6 flex items-start justify-between gap-3"><div className="flex gap-3"><Icon name="chart" className="mt-0.5 h-5 w-5 text-blue-600" /><div><h2 className="text-xl font-bold tracking-[-.03em]">Servicios completados</h2><p className="mt-1 text-sm font-medium text-slate-500">Cantidad de servicios realizados por mes.</p></div></div><select aria-label="Periodo del gráfico" value={chartRange} onChange={(event) => setChartRange(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 outline-none focus:border-blue-500"><option value={6}>Últimos 6 meses</option><option value={12}>Últimos 12 meses</option></select></div>
             <div key={chartRenderKey} className="flex h-36 items-end gap-3 border-b border-slate-200 px-4 pt-3 sm:gap-6">
-              {chart.map((item) => <div key={item.label} className="flex h-full flex-1 flex-col justify-end gap-2 text-center"><div className="mx-auto w-full max-w-10 rounded-t-md bg-gradient-to-t from-blue-300 to-blue-400" style={{ height: `${Math.max(item.count ? 20 : 6, (item.count / maxChart) * 110)}px` }} title={`${item.count} servicios`} /><span className="pb-2 text-xs text-slate-500">{item.label}</span></div>)}
+              {chart.map((item) => <div key={item.label} className="flex h-full flex-1 flex-col justify-end gap-2 text-center"><div className="mx-auto w-full max-w-10 rounded-t-md bg-blue-500/75 transition-[height] duration-200" style={{ height: `${Math.max(item.count ? 20 : 6, (item.count / maxChart) * 110)}px` }} title={`${item.count} servicios`} /><span className="pb-2 text-xs text-slate-500">{item.label}</span></div>)}
             </div>
           </section>
         </div>
