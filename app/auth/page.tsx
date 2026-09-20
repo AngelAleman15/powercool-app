@@ -1,16 +1,14 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react"
+import { FormEvent, useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuthSession } from "@/lib/useAuthSession"
 
-const PENDING_NAME_KEY = "powercool.auth.pendingName"
-const PENDING_ACCESS_CODE_KEY = "powercool.auth.pendingAccessCode"
 const LAST_EMAIL_KEY = "powercool.auth.lastEmail"
 const MAGIC_LINK_COOLDOWN_SECONDS = 60
 const SERVER_RATE_LIMIT_COOLDOWN_SECONDS = 60 * 60
-const MIN_ACCESS_CODE_LENGTH = 6
+const MIN_ACCESS_CODE_LENGTH = 8
 
 function Snowflake({ className = "" }: { className?: string }) {
   return <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg>
@@ -37,11 +35,6 @@ function getRateLimitUntilStorageKey(email: string) {
   return `powercool.auth.rateLimitUntil:${normalizedEmail || "anon"}`
 }
 
-function getEmailScopedKey(baseKey: string, email: string) {
-  const normalizedEmail = String(email || "").trim().toLowerCase()
-  return normalizedEmail ? `${baseKey}:${normalizedEmail}` : baseKey
-}
-
 function Brand() {
   return <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-lg bg-[#1463d8] text-white shadow-sm shadow-blue-950/30"><Snowflake className="h-6 w-6" /></span><span><strong className="block text-lg font-semibold tracking-[-.035em] text-white">PowerCool</strong><span className="block text-xs text-slate-300">Gestión técnica</span></span></div>
 }
@@ -62,42 +55,27 @@ export default function AuthPage() {
   const [showAccessCode, setShowAccessCode] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
+  const [activationFromLink, setActivationFromLink] = useState(false)
 
-  const pendingNameStorageKey = useMemo(() => getEmailScopedKey(PENDING_NAME_KEY, email), [email])
-  const pendingAccessCodeStorageKey = useMemo(() => getEmailScopedKey(PENDING_ACCESS_CODE_KEY, email), [email])
-
-  const syncPendingIdentity = useCallback(async (activeUser: { id: string; email?: string } | null | undefined) => {
+  const syncPendingIdentity = useCallback(async (activeUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string } } | null | undefined) => {
     if (!activeUser?.id || !activeUser?.email || typeof window === "undefined") return { codeActivated: false }
 
     const normalizedEmail = String(activeUser.email).trim().toLowerCase()
-    const nameKey = getEmailScopedKey(PENDING_NAME_KEY, normalizedEmail)
-    const codeKey = getEmailScopedKey(PENDING_ACCESS_CODE_KEY, normalizedEmail)
-    const preferredName = window.localStorage.getItem(nameKey)?.trim() || ""
-    const pendingCode = window.localStorage.getItem(codeKey) || ""
-    const authUpdate: { data?: { full_name: string }; password?: string } = {}
-
-    if (preferredName) authUpdate.data = { full_name: preferredName }
-    if (pendingCode.length >= MIN_ACCESS_CODE_LENGTH) authUpdate.password = pendingCode
-
-    if (authUpdate.data || authUpdate.password) {
-      const { error: updateUserError } = await supabase.auth.updateUser(authUpdate)
-      if (updateUserError) return { codeActivated: false, error: updateUserError.message || "No se pudo activar el código de acceso." }
-    }
+    const preferredName = activeUser.user_metadata?.full_name?.trim() || activeUser.user_metadata?.name?.trim() || ""
 
     if (preferredName) {
       const { error: profileError } = await supabase.from("profiles").update({ full_name: preferredName }).eq("id", activeUser.id)
-      if (profileError) return { codeActivated: Boolean(authUpdate.password), error: profileError.message || "El código se activó, pero no se pudo guardar el nombre." }
+      if (profileError) return { codeActivated: false, error: profileError.message || "No se pudo guardar el nombre del perfil." }
     }
 
     window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
-    window.localStorage.removeItem(nameKey)
-    window.localStorage.removeItem(codeKey)
-    return { codeActivated: Boolean(authUpdate.password) }
+    return { codeActivated: false }
   }, [])
 
   useEffect(() => {
     const savedEmail = window.localStorage.getItem(LAST_EMAIL_KEY)
     if (savedEmail) setEmail(savedEmail)
+    setActivationFromLink(new URLSearchParams(window.location.search).get("activation") === "1")
   }, [])
 
   useEffect(() => {
@@ -126,14 +104,16 @@ export default function AuthPage() {
         if (setSessionError) setError(setSessionError.message || "No se pudo validar el enlace de acceso.")
         else {
           const result = await syncPendingIdentity(data.session?.user)
+          const isActivationLink = new URLSearchParams(window.location.search).get("activation") === "1"
           if (result.error) setError(result.error)
-          else router.replace("/")
-          window.history.replaceState({}, document.title, "/auth")
+          else if (!isActivationLink) router.replace("/")
+          window.history.replaceState({}, document.title, isActivationLink ? "/auth?activation=1" : "/auth")
+          setActivationFromLink(isActivationLink)
         }
       } finally { setProcessingLink(false) }
     }
     void hydrateSessionFromHash()
-  }, [router, syncPendingIdentity])
+  }, [activationFromLink, router, syncPendingIdentity])
 
   useEffect(() => {
     void syncPendingIdentity(user).then((result) => {
@@ -142,16 +122,15 @@ export default function AuthPage() {
   }, [syncPendingIdentity, user])
 
   useEffect(() => {
-    if (!loading && user && !processingLink) router.replace("/")
-  }, [loading, processingLink, router, user])
+    if (!loading && user && !processingLink && !activationFromLink) router.replace("/")
+  }, [activationFromLink, loading, processingLink, router, user])
 
   const handleMagicLink = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedEmail = email.trim().toLowerCase()
     const normalizedName = fullName.trim()
-    const normalizedCode = accessCode.trim()
-    if (!normalizedName || !normalizedEmail || normalizedCode.length < MIN_ACCESS_CODE_LENGTH) {
-      setError(`Completa tu nombre, correo y un código de al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
+    if (!normalizedName || !normalizedEmail) {
+      setError("Completa tu nombre y correo electrónico.")
       return
     }
     if (cooldownLeft > 0) {
@@ -163,7 +142,7 @@ export default function AuthPage() {
     try {
       const configuredAppUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim()
       const baseUrl = configuredAppUrl || window.location.origin
-      const { error: authError } = await supabase.auth.signInWithOtp({ email: normalizedEmail, options: { emailRedirectTo: `${baseUrl.replace(/\/$/, "")}/auth`, data: { full_name: normalizedName } } })
+      const { error: authError } = await supabase.auth.signInWithOtp({ email: normalizedEmail, options: { shouldCreateUser: false, emailRedirectTo: `${baseUrl.replace(/\/$/, "")}/auth?activation=1`, data: { full_name: normalizedName } } })
       if (authError) {
         if (authError.status === 429 || /rate limit|too many/i.test(String(authError.message || ""))) {
           window.localStorage.setItem(getRateLimitUntilStorageKey(normalizedEmail), String(Date.now() + SERVER_RATE_LIMIT_COOLDOWN_SECONDS * 1000))
@@ -172,12 +151,10 @@ export default function AuthPage() {
         } else setError(authError.message)
         return
       }
-      window.localStorage.setItem(pendingNameStorageKey, normalizedName)
-      window.localStorage.setItem(pendingAccessCodeStorageKey, normalizedCode)
       window.localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail)
       window.localStorage.setItem(getCooldownStorageKey(normalizedEmail), String(Date.now()))
       setCooldownLeft(MAGIC_LINK_COOLDOWN_SECONDS)
-      setMessage("Revisa tu correo y abre el enlace una vez. Después podrás usar solamente tu email y código.")
+      setMessage("Revisa tu correo y abre el enlace. Allí podrás definir tu código personal.")
     } finally { setSending(false) }
   }
 
@@ -201,9 +178,31 @@ export default function AuthPage() {
     } finally { setSigningInWithCode(false) }
   }
 
+  const handleSetAccessCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const normalizedCode = accessCode.trim()
+    if (normalizedCode.length < MIN_ACCESS_CODE_LENGTH) {
+      setError(`El código debe tener al menos ${MIN_ACCESS_CODE_LENGTH} caracteres.`)
+      return
+    }
+    setError(""); setMessage(""); setSigningInWithCode(true)
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password: normalizedCode })
+      if (updateError) {
+        setError(updateError.message || "No se pudo guardar el código de acceso.")
+        return
+      }
+      window.localStorage.setItem(LAST_EMAIL_KEY, user?.email || email.trim().toLowerCase())
+      router.replace("/")
+    } finally { setSigningInWithCode(false) }
+  }
+
   const emailInput = <div><label htmlFor="email" className="text-sm font-medium text-slate-800">Correo electrónico</label><div className="relative mt-2"><FieldIcon name="email" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" placeholder="tu@empresa.com" className={inputClass} /></div></div>
   const codeInput = <div><div className="flex items-center justify-between gap-3"><label htmlFor="accessCode" className="text-sm font-medium text-slate-800">Código de acceso</label><button type="button" onClick={() => setShowAccessCode((visible) => !visible)} className="text-xs font-medium text-blue-700 underline-offset-4 hover:text-blue-800 hover:underline">{showAccessCode ? "Ocultar" : "Mostrar"}</button></div><div className="relative mt-2"><FieldIcon name="key" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="accessCode" type={showAccessCode ? "text" : "password"} value={accessCode} onChange={(event) => setAccessCode(event.target.value)} required minLength={MIN_ACCESS_CODE_LENGTH} autoComplete="current-password" placeholder="Tu código personal" className={inputClass} /></div></div>
-  const formContent = loading || processingLink || user ? <p className="py-14 text-center text-sm text-slate-500">{user ? "Redirigiendo al Panel…" : "Validando sesión…"}</p> : activationMode ? <form onSubmit={handleMagicLink} className="mt-8 space-y-5"><div><label htmlFor="fullName" className="text-sm font-medium text-slate-800">Nombre para mostrar</label><input id="fullName" type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Ej.: Ángel" autoComplete="name" className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100" /></div>{emailInput}{codeInput}<Status message={message} error={error} /><button type="submit" disabled={sending || cooldownLeft > 0} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#1463d8] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0f56bd] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">{sending ? "Enviando…" : cooldownLeft > 0 ? `Reenviar en ${cooldownLeft}s` : "Recibir enlace de activación"}</button><button type="button" onClick={() => { setActivationMode(false); setError(""); setMessage("") }} className="w-full py-1 text-sm font-medium text-slate-600 underline-offset-4 hover:text-blue-700 hover:underline">Volver al inicio de sesión</button></form> : <form onSubmit={handleCodeSignIn} className="mt-8 space-y-5">{emailInput}{codeInput}<Status message={message} error={error} /><button type="submit" disabled={signingInWithCode} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#1463d8] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0f56bd] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">{signingInWithCode ? "Ingresando…" : "Ingresar"}</button><div className="flex items-center gap-3 pt-1 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-200" />¿Es tu primer acceso?<span className="h-px flex-1 bg-slate-200" /></div><button type="button" onClick={() => { setActivationMode(true); setError(""); setMessage("") }} className="w-full py-1 text-sm font-medium text-blue-700 underline-offset-4 hover:text-blue-800 hover:underline">Activar acceso por email</button></form>
+  const activationRequestForm = <form onSubmit={handleMagicLink} className="mt-8 space-y-5"><div><label htmlFor="fullName" className="text-sm font-medium text-slate-800">Nombre para mostrar</label><input id="fullName" type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Ej.: Ángel" autoComplete="name" className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100" /></div>{emailInput}<Status message={message} error={error} /><p className="text-xs leading-5 text-slate-500">El acceso debe haber sido creado por un administrador. Te enviaremos un enlace único para elegir tu código.</p><button type="submit" disabled={sending || cooldownLeft > 0} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#1463d8] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0f56bd] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">{sending ? "Enviando…" : cooldownLeft > 0 ? `Reenviar en ${cooldownLeft}s` : "Recibir enlace de activación"}</button><button type="button" onClick={() => { setActivationMode(false); setError(""); setMessage("") }} className="w-full py-1 text-sm font-medium text-slate-600 underline-offset-4 hover:text-blue-700 hover:underline">Volver al inicio de sesión</button></form>
+  const activationCodeForm = <form onSubmit={handleSetAccessCode} className="mt-8 space-y-5">{codeInput}<Status message={message} error={error} /><p className="text-xs leading-5 text-slate-500">Usa al menos {MIN_ACCESS_CODE_LENGTH} caracteres. Este código solo se envía a Supabase al guardarlo.</p><button type="submit" disabled={signingInWithCode} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#1463d8] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0f56bd] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">{signingInWithCode ? "Guardando…" : "Guardar código y continuar"}</button></form>
+  const signInForm = <form onSubmit={handleCodeSignIn} className="mt-8 space-y-5">{emailInput}{codeInput}<Status message={message} error={error} /><button type="submit" disabled={signingInWithCode} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#1463d8] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0f56bd] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">{signingInWithCode ? "Ingresando…" : "Ingresar"}</button><div className="flex items-center gap-3 pt-1 text-xs text-slate-500"><span className="h-px flex-1 bg-slate-200" />¿Es tu primer acceso?<span className="h-px flex-1 bg-slate-200" /></div><button type="button" onClick={() => { setActivationMode(true); setError(""); setMessage("") }} className="w-full py-1 text-sm font-medium text-blue-700 underline-offset-4 hover:text-blue-800 hover:underline">Activar acceso por email</button></form>
+  const formContent = loading || processingLink ? <p className="py-14 text-center text-sm text-slate-500">Validando sesión…</p> : user && activationFromLink ? activationCodeForm : user ? <p className="py-14 text-center text-sm text-slate-500">Redirigiendo al Panel…</p> : activationMode ? activationRequestForm : signInForm
 
   return <div className="min-h-dvh bg-white lg:grid lg:grid-cols-[minmax(360px,42%)_1fr]">
     <aside className="relative hidden min-h-dvh overflow-hidden bg-[#061426] text-white lg:flex lg:flex-col" style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.26),rgba(3,17,34,.68)),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}>
@@ -214,7 +213,7 @@ export default function AuthPage() {
       <div className="relative min-h-40 overflow-hidden bg-[#061426] px-6 py-7 sm:min-h-48 sm:px-10 lg:hidden" style={{ backgroundImage: "linear-gradient(90deg,rgba(3,16,32,.48),rgba(3,17,34,.8)),url('/sidebar-mountains.png')", backgroundPosition: "center 58%", backgroundSize: "cover" }}><Brand /></div>
       <div className="flex flex-1 items-start justify-center px-6 py-10 sm:px-10 sm:py-14 lg:items-center lg:px-12 xl:px-20">
         <section className="w-full max-w-[400px]" aria-labelledby="auth-title">
-          <header><p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">PowerCool</p><h1 id="auth-title" className="mt-3 text-2xl font-semibold tracking-[-.035em] text-slate-950 sm:text-[28px]">{activationMode ? "Activar acceso" : "Iniciar sesión"}</h1><p className="mt-2 text-sm leading-6 text-slate-500">{activationMode ? "Configura tu código personal para futuros accesos." : "Ingresa con tu correo y código personal."}</p></header>
+          <header><p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">PowerCool</p><h1 id="auth-title" className="mt-3 text-2xl font-semibold tracking-[-.035em] text-slate-950 sm:text-[28px]">{activationFromLink ? "Define tu código" : activationMode ? "Activar acceso" : "Iniciar sesión"}</h1><p className="mt-2 text-sm leading-6 text-slate-500">{activationFromLink ? "Elige un código personal para tus próximos accesos." : activationMode ? "Solicita tu enlace de activación si tu cuenta ya fue creada." : "Ingresa con tu correo y código personal."}</p></header>
           {formContent}
           <p className="mt-10 text-center text-xs text-slate-400">Acceso interno · PowerCool</p>
         </section>
