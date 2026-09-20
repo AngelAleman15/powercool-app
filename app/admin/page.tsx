@@ -184,20 +184,20 @@ export default function AdminPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 text-slate-900 sm:px-6 sm:py-8 lg:px-8">
       <div className="space-y-5">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <section className="border-b border-slate-200 pb-6 sm:pb-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6280a5]">Panel de administración</p>
-              <h1 className="mt-1 text-2xl sm:text-4xl font-bold text-[#214a79]">Roles y permisos por módulo</h1>
-              <p className="mt-2 text-sm sm:text-base text-[#5c7699] max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Administración</p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-[-.04em] text-slate-950 sm:text-3xl">Roles y permisos por módulo</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
                 Admin y owner pueden cambiar roles y activar o desactivar módulos por usuario. El rol visor queda con acceso base al dashboard y equipos.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 text-sm">
-              <span className="rounded-full border border-[#d8e4f4] bg-white px-3 py-1 text-[#2d5c91]">Admin: {roleSummary.admin}</span>
-              <span className="rounded-full border border-[#d8e4f4] bg-white px-3 py-1 text-[#2d5c91]">Owner: {roleSummary.owner}</span>
-              <span className="rounded-full border border-[#d8e4f4] bg-white px-3 py-1 text-[#2d5c91]">Técnico: {roleSummary.tecnico}</span>
-              <span className="rounded-full border border-[#d8e4f4] bg-white px-3 py-1 text-[#2d5c91]">Visor: {roleSummary.visor}</span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">Admin: {roleSummary.admin}</span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">Owner: {roleSummary.owner}</span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">Técnico: {roleSummary.tecnico}</span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">Visor: {roleSummary.visor}</span>
             </div>
           </div>
 
@@ -218,11 +218,11 @@ export default function AdminPage() {
         )}
 
         {authLoading || loading ? (
-          <section className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500 shadow-sm">
+          <section className="rounded-xl border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500">
             Cargando panel de administración...
           </section>
         ) : profiles.length === 0 ? (
-          <section className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500 shadow-sm">
+          <section className="rounded-xl border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500">
             No hay usuarios para mostrar.
           </section>
         ) : (
@@ -233,24 +233,23 @@ export default function AdminPage() {
               const isLockedForOwner = currentRole === "owner" && profile.role === "admin"
 
               return (
-                <article key={profile.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <article key={profile.id} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg font-bold text-[#284a76] truncate">{profile.full_name || "Sin nombre"}</h2>
-                        <span className="rounded-full bg-[#edf4ff] px-2.5 py-1 text-xs font-semibold text-[#1f6bc1]">{profile.role}</span>
+                        <h2 className="truncate text-lg font-semibold text-slate-950">{profile.full_name || "Sin nombre"}</h2>
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">{profile.role}</span>
                       </div>
-                      <p className="mt-1 text-sm text-[#6b84a5] break-all">{profile.email || "Sin email"}</p>
-                      <p className="mt-2 text-xs text-[#7a90ad]">{profile.id}</p>
+                      <p className="mt-1 break-all text-sm text-slate-500">{profile.email || "Sin email"}</p>
                     </div>
 
                     <div className="w-full max-w-xs">
-                      <label className="text-xs font-semibold uppercase tracking-wide text-[#6280a5]">Rol</label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rol</label>
                       <select
                         value={profile.role}
                         onChange={(event) => updateRole(profile.id, event.target.value as RoleKey)}
                         disabled={!canManageRoles || (currentRole === "owner" && profile.role === "admin")}
-                        className="mt-1 w-full rounded-lg border border-[#cad8ea] bg-white px-3 py-2 text-sm text-[#214a79] disabled:opacity-60"
+                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
                       >
                         {ROLE_OPTIONS.filter((option) => canEditAdminRole || option.value !== "admin").map((option) => (
                           <option key={option.value} value={option.value}>
@@ -272,14 +271,14 @@ export default function AdminPage() {
                           type="button"
                           onClick={() => updatePermission(profile.role, module.key, !enabled)}
                           disabled={disabled || savingId === profile.role}
-                          className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${enabled ? "border-[#b9d2f2] bg-[#f6fbff]" : "border-[#e1e9f3] bg-[#fbfdff]"} ${disabled ? "opacity-60 cursor-not-allowed" : "hover:border-[#8fb3e5] hover:bg-[#eef6ff]"}`}
+                          className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${enabled ? "border-blue-200 bg-blue-50/50" : "border-slate-200 bg-white"} ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-slate-300 hover:bg-slate-50"}`}
                         >
                           <div>
-                            <p className="text-sm font-semibold text-[#2b527f]">{module.label}</p>
-                            <p className="text-xs text-[#6f87a7]">{module.description}</p>
+                            <p className="text-sm font-semibold text-slate-800">{module.label}</p>
+                            <p className="text-xs text-slate-500">{module.description}</p>
                           </div>
                           <span
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? "bg-[#1f67bf]" : "bg-[#c7d6e8]"}`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? "bg-blue-600" : "bg-slate-300"}`}
                             aria-hidden="true"
                           >
                             <span
