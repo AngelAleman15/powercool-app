@@ -27,7 +27,7 @@ function ScanIcon({ className = "h-4 w-4" }) {
 function Brand({ compact = false }) {
   return (
     <div className={`flex items-center gap-3 ${compact ? "" : "px-3"}`}>
-      <div className={`${compact ? "h-9 w-9 rounded-lg" : "h-11 w-11 rounded-xl"} grid place-items-center bg-gradient-to-br from-[#2784ff] to-[#0958c9] shadow-[0_10px_22px_rgba(8,94,205,.32)]`}>
+      <div className={`${compact ? "h-9 w-9 rounded-lg" : "h-11 w-11 rounded-xl"} grid place-items-center bg-[#1463d8] shadow-sm shadow-blue-950/20`}>
         <svg aria-hidden="true" className={`${compact ? "h-5 w-5" : "h-7 w-7"} text-white`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 2v20M4.1 6l15.8 12M4.1 18 19.9 6M2 12h20M7 3.3l10 17.4M17 3.3 7 20.7" /></svg>
       </div>
       <div>
@@ -70,12 +70,12 @@ export default function Navbar() {
     <>
       <aside
         className="fixed inset-y-0 left-0 z-50 hidden w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[#061426] px-4 py-7 lg:flex"
-        style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.78) 0%,rgba(3,17,34,.64) 48%,rgba(3,17,34,.9) 100%),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}
+        style={{ backgroundImage: "linear-gradient(180deg,rgba(3,16,32,.94) 0%,rgba(3,17,34,.92) 52%,rgba(3,17,34,.96) 100%),url('/sidebar-mountains.png')", backgroundPosition: "center", backgroundSize: "cover" }}
       >
         <Link href="/" aria-label="Ir al panel" className="mb-9 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white"><Brand /></Link>
         <nav aria-label="Navegación principal" className="space-y-2">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={`flex min-h-12 items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-semibold outline-none transition-all focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#061426] ${isActive(item.href) ? "bg-gradient-to-r from-[#1976e9] to-[#1758aa] text-white shadow-[0_10px_24px_rgba(18,106,220,.3)]" : "text-slate-300 hover:bg-white/8 hover:text-white"}`}>
+            <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={`flex min-h-12 items-center gap-4 rounded-lg border-l-2 px-4 py-3 text-[15px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#061426] ${isActive(item.href) ? "border-blue-400 bg-white/10 text-white" : "border-transparent text-slate-300 hover:bg-white/[.06] hover:text-white"}`}>
               <NavIcon name={item.icon} />
               {item.label}
             </Link>
@@ -83,7 +83,7 @@ export default function Navbar() {
         </nav>
         <div className="mt-auto border-t border-white/10 px-3 pt-6">
           <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-[#738bdc] to-[#293d71] text-sm font-bold text-white">{(displayName || "U").slice(0, 2).toUpperCase()}</div>
+            <div className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/10 text-sm font-bold text-white">{(displayName || "U").slice(0, 2).toUpperCase()}</div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{loading ? "Cargando..." : displayName}</p>
               <p className="truncate text-xs capitalize text-slate-400">{role || "Usuario"}</p>
@@ -101,10 +101,10 @@ export default function Navbar() {
         </div>
       </header>
       {mobileMenuOpen && <div className="fixed inset-0 z-[60] bg-slate-950/30 backdrop-blur-[1px] sm:hidden" onClick={() => setMobileMenuOpen(false)}>
-        <section role="dialog" aria-modal="true" aria-label="Más opciones" className="absolute inset-x-3 bottom-[5.25rem] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+        <section role="dialog" aria-modal="true" aria-label="Más opciones" className="absolute inset-x-3 bottom-[5.25rem] rounded-xl border border-slate-200 bg-white p-3 shadow-[var(--pc-shadow-float)]" onClick={(event) => event.stopPropagation()}>
           <p className="px-2 pb-2 pt-1 text-xs font-semibold uppercase tracking-[.12em] text-slate-400">Más opciones</p>
           <div className="grid grid-cols-2 gap-2">
-            {navItems.filter((item) => !["/", "/equipos"].includes(item.href)).map((item) => <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className={`flex min-h-14 items-center gap-3 rounded-xl px-3 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-blue-600 ${isActive(item.href) ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}><NavIcon name={item.icon} />{item.label}</Link>)}
+            {navItems.filter((item) => !["/", "/equipos"].includes(item.href)).map((item) => <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className={`flex min-h-14 items-center gap-3 rounded-lg px-3 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-blue-600 ${isActive(item.href) ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}><NavIcon name={item.icon} />{item.label}</Link>)}
           </div>
         </section>
       </div>}
